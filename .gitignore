@@ -32,6 +32,14 @@ dist/
 *.egg-info/
 .eggs/
 
+# Node.js, Vite+ e Turborepo
+node_modules/
+.turbo/
+.tools/
+*.tsbuildinfo
+app/*/dist/
+app/*/coverage/
+
 # Credenciais locais (o modelo de configuração deve ser versionado)
 .env
 .env.*

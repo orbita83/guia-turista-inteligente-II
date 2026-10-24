@@ -2,6 +2,12 @@
 
 Aplicação web desenvolvida com o microframework **Flask** e Python moderno para orquestração de APIs externas com autenticação via **Google Identity Services (OAuth JWT)**, gerando roteiros de viagem com dados meteorológicos, cálculo de percurso rodoviário e guia turístico & culinário com inteligência artificial.
 
+## 📚 Documentação de engenharia
+
+A especificação modular para a evolução do projeto está em [`docs/README.md`](docs/README.md). Ela organiza visão de produto, requisitos, regras de negócio, arquitetura-alvo FastAPI + React, contratos de API, critérios de aceite, operação e roadmap de migração.
+
+O projeto será evoluído como **monorepo Turborepo**, com a API em `app/backend` e a SPA React 19 + TypeScript + Vite+ em `app/frontend`. O monólito Flask atual permanece temporariamente na raiz durante a migração incremental.
+
 ---
 
 ## 🚀 Como Executar o Projeto Localmente
