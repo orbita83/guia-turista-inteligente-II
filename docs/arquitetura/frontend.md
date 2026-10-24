@@ -8,26 +8,55 @@ A interface será uma SPA independente em React 19, escrita em TypeScript e cons
 
 Fonte: [Estrutura do Frontend React 19](../modulo-guia-turista-inteligente.md#22-frontend-react-19).
 
-## Organização prevista
+## Estrutura de referência
+
+A fonte apresenta o frontend em `guia-turista-inteligente/completo/frontend/`. No monorepositório adotado pelo projeto, essa raiz corresponde a `app/frontend/`. A estrutura abaixo preserva os módulos e responsabilidades da fonte, adaptando os arquivos JavaScript/JSX para TypeScript/TSX conforme a [ADR-001](./decisoes/ADR-001-typescript-e-vite-plus.md).
 
 ```text
 app/frontend/
-├── public/                 # favicon, sprite de ícones e manifesto PWA
+├── public/
+│   ├── favicon.svg                   # Favicon temático
+│   ├── icons.svg                     # Sprite de ícones da interface
+│   └── manifest.webmanifest          # Metadados da aplicação web
 ├── src/
-│   ├── assets/             # imagens e ilustrações
-│   ├── components/         # componentes visuais e limites de erro
-│   ├── hooks/              # estado e efeitos reutilizáveis
-│   ├── services/           # API, SSE, geolocalização e storage local
-│   ├── types/              # validação defensiva dos dados recebidos
-│   ├── App.tsx             # composição e orquestração da interface
-│   ├── config.ts           # URL da API e Google Client ID
-│   ├── index.css           # tokens, temas e responsividade
-│   └── main.tsx            # ponto de montagem
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+│   ├── assets/                       # Ilustrações e imagens do portal
+│   ├── components/
+│   │   ├── Header.tsx                # Tema, Google Sign-In e sessão híbrida
+│   │   ├── RoteiroForm.tsx           # Veículo, sugestões de destino e perfis
+│   │   ├── MapaRota.tsx              # Leaflet, rota, paradas, custos e altimetria
+│   │   ├── RoteiroResult.tsx         # Clima, guia via IA e atrativos
+│   │   ├── TelemetriaCard.tsx        # Latência, Correlation-ID e métricas
+│   │   ├── HistoricoViagens.tsx      # Histórico reativo e exclusão de viagens
+│   │   ├── BotoesControleViagem.tsx  # Maps, WhatsApp e exportação GPX
+│   │   ├── ErrorBoundary.tsx         # Contenção de erros de interface
+│   │   ├── Toast.tsx                 # Notificações acessíveis
+│   │   └── Footer.tsx                # Rodapé semântico e créditos
+│   ├── hooks/
+│   │   ├── useAuth.ts                # Identidade Google e visitante
+│   │   ├── useTheme.ts               # Alternância e persistência do tema
+│   │   ├── useToasts.ts              # Notificações temporizadas
+│   │   ├── useNetworkStatus.ts       # Estado online/offline
+│   │   ├── useSessionTimer.ts        # Sessão visitante de duas horas
+│   │   └── useViagem.ts              # Planejamento, telemetria, custos e histórico
+│   ├── services/
+│   │   ├── api.ts                    # REST, X-User-Id e leitura de SSE
+│   │   ├── geolocation.ts            # GPS do navegador e cálculo de Haversine
+│   │   └── visitanteStorage.ts       # Cache local da sessão visitante
+│   ├── types/
+│   │   └── schemas.ts                # Contratos e validação em runtime
+│   ├── App.tsx                       # Orquestração do layout e componentes
+│   ├── index.css                     # Design tokens, tema e acessibilidade
+│   ├── config.ts                     # URL da API e Google Client ID
+│   ├── setupTests.ts                 # Inicialização dos testes Vitest
+│   └── main.tsx                      # Montagem da aplicação React
+├── index.html                        # HTML semântico, Google Identity e CSS Leaflet
+├── package.json                      # React, Leaflet, Vite+ e ferramentas de teste
+├── tsconfig.json                     # Configuração estrita do TypeScript
+├── vite.config.ts                    # Plugins e servidor/build Vite+
+└── .env.example                      # Modelo de configuração sem segredos
 ```
+
+**Estado da árvore:** os módulos e arquivos representam a estrutura descrita pela fonte e as decisões aprovadas de TypeScript e Vite+. O workspace contém atualmente o manifesto e as dependências; o scaffold da aplicação ainda será criado. Variáveis com prefixo `VITE_` são incorporadas ao bundle e não podem conter segredos.
 
 ## Responsabilidades por camada
 
