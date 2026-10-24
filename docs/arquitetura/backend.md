@@ -9,6 +9,53 @@ Sua raiz será `app/backend` dentro do monorepo. Os caminhos internos `app/...` 
 **Estado:** Fonte, com decomposição derivada.  
 **Rastreabilidade:** [Backend FastAPI](../modulo-guia-turista-inteligente.md#21-backend-fastapi) e [Engenharia Assíncrona](../modulo-guia-turista-inteligente.md#4-engenharia-assíncrona).
 
+## Estrutura de referência
+
+A fonte apresenta o backend em `guia-turista-inteligente/completo/backend/`. No monorepositório adotado pelo projeto, essa raiz corresponde a `app/backend/`; os caminhos da árvore abaixo são relativos a esse workspace.
+
+```text
+app/backend/
+├── app/
+│   ├── core/
+│   │   ├── config.py                 # Pydantic Settings, variáveis de ambiente e CORS
+│   │   ├── dependencies.py           # Injeção de dependências FastAPI e pool HTTP
+│   │   ├── logging_config.py         # Logging estruturado com X-Request-ID
+│   │   ├── catalogo.py               # Destinos, atrativos e gastronomia curados
+│   │   ├── cache.py                  # Cache em memória com TTL e expiração
+│   │   └── circuit_breaker.py        # Proteção contra falhas e degradação graciosa
+│   ├── routers/
+│   │   ├── auth.py                   # Google OAuth JWT e sessão visitante
+│   │   ├── roteiros.py               # Planejamento, mapa, streaming, custos e GPX
+│   │   └── telemetria.py             # Auditoria, circuit breakers e Prometheus
+│   ├── schemas/
+│   │   ├── auth.py                   # Contratos Pydantic de autenticação
+│   │   └── roteiros.py               # Contratos Pydantic v2 de roteiros
+│   ├── services/
+│   │   ├── altimetria_service.py     # Perfil topográfico e efeito no consumo
+│   │   ├── clima_service.py          # Integração assíncrona com Open-Meteo
+│   │   ├── custos_service.py         # Combustível, EV, pedágios, emissões e rateio
+│   │   ├── gemini_service.py         # Guia turístico e streaming SSE
+│   │   ├── gpx_service.py            # Exportação de arquivos GPX 1.1
+│   │   ├── postos_service.py         # Sugestões de abastecimento e recarga
+│   │   ├── rota_service.py           # Rotas OSRM, geometria e alternativas
+│   │   └── storage_service.py        # Persistência JSON atômica por usuário
+│   └── main.py                       # Aplicação, lifespan, middlewares e probes
+├── static/
+│   └── data/
+│       └── viagens.json              # Histórico persistido por identificador de usuário
+├── tests/
+│   ├── conftest.py                   # Fixtures e isolamento dos testes
+│   ├── test_roteiros.py              # Testes de rotas, concorrência e streaming
+│   └── test_settings.py              # Testes das configurações
+├── requirements.txt                  # Dependências de execução Python
+├── requirements-dev.txt              # Ferramentas de desenvolvimento e testes
+├── requirements.lock                 # Versões instaladas e validadas
+├── .env                              # Configuração local; não versionar
+└── .env.example                      # Modelo sem segredos; pode ser versionado
+```
+
+**Estado da árvore:** os módulos e testes representam a estrutura descrita pela fonte e o destino arquitetural. O workspace contém atualmente os manifests e as dependências; os arquivos de aplicação, testes e dados serão criados durante a implementação. `.env` é configuração local e deve permanecer fora do controle de versão.
+
 ## Organização por camadas
 
 ```mermaid
