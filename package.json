@@ -2,10 +2,8 @@
   "name": "guia-turista-inteligente-monorepo",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "npm@11.18.0",
   "workspaces": [
-    "app/*",
-    "packages/*"
+    "app/*"
   ],
   "scripts": {
     "dev": "turbo run dev",
@@ -16,6 +14,13 @@
     "clean": "turbo run clean"
   },
   "devDependencies": {
-    "turbo": "2.11.10"
-  }
+    "@types/node": "22.20.5",
+    "turbo": "2.11.10",
+    "vite-plus": "1.4.0"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+    "vitest": "5.0.5"
+  },
+  "packageManager": "npm@11.18.0"
 }
