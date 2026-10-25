@@ -1,0 +1,159 @@
+/* Formulário */
+.form-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--primary-hover);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.form-fieldset {
+  min-width: 0;
+  border: 0;
+}
+
+.form-fieldset:disabled {
+  opacity: 1;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-btn);
+  background: #ffffff;
+  color: var(--text-main);
+  font-size: 16px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+input::placeholder {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.form-row input {
+  min-width: 0;
+  flex: 1;
+}
+
+.form-row select {
+  width: 82px;
+  flex-shrink: 0;
+  padding: 0.75rem 0.4rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Botões */
+button,
+.btn {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  font-size: 0.98rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary-strong) 100%);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-toggle {
+  width: 100%;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-light);
+  color: var(--primary-hover);
+}
+
+.btn-toggle:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.btn-logout {
+  min-height: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #b91c1c;
+  background: #c73636;
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.btn-logout:hover {
+  border-color: var(--danger);
+  background: #ef4444;
+}

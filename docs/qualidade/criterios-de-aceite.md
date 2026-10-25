@@ -1,0 +1,44 @@
+# Critérios de aceite
+
+> Os critérios abaixo tornam verificável o comportamento descrito na fonte. “Estado” indica **Fonte**, **Derivado** ou **Proposto**.
+
+| ID | Critério verificável | Estado |
+| --- | --- | --- |
+| CA-AUT-001 | Dado login Google válido, o cabeçalho apresenta a identidade ativa e as chamadas usam seu identificador. | Derivado |
+| CA-AUT-002 | Ao alternar de Google para visitante, a identidade Google permanece restaurável em um clique. | Fonte |
+| CA-AUT-003 | Uma sessão visitante expira após 2 horas e não acessa o histórico de outra identidade. | Fonte/Derivado |
+| CA-PLN-001 | Cidade/UF inválida é rejeitada; UF inconsistente resulta em `422`. | Fonte |
+| CA-PLN-002 | Durante planejamento ativo, nova submissão idêntica é impedida no cliente e protegida por `409` no servidor. | Fonte |
+| CA-PLN-003 | Planejamento concluído apresenta rota, clima, guia, telemetria e dados de custos correspondentes à mesma solicitação. | Derivado |
+| CA-MAP-001 | Quando houver alternativas, selecionar uma rota atualiza geometria, duração, custos e paradas de modo coerente. | Fonte/Derivado |
+| CA-MAP-002 | O mapa apresenta paradas antes do limite crítico segundo autonomia e margem configurada. | Fonte |
+| CA-MAP-003 | Perfil de relevo informa máxima, ganho/perda e efeito no consumo. | Fonte |
+| CA-CST-001 | O total reúne energia/combustível e pedágios e é dividido pela ocupação de 1 a 8 pessoas. | Fonte |
+| CA-GUI-001 | O guia chega progressivamente e o frontend acrescenta os chunks na ordem recebida. | Fonte |
+| CA-GUI-002 | O stream termina com sinal inequívoco de conclusão e não permanece carregando. | Derivado |
+| CA-GUI-003 | O roteiro de IA respeita seções e limites de concisão definidos na documentação. | Fonte |
+| CA-HIS-001 | Nova viagem é respondida antes da persistência em background e aparece no histórico após conclusão. | Fonte/Derivado |
+| CA-HIS-002 | Excluir viagem remove apenas o item do usuário ativo sem recarregar a SPA. | Fonte |
+| CA-EXP-001 | A aplicação gera GPX 1.1 válido contendo os pontos previstos da rota. | Fonte/Derivado |
+| CA-EXP-002 | Ações de Maps e WhatsApp usam a rota ativa e não dados de planejamento anterior. | Derivado |
+| CA-TEL-001 | Resposta expõe `X-Process-Time`; a UI diferencia tempo do servidor e tempo total. | Fonte |
+| CA-TEL-002 | `/healthz`, `/readyz` e `/metrics` respondem conforme finalidade operacional. | Fonte |
+| CA-DES-001 | Geocodificações e consultas independentes são executadas concorrentemente. | Fonte |
+| CA-DES-002 | Desconexão interrompe o pipeline e impede salvar resultado incompleto. | Fonte |
+| CA-DES-003 | A meta de resposta de planejamento é inferior a 1.000 ms no cenário e ambiente de medição a definir. | Fonte + questão |
+| CA-OPS-001 | Backend inicia em `8001` e frontend em `5173` com configuração documentada. | Fonte |
+| CA-OPS-002 | Suítes backend/frontend e lint concluem sem falhas antes da entrega. | Fonte |
+| CA-OPS-003 | O frontend usa `.ts`/`.tsx`, passa por verificação estrita de tipos e é servido/construído por Vite+ sem perder os comandos npm esperados pela atividade. | Decisão aprovada |
+| CA-OPS-004 | A raiz instala a versão fixada do Turbo sem instalação global, reconhece a configuração `turbo.json` e permite executar tarefas de ambos os workspaces por comando único ou filtro. | Decisão aprovada |
+| CA-PLN-004 | Jornada crítica pode ser concluída por teclado e mantém contraste WCAG 2.1 AA nos dois temas. | Fonte/Derivado |
+| CA-PLN-005 | Negar geolocalização não impede o planejamento manual. | Derivado |
+
+## Condições para homologação
+
+- Critério associado a pelo menos um teste ou evidência manual reproduzível.
+- Dependências externas simuladas em testes e identificadas em homologação integrada.
+- Critérios com “questão” não viram gate numérico até ambiente e método serem aprovados.
+- Falhas conhecidas devem registrar impacto, contorno e decisão de aceite.
+
+Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
+

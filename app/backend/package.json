@@ -1,0 +1,13 @@
+{
+  "name": "@guia/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run --with-requirements requirements.lock python -m uvicorn app.main:app --reload --port 8001",
+    "check": "uv run --with-requirements requirements.lock python -m ruff check . && uv run --with-requirements requirements.lock python -m mypy .",
+    "lint": "uv run --with-requirements requirements.lock python -m ruff check .",
+    "test": "uv run --with-requirements requirements.lock python -m pytest",
+    "build": "uv run --with-requirements requirements.lock python -m compileall -q app"
+  }
+}
+

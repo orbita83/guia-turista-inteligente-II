@@ -32,13 +32,21 @@ dist/
 *.egg-info/
 .eggs/
 
+# Node.js, Vite+ e Turborepo
+node_modules/
+.turbo/
+.tools/
+*.tsbuildinfo
+app/*/dist/
+app/*/coverage/
+
 # Credenciais locais (o modelo de configuração deve ser versionado)
 .env
 .env.*
 !.env.example
+/app/backend/static/data/viagens.json
 
-# Configuração local e logs do Flask
-/instance/
+# Configuração local e logs
 *.log
 
 # Arquivos pessoais de editores; configurações compartilhadas continuam permitidas
@@ -56,3 +64,7 @@ dist/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Skills locais instaladas por ferramentas de agentes
+/.agents/
+/skills-lock.json
