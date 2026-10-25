@@ -4,7 +4,7 @@
 
 ## Objetivos
 
-1. Proteger regras de planejamento, custos, autonomia e sessões.
+1. Proteger os fluxos existentes de planejamento, integrações, persistência e sessões.
 2. Validar contratos entre React e FastAPI.
 3. Exercitar concorrência, SSE, persistência e degradação de provedores.
 4. Tornar requisitos e critérios de aceite executáveis.
@@ -17,7 +17,7 @@
 | API/componente backend | endpoints, headers, erros, concorrência e storage | `pytest` + cliente de teste | Fonte |
 | Unitário frontend | hooks, services e funções puras TypeScript | `vp test` (Vitest) | Fonte + decisão aprovada |
 | Componente frontend | componentes `.tsx`, formulários, mapa adaptado, resultados e histórico | `vp test` + Testing Library | Fonte + decisão aprovada |
-| Contrato | payloads, respostas, SSE e GPX | fixtures compartilhadas | Proposto |
+| Contrato | payloads, respostas e sessão por cookie | testes de contrato no backend | Implementado |
 | E2E | jornadas críticas em dois processos | ferramenta a decidir | Proposto |
 | Não funcional | latência, acessibilidade e resiliência | ferramentas a decidir | Derivado |
 
@@ -37,7 +37,7 @@
 - desconexão interrompe trabalho e evita persistência incompleta.
 - pool HTTP é criado/encerrado pelo `lifespan`.
 
-### Streaming
+### Recursos futuros fora do escopo atual
 
 - resposta usa `text/event-stream` e headers anti-buffering.
 - chunks mantêm ordem e caractere Unicode.
@@ -65,7 +65,7 @@
 
 ## Gates propostos
 
-- `pytest tests/ -v` aprovado.
+- `npm test` aprovado para backend e frontend.
 - `npm run check`/`vp check` aprovado, incluindo formato, lint e tipos.
 - `npm test`/`vp test` aprovado.
 - `npm run build`/`vp build` aprovado.

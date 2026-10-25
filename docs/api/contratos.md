@@ -1,129 +1,90 @@
 # Contratos da API
 
-## Escopo e nível de certeza
+Este documento separa os contratos executáveis hoje dos endpoints futuros descritos
+na arquitetura de referência. A migração atual preserva apenas comportamentos que já
+existiam no monólito; os endpoints futuros não devem ser implementados como parte
+desta reorganização.
 
-Este catálogo reúne somente rotas e campos mencionados na fonte. Onde método, caminho completo ou schema não estão definidos, o item é marcado como pendente em vez de receber um contrato inventado.
+## API FastAPI executável
 
-**Rastreabilidade:** [Arquitetura de Microsserviços](../modulo-guia-turista-inteligente.md#13-arquitetura-de-microsserviços), [Backend FastAPI](../modulo-guia-turista-inteligente.md#21-backend-fastapi) e [Telas e Componentes](../modulo-guia-turista-inteligente.md#3-telas-e-componentes).
+Base REST: `/api/v1`. As respostas de sucesso usam JSON, exceto logout e exclusão,
+que retornam `204 No Content`.
 
-## Convenções HTTP confirmadas
-
-| Elemento | Uso | Estado |
+| Método e caminho | Contrato | Identidade |
 | --- | --- | --- |
-| Prefixo | `/api/v1` | Fonte |
-| `Content-Type` | `application/json` nas operações REST | Fonte |
-| `X-User-Id` | identidade ativa e isolamento do histórico | Fonte |
-| `X-Process-Time` | tempo do processamento ASGI, em formato ainda não estabilizado | Fonte |
-| `X-Request-ID` | correlação entre requisição, logs e interface | Fonte |
-| Erro de validação | `422 Unprocessable Entity` | Fonte |
-| Duplicidade ativa | `409 Conflict` | Fonte |
-| Cliente desconectado | `499` usado internamente/pela API | Fonte |
+| `GET /api/v1/auth/session` | `{ usuario, google_client_id, ufs }` | cookie de sessão opcional |
+| `POST /api/v1/auth/google` | entrada `{ credential }`; saída `{ usuario }` | valida credencial no Google e cria cookie |
+| `POST /api/v1/auth/visitor` | saída `{ usuario }` | cria sessão visitante com validade de 2 horas |
+| `POST /api/v1/auth/logout` | `204` | encerra sessão e limpa dados temporários do visitante |
+| `GET /api/v1/roteiros/minhas-viagens` | `{ viagens: [...] }` | sessão obrigatória; lista somente os roteiros da identidade ativa |
+| `GET /api/v1/roteiros/minhas-viagens/json` | metadados legados e envelope `usuarios` contendo somente a identidade ativa | sessão obrigatória; exportação compatível e isolada |
+| `POST /api/v1/roteiros/planejar` | entrada com `origem_cidade`, `origem_uf`, `destino_cidade`, `destino_uf`; saída `{ viagem, aviso }` | sessão obrigatória |
+| `DELETE /api/v1/roteiros/{roteiro_id}` | `204` | sessão obrigatória; exclusão limitada à identidade ativa |
 
-## Catálogo de endpoints
+O planejamento mantém o formato de viagem já produzido pelo Flask: `id`, `criado_em`,
+`origem`, `destino`, `clima`, `percurso`, `dicas_destino` e `diagnostico_ia`. Cidades
+são higienizadas e limitadas a 80 caracteres; origem e destino vazios retornam `422`.
+Solicitações iguais da mesma identidade têm bloqueio de concorrência e cooldown de
+quatro segundos, respondendo `409`. Falhas HTTP não tratadas pelos fallbacks dos
+provedores respondem `502`.
 
-| ID | Método e caminho | Finalidade | Certeza |
-| --- | --- | --- | --- |
-| `API-PLN-001` | `POST /api/v1/roteiros/planejar` | produzir roteiro estruturado e telemetria | Confirmado |
-| `API-MAP-001` | `POST /api/v1/roteiros/mapa-rota` | obter geometria e alternativas de rota | Confirmado |
-| `API-GUI-001` | `POST /api/v1/roteiros/stream-guia` | transmitir guia por SSE | Confirmado |
-| `API-HIS-001` | `GET /api/v1/roteiros/minhas-viagens` | listar histórico do usuário | Confirmado |
-| `API-HIS-002` | `DELETE /api/v1/roteiros/{roteiro_id}` | excluir uma viagem e atualizar a interface | Confirmado |
-| `API-HIS-003` | `PATCH /api/v1/roteiros/{roteiro_id}/visitas` | marcar atrativos visitados | Confirmado |
-| `API-CST-001` | método pendente em `/api/v1/roteiros/custos` | calcular custos e rateio | Caminho mencionado |
-| `API-EXP-001` | método pendente em `/api/v1/roteiros/exportar/gpx` | gerar arquivo GPX 1.1 | Caminho mencionado |
-| `API-EXP-002` | método pendente em `/api/v1/roteiros/compartilhar` | despachar compartilhamento em background | Caminho mencionado |
-| `API-AUT-001` | caminhos pendentes sob `/api/v1/auth` | Google JWT, visitante e encerramento | Somente router confirmado |
-| `API-TEL-001` | caminhos pendentes sob `/api/v1/telemetria` | métricas e diagnóstico | Somente router confirmado |
-| `API-OPS-001` | `GET /healthz` | liveness probe | Confirmado |
-| `API-OPS-002` | `GET /readyz` | readiness probe | Confirmado |
-| `API-TEL-002` | `GET /metrics` | métricas OpenMetrics/Prometheus | Confirmado |
+### Sessão e isolamento
 
-## `API-PLN-001` — Planejar roteiro
+A identidade é obtida exclusivamente do cookie de sessão assinado pelo backend. O
+cliente não pode escolher uma identidade enviando `X-User-Id`; esse header não é
+aceito como autenticação. Cookies são enviados com credenciais e devem ser protegidos
+por HTTPS em produção. O login Google valida o campo `aud` contra `GOOGLE_CLIENT_ID`.
+Visitantes mantêm roteiros somente em memória e perdem seus dados ao encerrar ou
+expirar a sessão. Usuários Google mantêm histórico em
+`app/backend/static/data/viagens.json`. No primeiro startup, se o arquivo não existir,
+o backend valida e copia o arquivo legado da raiz sem removê-lo.
 
-### Entrada conhecida
+### Erros e cabeçalhos
 
-| Campo | Evidência | Obrigatoriedade/tipo |
+- `401`: sessão ausente/expirada ou credencial Google inválida;
+- `409`: planejamento duplicado ativo ou dentro do cooldown;
+- `422`: payload inválido;
+- `502`: falha de transporte em provedor necessária à operação.
+- `X-Process-Time`: duração do processamento em milissegundos;
+- `X-Request-ID`: ecoa o ID enviado ou gera um ID para a requisição.
+
+Em chamadas cross-origin, os dois cabeçalhos de resposta são expostos por CORS.
+
+### Operação
+
+| Método e caminho | Resposta | Estado |
 | --- | --- | --- |
-| `origem_cidade` | trecho de `RoteiroRequest` usado na orquestração | string; validação exata pendente |
-| `origem_uf` | geocodificação e validação de UF | string de duas letras maiúsculas |
-| `destino_cidade` | trecho de orquestração | string; validação exata pendente |
-| `destino_uf` | geocodificação e validação de UF | string de duas letras maiúsculas |
-| `preferencia_rota` | chamada OSRM | enum/domínio pendente |
-| `dias_estadia` | geração de guia | numérico; limites pendentes |
-| `estilo_viagem` | geração de guia | enum/domínio pendente |
-| parâmetros de veículo e passageiros | formulário e calculadora | nomes e limites pendentes |
+| `GET /healthz` | `{ status: "ok" }` | executável |
+| `GET /readyz` | `{ status: "ready" }` | executável; readiness simples do processo |
+| `GET /docs`, `GET /redoc` | OpenAPI interativo | executável |
 
-### Saída conhecida
+## Rotas antigas aposentadas
 
-A fonte descreve, sem fornecer JSON completo:
+As rotas Flask de SSR e formulário (`/`, `/auth/google/callback`, `/auth/demo`,
+`/auth/logout`, `/viagens/criar` e `/viagens/deletar/{id}`) foram retiradas após a
+SPA passar a consumir a API FastAPI. Os arquivos de template, CSS e JavaScript de
+apresentação também foram removidos.
 
-- origem e destino resolvidos;
-- clima;
-- percurso, geometria e alternativas;
-- guia de viagem;
-- atrativos e gastronomia;
-- custos, autonomia, paradas e altimetria;
-- diagnóstico/telemetria e identificador do roteiro.
+O Flask antigo expunha `/viagens/json`, `/api/viagens/json` e `/api/viagens`, com a
+base agregada de todos os usuários. Essas rotas foram aposentadas; o comportamento
+de visualizar JSON é migrado em
+`GET /api/v1/roteiros/minhas-viagens/json`, que mantém metadados e estrutura
+compatíveis, mas inclui somente o usuário autenticado.
 
-O schema final e a distinção entre resposta do planejamento e consultas complementares são questões em aberto.
+## Contratos futuros ainda não implementados
 
-## `API-GUI-001` — Streaming do guia
+Os itens a seguir constam na arquitetura global, mas não possuem comportamento
+correspondente no frontend monolítico atual; ficam fora desta migração:
 
-### Payload conhecido
+| Método e caminho | Finalidade descrita | Estado |
+| --- | --- | --- |
+| `POST /api/v1/roteiros/mapa-rota` | mapa e alternativas | futuro |
+| `POST /api/v1/roteiros/stream-guia` | guia por SSE | futuro |
+| `PATCH /api/v1/roteiros/{id}/visitas` | marcar atrativos visitados | futuro |
+| método pendente `/api/v1/roteiros/custos` | calculadora de custos | futuro |
+| método pendente `/api/v1/roteiros/exportar/gpx` | exportação GPX | futuro |
+| método pendente `/api/v1/roteiros/compartilhar` | compartilhamento | futuro |
+| `/api/v1/telemetria` | diagnóstico de provedores/circuit breakers | futuro |
+| `GET /metrics` | métricas Prometheus/OpenMetrics | futuro; não existe no Flask monolítico |
 
-```json
-{
-  "destino": "<string>",
-  "dias_estadia": "<valor conforme schema>",
-  "estilo_viagem": "<valor conforme schema>",
-  "clima_info": "<objeto ainda não estabilizado>",
-  "atrativos": "<coleção ainda não estabilizada>",
-  "gastronomia": "<coleção ainda não estabilizada>"
-}
-```
-
-### Resposta
-
-- status de sucesso esperado: `200`;
-- mídia: `text/event-stream`;
-- quadro incremental:
-
-```text
-data: {"chunk":"texto parcial","done":false}\n\n
-```
-
-- quadro terminal:
-
-```text
-data: {"chunk":"","done":true}\n\n
-```
-
-O cliente deve processar frames incompletos entre leituras do `ReadableStream`, preservar UTF-8 e encerrar ao receber `done: true` ou fechamento de conexão.
-
-## Histórico e identidade
-
-- `X-User-Id` seleciona o escopo do usuário.
-- `GET .../minhas-viagens` não deve retornar registros de outro identificador.
-- `DELETE` e `PATCH` precisam verificar que `roteiro_id` pertence ao usuário ativo.
-
-A última verificação é uma regra derivada de isolamento; o comportamento `403` versus `404` ainda precisa ser decidido.
-
-## OpenAPI
-
-FastAPI deve publicar o contrato executável em:
-
-- `/docs` — Swagger UI;
-- `/redoc` — ReDoc.
-
-**Proposto:** cada schema e endpoint deve carregar descrição, exemplos sem dados pessoais, respostas de erro e ID estável deste catálogo.
-
-## Questões necessárias antes da implementação
-
-1. estabilizar schemas Pydantic de entrada e saída;
-2. definir autenticação/autorização real associada a `X-User-Id`;
-3. definir métodos de custos, exportação e compartilhamento;
-4. definir paginação e ordenação do histórico;
-5. definir formato dos tempos e unidades numéricas;
-6. definir limites de tamanho e timeout de streaming;
-7. definir respostas parciais quando provedores falham.
-
+O schema executável completo também está publicado pelo FastAPI em `/openapi.json`.

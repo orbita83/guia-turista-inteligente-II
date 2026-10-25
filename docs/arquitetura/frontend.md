@@ -2,6 +2,11 @@
 
 > **Estado:** conteúdo de **Fonte**, **Derivado** e **Decisão aprovada**. TypeScript e Vite+ foram aprovados em [ADR-001](./decisoes/ADR-001-typescript-e-vite-plus.md).
 
+> **Implementação atual:** a SPA existente está em `app/frontend` e consome a API
+> JSON de `app/backend`. Esta página descreve a arquitetura de referência completa;
+> recursos mencionados nela que não existiam no monólito continuam fora do recorte
+> de migração documentado em `specs/`.
+
 ## Objetivo arquitetural
 
 A interface será uma SPA independente em React 19, escrita em TypeScript e construída com Vite+ sobre o servidor/build do Vite. Em desenvolvimento será executada na porta `5173`. Ela concentra apresentação e estado de interação; regras persistentes, integrações externas e decisões de negócio permanecem no backend.
@@ -56,7 +61,11 @@ app/frontend/
 └── .env.example                      # Modelo de configuração sem segredos
 ```
 
-**Estado da árvore:** os módulos e arquivos representam a estrutura descrita pela fonte e as decisões aprovadas de TypeScript e Vite+. O workspace contém atualmente o manifesto e as dependências; o scaffold da aplicação ainda será criado. Variáveis com prefixo `VITE_` são incorporadas ao bundle e não podem conter segredos.
+**Estado da árvore:** o workspace `app/frontend` possui uma SPA funcional com
+componentes, hooks, cliente REST, tipos e estilos modulares. A tabela acima descreve
+uma arquitetura de referência ampliada; recursos sem equivalente no monólito atual
+permanecem fora da reorganização registrada em `specs/`. Variáveis com prefixo
+`VITE_` são incorporadas ao bundle e não podem conter segredos.
 
 ## Responsabilidades por camada
 
@@ -64,7 +73,7 @@ app/frontend/
 | --- | --- | --- |
 | `components/` | Renderizar formulário, mapa, resultados, telemetria, histórico, controles e feedback | Fonte |
 | `hooks/` | Encapsular autenticação, tema, notificações, rede, temporizador e viagem ativa | Fonte |
-| `services/api.ts` | Encapsular REST, `X-User-Id`, telemetria de resposta e leitura tipada de SSE | Decisão aprovada sobre responsabilidade da fonte |
+| `services/api.ts` | REST por cookie de sessão; SSE permanece como referência futura | Implementado para os endpoints existentes |
 | `services/geolocation.ts` | Obter GPS e calcular distância por Haversine | Decisão aprovada sobre responsabilidade da fonte |
 | `services/visitanteStorage.ts` | Preservar sessão temporária e identidade Google recuperável | Decisão aprovada sobre responsabilidade da fonte |
 | `types/schemas.ts` | Definir tipos e validar em runtime os dados recebidos | Decisão aprovada sobre responsabilidade da fonte |
@@ -85,8 +94,8 @@ sequenceDiagram
     F->>A: Solicita planejamento
     A->>A: Bloqueia nova submissão
     A->>C: POST /roteiros/planejar
-    C->>B: JSON + X-User-Id
-    B-->>C: roteiro + X-Process-Time
+    C->>B: JSON + cookie de sessão
+    B-->>C: roteiro + cabeçalhos de resposta
     C-->>A: dados e telemetria
     A->>M: Atualiza mapa, custos e guia
     A->>C: Inicia stream-guia
@@ -106,9 +115,11 @@ sequenceDiagram
 
 - Base da API configurada por variável de ambiente.
 - REST por `fetch` para comandos e consultas.
-- SSE lido com `ReadableStream` para a geração incremental do guia.
-- `X-User-Id` identifica o escopo do histórico.
-- `X-Process-Time` e Correlation-ID alimentam telemetria.
+- SSE e telemetria de produto aparecem como alvos futuros, sem equivalente nos
+  fluxos do monólito migrados.
+- O cookie de sessão assinado identifica o escopo do histórico; `X-User-Id` não é
+  aceito como identidade confiável.
+- `X-Process-Time` e `X-Request-ID` são cabeçalhos operacionais da API.
 
 ## Resiliência na interface
 

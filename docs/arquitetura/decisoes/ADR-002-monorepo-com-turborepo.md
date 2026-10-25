@@ -18,7 +18,7 @@ O Guia do Turista Inteligente será mantido em um único **monorepo**, usando:
 - Turborepo para orquestração, dependências, cache e execução paralela de tarefas;
 - `app/backend` para a API FastAPI;
 - `app/frontend` para a SPA React 19 + TypeScript + Vite+;
-- `packages` apenas para artefatos realmente compartilhados.
+- pacotes compartilhados só serão adicionados quando existir consumo real em mais de um workspace.
 
 Estrutura-alvo:
 
@@ -27,7 +27,6 @@ guia-turista-inteligente-II/
 ├── app/
 │   ├── backend/             # FastAPI, Python, pytest, Ruff e Mypy
 │   └── frontend/            # React 19, TypeScript e Vite+
-├── packages/                # configurações/contratos compartilháveis
 ├── docs/                    # especificação e ADRs
 ├── package.json             # workspaces e comandos globais
 ├── package-lock.json        # lockfile único do ecossistema npm
@@ -51,9 +50,9 @@ O backend continuará gerenciado por Python. Seu `package.json` será apenas um 
 
 ## Estado de transição
 
-O monólito Flask atual ainda está na raiz. Ele não será movido ou removido nesta decisão. A migração ocorrerá gradualmente para `app/backend`, protegida por testes de caracterização e pelo roadmap.
-
-Os diretórios `app/backend` e `app/frontend` foram criados como fronteiras-alvo. Seus manifests e dependências-base já existem; os scripts adaptam as ferramentas de cada ecossistema ao grafo do Turbo. Os scaffolds de aplicação ainda serão adicionados na implementação, portanto tarefas que dependem de código-fonte só passam a ser executáveis nessa etapa.
+O monólito Flask e seus módulos síncronos de serviço foram retirados do runtime. A
+SPA React em `app/frontend` e a API FastAPI em `app/backend` são executadas como
+workspaces independentes e orquestradas pelo Turborepo.
 
 ## Consequências positivas
 

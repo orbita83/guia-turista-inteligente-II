@@ -7,20 +7,22 @@ Esta arquitetura moderniza o Guia do Turista Inteligente, separando a interface 
 **Estado:** Fonte, com organização derivada para orientar a implementação.  
 **Rastreabilidade:** [Visão Geral](../modulo-guia-turista-inteligente.md#1-visão-geral), [Arquitetura de Microsserviços](../modulo-guia-turista-inteligente.md#13-arquitetura-de-microsserviços) e [Estrutura dos Projetos](../modulo-guia-turista-inteligente.md#2-estrutura-dos-projetos).
 
+**Runtime migrado:** React em `app/frontend` consome JSON da API FastAPI em
+`app/backend` com cookie de sessão assinado. A tabela e os diagramas abaixo também
+registram alvos globais futuros; mapa dedicado, SSE, altimetria, custos, GPX,
+compartilhamento e métricas não fazem parte da migração atual.
+
 ## Contexto do sistema
 
 ```mermaid
 flowchart LR
     U[Pessoa viajante] --> SPA[SPA React 19 + TypeScript<br>Vite+ • porta 5173]
-    SPA -->|JSON + X-User-Id| API[API FastAPI / ASGI<br>porta 8001]
+    SPA -->|JSON + cookie de sessão| API[API FastAPI / ASGI<br>porta 8001]
     API --> METEO[Open-Meteo]
     API --> OSRM[OSRM]
-    API --> ELEV[Open-Elevation]
     API --> GEMINI[Google Gemini]
     API --> STORE[(Arquivo JSON<br>isolado por usuário)]
-    API -->|SSE| SPA
-    SPA --> MAP[Leaflet / navegador]
-    SPA --> OUT[Google Maps / WhatsApp / GPX]
+    SPA --> OUT[Google Maps]
 ```
 
 ## Contêineres
@@ -40,8 +42,8 @@ Backend e frontend são aplicações independentes dentro de um único monorepo 
 2. **Contratos antes da implementação — Fonte:** Pydantic v2 valida entradas; OpenAPI 3.1 publica contratos em `/docs` e `/redoc`.
 3. **I/O não bloqueante — Fonte:** integrações externas usam `httpx.AsyncClient` compartilhado e `asyncio.gather()`.
 4. **Degradação controlada — Fonte:** cache, circuit breakers e fallbacks reduzem o impacto de provedores indisponíveis.
-5. **Identidade explícita — Fonte:** `X-User-Id` isola histórico e operações por usuário.
-6. **Observabilidade embutida — Fonte:** `X-Process-Time`, `X-Request-ID`, probes e métricas Prometheus fazem parte da solução.
+5. **Identidade explícita — Implementação:** cookie de sessão assinado isola histórico e operações por usuário; `X-User-Id` não autentica chamadas.
+6. **Observabilidade operacional — Implementação:** `X-Process-Time`, `X-Request-ID` e probes; métricas Prometheus permanecem como alvo futuro.
 7. **Fonte única de estado na interface — Fonte + decisão aprovada:** `App.tsx` e hooks coordenam formulário, mapa, resultados e histórico.
 
 ## Fluxo principal de planejamento

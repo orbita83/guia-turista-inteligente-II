@@ -4,30 +4,28 @@
 
 ## Subida local
 
-Quando os dois workspaces estiverem implementados, a execução integrada partirá da raiz:
+Execute os dois workspaces pela raiz do monorepo:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Durante a migração, os processos também podem ser iniciados separadamente:
+Os processos também podem ser iniciados separadamente:
 
 ### Terminal 1 — backend
 
 ```bash
-cd app/backend
-uvicorn app.main:app --reload --port 8001
+npm run dev --workspace @guia/backend
 ```
 
 ### Terminal 2 — frontend
 
 ```bash
-cd app/frontend
-npm run dev
+npm run dev --workspace @guia/frontend
 ```
 
-O script executa `vp dev`. Também é possível usar `npm exec -- vp dev` para chamar diretamente a versão local.
+O script do frontend executa Vite+; o script do backend inicia Uvicorn via `uv`.
 
 ## Verificação rápida
 
@@ -35,19 +33,13 @@ O script executa `vp dev`. Também é possível usar `npm exec -- vp dev` para c
 2. Abrir `http://localhost:8001/readyz` e confirmar prontidão.
 3. Abrir `http://localhost:8001/docs` e conferir rotas carregadas.
 4. Abrir `http://localhost:5173` e executar planejamento mínimo.
-5. Conferir `X-Process-Time`, Correlation-ID, mapa e término do SSE.
-6. Verificar métricas em `http://localhost:8001/metrics`.
+5. Conferir `X-Process-Time`, `X-Request-ID` e os fluxos existentes de histórico e exportação JSON.
 
 ## Testes e análise estática
 
 ```bash
-# backend
-pytest tests/ -v
-
-# frontend
 npm run check
 npm test
-npm run lint
 npm run build
 ```
 
@@ -59,10 +51,9 @@ npm run build
 | SPA não chama API | URL configurada e console/rede | corrigir URL/CORS |
 | Login Google falha | Client ID e origem autorizada | revisar configuração OAuth |
 | Guia não inicia | chave Gemini, logs e circuit breaker | corrigir segredo ou aguardar recuperação |
-| Stream fica pendente | evento `done`, proxy buffering e desconexão | revisar gerador/headers |
-| Rota/clima degradado | status dos provedores e métricas | acionar fallback/circuit breaker |
+| Rota/clima degradado | resposta de fallback e logs do backend | conferir disponibilidade dos provedores |
 | `409` persistente | conjunto de requisições ativas e bloco `finally` | confirmar liberação do lock |
-| Histórico incorreto | `X-User-Id` e arquivo de storage | verificar isolamento por usuário |
+| Histórico incorreto | cookie de sessão e arquivo de storage | verificar isolamento por usuário |
 | `422` | corpo e erros do Pydantic | corrigir campos/UF do payload |
 
 ## Encerramento
@@ -76,7 +67,7 @@ npm run build
 Antes de homologação/produção, definir:
 
 - processo de build e publicação;
-- servidor/proxy e política de SSE sem buffering;
+- servidor/proxy e domínios da API;
 - armazenamento durável concorrente;
 - HTTPS, domínios e CORS;
 - secrets manager;

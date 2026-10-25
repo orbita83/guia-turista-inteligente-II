@@ -54,7 +54,7 @@ app/backend/
 └── .env.example                      # Modelo sem segredos; pode ser versionado
 ```
 
-**Estado da árvore:** os módulos e testes representam a estrutura descrita pela fonte e o destino arquitetural. O workspace contém atualmente os manifests e as dependências; os arquivos de aplicação, testes e dados serão criados durante a implementação. `.env` é configuração local e deve permanecer fora do controle de versão.
+**Estado da árvore:** a aplicação FastAPI, os dados de referência e os testes estão em `app/backend`. O backend é dono de `app/backend/static/data/viagens.json`; no primeiro startup, se esse arquivo não existir e o arquivo antigo `static/data/viagens.json` estiver presente, a API valida a estrutura e copia os dados sem remover a origem. A origem fica preservada como backup.
 
 ## Organização por camadas
 
@@ -144,9 +144,10 @@ Os passos 1 a 4 são explícitos ou diretamente derivados da fonte. O encerramen
 ## Persistência
 
 - **Fonte:** viagens são agrupadas pelo identificador do usuário em `viagens.json`.
-- **Fonte:** gravações usam mecanismo thread-safe, escrita atômica e file lock.
+- **Monólito:** gravações usam lock de thread. **API reorganizada:** usa lock de thread e substituição atômica do arquivo.
 - **Fonte:** novas viagens podem ser persistidas via `BackgroundTasks` após a resposta.
 - **Derivado:** leitura e exclusão devem usar a mesma disciplina de sincronização para não observar estado parcial.
+- **Transição:** como os locks das duas aplicações não são compartilhados entre processos, não executar simultaneamente operações de escrita nas duas aplicações até que o adaptador legado seja aposentado ou ambas usem um lock interprocesso comum.
 - **Questão em aberto:** formato, versionamento, limite de tamanho e política de retenção do arquivo.
 
 ## Fronteiras de responsabilidade

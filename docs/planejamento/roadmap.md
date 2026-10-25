@@ -6,9 +6,18 @@ Evoluir a implementação Flask/SSR atual para dois projetos independentes: back
 
 Este roadmap organiza dependências de entrega; não representa estimativas de calendário.
 
-## Estado de partida observado
+## Estado da reorganização atual
 
-| Área | Estado atual no repositório | Destino documentado |
+O recorte de migração solicitado está implementado: a interface React em
+`app/frontend` consome a API FastAPI em `app/backend`, e os fluxos que existiam no
+monólito foram migrados sem habilitar recursos descritos apenas como alvos futuros.
+O SSR Flask e seus arquivos de apresentação foram aposentados. As fases abaixo que
+descrevem mapa dedicado, custos, SSE, GPX, compartilhamento, catálogo e telemetria
+continuam sendo referências futuras, fora do escopo desta migração.
+
+## Baseline do monólito e arquitetura-alvo
+
+| Área | Comportamento de origem | Destino documentado |
 | --- | --- | --- |
 | Aplicação web | Flask com Jinja2 em `app.py` e `templates/` | SPA React 19 + TypeScript + Vite+ independente |
 | Integrações | Chamadas síncronas com `httpx.Client` em `services.py` | Serviços assíncronos com `httpx.AsyncClient` compartilhado |
