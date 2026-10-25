@@ -44,9 +44,9 @@ app/*/coverage/
 .env
 .env.*
 !.env.example
+/app/backend/static/data/viagens.json
 
-# Configuração local e logs do Flask
-/instance/
+# Configuração local e logs
 *.log
 
 # Arquivos pessoais de editores; configurações compartilhadas continuam permitidas
@@ -64,3 +64,7 @@ app/*/coverage/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Skills locais instaladas por ferramentas de agentes
+/.agents/
+/skills-lock.json
