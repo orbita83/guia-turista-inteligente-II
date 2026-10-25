@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "python -m uvicorn app.main:app --reload --port 8001",
-    "check": "python -m ruff check . && python -m mypy .",
-    "lint": "python -m ruff check .",
-    "test": "python -m pytest",
-    "build": "python -m compileall -q app"
+    "dev": "uv run --with-requirements requirements.lock python -m uvicorn app.main:app --reload --port 8001",
+    "check": "uv run --with-requirements requirements.lock python -m ruff check . && uv run --with-requirements requirements.lock python -m mypy .",
+    "lint": "uv run --with-requirements requirements.lock python -m ruff check .",
+    "test": "uv run --with-requirements requirements.lock python -m pytest",
+    "build": "uv run --with-requirements requirements.lock python -m compileall -q app"
   }
 }
 

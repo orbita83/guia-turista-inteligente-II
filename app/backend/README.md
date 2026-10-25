@@ -1,10 +1,34 @@
 # Backend
 
-Destino da API FastAPI/ASGI do monorepo.
+API FastAPI/ASGI do monorepo. Responsável por sessão, planejamento de roteiros,
+integrações, persistência e contratos consumidos pela SPA.
 
-O backend Flask atual permanece temporariamente na raiz. A migração para este diretório ocorrerá por capacidades verticais, conforme o [roadmap](../../docs/planejamento/roadmap.md), sem apagar a baseline antes da cobertura de caracterização.
+## Execução
 
-O `package.json` privado deste workspace já fornece scripts de adaptação para o Turborepo orquestrar comandos Python (`dev`, `check`, `lint`, `test` e `build`) sem transformar o backend em um pacote JavaScript.
+Com `uv` instalado, execute na raiz do monorepo:
 
-As dependências de execução estão em `requirements.txt`, as ferramentas de desenvolvimento em `requirements-dev.txt` e o ambiente validado está registrado em `requirements.lock`. O scaffold FastAPI e seus testes serão adicionados na etapa de implementação.
+```powershell
+npm run dev
+```
+
+O Turborepo executa esta API em `http://localhost:8001` junto com o frontend em
+`http://localhost:5173`. Para executar somente o backend:
+
+```powershell
+npm run dev --workspace @guia/backend
+```
+
+Os comandos do workspace usam `requirements.lock` com `uv run`, sem exigir ativação
+manual de ambiente virtual. O arquivo `.env` da raiz fornece `GEMINI_API_KEY`,
+`GOOGLE_CLIENT_ID` e `SECRET_KEY`. A API publica OpenAPI em `/docs`, health em
+`/healthz` e readiness em `/readyz`.
+
+## Estrutura
+
+- `app/main.py`: aplicação, ciclo de vida e middleware;
+- `app/routers/`: fronteiras HTTP de autenticação e roteiros;
+- `app/schemas/`: modelos de request/response;
+- `app/services/`: casos de uso e integrações;
+- `app/core/`: configuração, dependências e persistência;
+- `tests/`: testes de serviço e contrato HTTP.
 

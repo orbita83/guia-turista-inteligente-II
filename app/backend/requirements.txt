@@ -9,4 +9,5 @@ filelock
 python-multipart
 orjson
 email-validator
+itsdangerous
 
