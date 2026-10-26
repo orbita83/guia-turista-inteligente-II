@@ -68,3 +68,8 @@ Desktop.ini
 # Skills locais instaladas por ferramentas de agentes
 /.agents/
 /skills-lock.json
+
+# Desenvolvimento
+/.specify
+/specs
+AGENTS.md
