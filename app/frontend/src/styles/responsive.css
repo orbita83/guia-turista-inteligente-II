@@ -96,6 +96,26 @@
   .guia-texto {
     font-size: 0.92rem;
   }
+
+  .telemetry-heading h2 {
+    font-size: 1.4rem;
+  }
+  .telemetry-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    max-width: 1320px;
+  }
+
+  .planning-layout-with-telemetry {
+    grid-template-columns: minmax(0, 1.62fr) minmax(340px, 1fr);
+    align-items: start;
+    gap: 1.4rem;
+  }
 }
 
 @media (max-width: 639px) {
@@ -104,6 +124,26 @@
     right: 0.85rem;
     left: 0.85rem;
     width: auto;
+  }
+
+  .telemetry-details > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+  .telemetry-correlation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .telemetry-copy {
+    width: 100%;
+  }
+  .telemetry-providers li > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .telemetry-state {
+    text-align: left;
   }
 }
 
