@@ -2,6 +2,26 @@
 
 ## Observabilidade no frontend
 
+### Estado implementado do painel
+
+O frontend implementa `TelemetriaCard` sem endpoint novo, polling ou persistência.
+O painel permanece oculto até a primeira tentativa, mede o tempo total com
+`performance.now()` e lê defensivamente `X-Process-Time` e `X-Request-ID` somente
+na resposta de planejamento. O snapshot fica em memória e é removido antes de
+login, entrada como visitante ou logout.
+
+Na tela autenticada, formulário e telemetria compartilham uma faixa: o formulário
+fica à esquerda e o `aside` do painel à direita em desktop. O `aside` só é montado
+após a primeira tentativa; abaixo do breakpoint desktop os blocos empilham nessa
+ordem.
+
+São dados reais nesta entrega: Tempo total, Tempo da API, rota, identidade de
+exibição, contagem de roteiros do usuário e evidências presentes na resposta para
+Open-Meteo, OSRM e Gemini. Processamento interno, rede externa, RTT, tipo de rede,
+uptime, conexões ativas, total do sistema, Open-Elevation e durações por provedor
+ficam explicitamente **Indisponíveis** ou **Desconhecidos**. `navigator.onLine`
+descreve apenas o indício do navegador e não a saúde da API.
+
 `TelemetriaCard` deve apresentar, após consulta:
 
 - usuário/identidade ativa de maneira apropriada;
@@ -58,6 +78,10 @@ timers e toasts. Segredos e dados pessoais reais não entram em fixtures ou snap
 11. Links/GPX usam somente a rota ativa, inclusive após novo planejamento.
 12. Temas, teclado, foco, contraste e redução de movimento são verificados.
 13. Telemetria diferencia tempo do servidor, tempo total e primeiro chunk.
+14. Telemetria ignora resposta antiga, preserva snapshot anterior em falha e limpa
+    imediatamente os dados ao trocar identidade.
+15. Correlação aparece mascarada; a cópia integral ocorre somente por ação explícita
+    e anuncia sucesso ou falha.
 
 ### Gates
 
