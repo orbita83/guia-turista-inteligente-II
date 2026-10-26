@@ -13,7 +13,22 @@ import {
   listarViagens,
   type SessionResponse,
 } from '../services/api';
-import type { RoteiroFormData, ToastMessage, Viagem } from '../types/domain';
+import {
+  connectivityCondition,
+  copyRequestId,
+  providerDiagnostics,
+  safeRoute,
+  serviceCondition,
+  sessionSummary,
+} from '../services/telemetry';
+import type {
+  RoteiroFormData,
+  TelemetryPanelState,
+  TelemetrySnapshot,
+  ToastMessage,
+  Viagem,
+} from '../types/domain';
+import { useNetworkStatus } from './useNetworkStatus';
 
 interface AppData extends SessionResponse {
   viagens: Viagem[];
@@ -38,6 +53,7 @@ function routeLabel(city: string, state: string): string {
 }
 
 export function useApp() {
+  const networkStatus = useNetworkStatus();
   const [data, setData] = useState<AppData>(EMPTY_DATA);
   const [initialLoading, setInitialLoading] = useState(true);
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -45,7 +61,9 @@ export function useApp() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingRoute, setPendingRoute] = useState<PendingRoute | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [telemetryState, setTelemetryState] = useState<TelemetryPanelState>({ kind: 'hidden' });
   const toastSequence = useRef(0);
+  const attemptSequence = useRef(0);
 
   const addToast = useCallback((message: string, type: ToastMessage['tipo'] = 'erro') => {
     toastSequence.current += 1;
@@ -89,6 +107,10 @@ export function useApp() {
 
   const runSessionAction = useCallback(
     async (action: () => Promise<unknown>) => {
+      attemptSequence.current += 1;
+      setTelemetryState({ kind: 'hidden' });
+      setIsSubmitting(false);
+      setPendingRoute(null);
       setSessionLoading(true);
       try {
         await action();
@@ -104,17 +126,47 @@ export function useApp() {
 
   const submitTrip = useCallback(
     async (form: RoteiroFormData) => {
-      setPendingRoute({
-        origem: routeLabel(form.origem_cidade, form.origem_uf),
-        destino: routeLabel(form.destino_cidade, form.destino_uf),
+      attemptSequence.current += 1;
+      const attemptId = attemptSequence.current;
+      const route = safeRoute(
+        routeLabel(form.origem_cidade, form.origem_uf),
+        routeLabel(form.destino_cidade, form.destino_uf),
+      );
+      let previous: TelemetrySnapshot | undefined;
+      setTelemetryState((current) => {
+        previous =
+          current.kind === 'settled'
+            ? current.snapshot
+            : current.kind === 'loading' || current.kind === 'error'
+              ? current.previous
+              : undefined;
+        return { kind: 'loading', attemptId, route, previous };
       });
+      setPendingRoute({ origem: route.origin, destino: route.destination });
       setIsSubmitting(true);
       try {
         const result = await criarViagem(form);
+        if (attemptId !== attemptSequence.current) return;
+        const usuario = data.usuario;
+        if (!usuario) return;
+        const snapshot: TelemetrySnapshot = {
+          attemptId,
+          sessionIdentityId: usuario.id,
+          recordedAt: new Date().toISOString(),
+          route,
+          ...result.metadata,
+          providers: providerDiagnostics(result.viagem),
+          session: sessionSummary(usuario, data.viagens.length + 1),
+          service: serviceCondition(true),
+          connectivity: connectivityCondition(networkStatus),
+        };
+        setTelemetryState({ kind: 'settled', snapshot });
         await reload();
         if (result.aviso) addToast(result.aviso, 'info');
         else addToast('Roteiro atualizado com sucesso.', 'sucesso');
       } catch (error: unknown) {
+        if (attemptId !== attemptSequence.current) return;
+        setTelemetryState({ kind: 'error', attemptId, route, previous });
         if (error instanceof ApiError && error.status === 409) {
           addToast(error.message, 'info');
         } else {
@@ -122,11 +174,13 @@ export function useApp() {
         }
         throw new Error('Falha ao gerar roteiro.');
       } finally {
-        setIsSubmitting(false);
-        setPendingRoute(null);
+        if (attemptId === attemptSequence.current) {
+          setIsSubmitting(false);
+          setPendingRoute(null);
+        }
       }
     },
-    [addToast, reload],
+    [addToast, data.usuario, data.viagens.length, networkStatus, reload],
   );
 
   const deleteTrip = useCallback(
@@ -153,6 +207,9 @@ export function useApp() {
     isSubmitting,
     deletingId,
     pendingRoute,
+    telemetryState,
+    connectivity: connectivityCondition(networkStatus),
+    copyTelemetryRequestId: copyRequestId,
     jsonUrl: API_TRIPS_URL,
     dismissToast: (id: string) =>
       setToasts((current) => current.filter((toast) => toast.id !== id)),
