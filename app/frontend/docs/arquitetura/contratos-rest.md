@@ -49,6 +49,22 @@ O backend sanitiza nomes de cidades e preserva o formato existente de viagem:
 `diagnostico_ia`. Cidades vazias retornam `422`; repetição ativa ou dentro do
 cooldown de quatro segundos retorna `409`.
 
+## Histórico e validação de fronteira
+
+Esta documentação descreve apenas o consumo frontend dos endpoints existentes; não
+é especificação de implementação backend. Campos ausentes ficam visíveis com texto
+provisório amigável como “Aguardando dados”.
+
+O frontend valida o envelope `{ viagens }` e cada item antes de atualizar o estado.
+Itens sem `id` são descartados; origem, destino, temperatura, duração e distância
+ausentes, vazios ou `N/D` são apresentados como “Aguardando dados”. A resposta de
+planejamento entra imediatamente como card e é deduplicada por `id`. A UI comunica
+pendência ou confirmação apenas conforme os sinais já oferecidos pela API; não
+presume gravação em segundo plano.
+
+Troca ou encerramento de sessão invalida consultas e ações pendentes. A exclusão só
+remove o card após `204`; qualquer falha preserva o item e produz feedback acionável.
+
 ## Itens fora do escopo atual
 
 Mapa dedicado, SSE, custos, altimetria, visitas, GPX, compartilhamento, métricas de

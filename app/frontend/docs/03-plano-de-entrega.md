@@ -23,10 +23,27 @@ uptime, conexões, totais sistêmicos, elevação e duração por provedor — p
 indisponíveis. A disponibilidade mostrada é sempre relativa à última operação, e
 não monitoramento em tempo real.
 
-Na tela autenticada, formulário e telemetria compartilham uma faixa: o formulário
-fica à esquerda e o `aside` do painel à direita a partir de 1024 px. Antes da
-primeira tentativa, não há coluna reservada; abaixo desse breakpoint, formulário e
-telemetria são empilhados nessa ordem.
+Na tela autenticada, o formulário fica à esquerda e o `aside` fica à direita a
+partir de 1024 px. O histórico ocupa o `aside` desde o carregamento da identidade; a
+telemetria passa a aparecer acima dele após a primeira tentativa, sem reservar um
+card vazio antes disso. Abaixo do breakpoint, formulário, telemetria disponível e
+histórico são empilhados nessa ordem.
+
+### Incremento concluído: histórico e persistência de viagens
+
+> Correção aprovada do escopo desta tarefa: a entrega é somente frontend. Descrições
+> abaixo de implementação de backend/background/storage não são parte desta feature.
+
+`UC-HIS-001` e a parte visual de `RF-HIS-001`–`003` foram implementados no frontend,
+consumindo os contratos existentes. Esta tarefa não alterou backend, armazenamento,
+autenticação ou endpoints.
+
+“Viagens Salvas” ocupa o `aside` abaixo da telemetria em desktop e empilha depois do
+planejador em telas estreitas. O componente valida JSON em runtime, mantém campos
+ausentes visíveis com mensagens como “Aguardando dados”, preserva a viagem retornada
+durante reconciliação, evita duplicidade e remove localmente após sucesso observável
+da API, sem reload da SPA. Paginação, retenção e confirmação modal continuam fora do
+escopo. Persistência não confirmada não é apresentada como sucesso.
 
 ## Ordem de implementacao
 
@@ -129,7 +146,7 @@ O frontend estará concluído quando:
 | --- | --- | --- |
 | Bloqueante | Schemas completos de planejamento, mapa, custos, histórico e autenticação | tipos, formulários, adapters e testes contratuais |
 | Bloqueante | Métodos/caminhos finais de custos, GPX, compartilhamento, autenticação e telemetria | cliente HTTP e fluxos de ação |
-| Bloqueante | Modelo confiável de autenticação/autorização além de `X-User-Id` | sessão, headers e isolamento de dados |
+| Resolvido para o escopo atual | Sessão assinada substitui `X-User-Id` como identidade confiável | histórico isolado e proteção contra spoofing |
 | Bloqueante | Domínios e limites de dias, perfil, veículo e passageiros | validação, controles e mensagens |
 | Alta | Interpretação do limiar de `400 km` | sugestões por geolocalização |
 | Alta | Semântica de respostas parciais/fallback por provedor | estados degradados e conteúdo disponível |
