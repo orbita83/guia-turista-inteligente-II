@@ -303,6 +303,8 @@ export function RoteiroForm({
             </p>
           ) : null}
 
+          {/* TODO(backend): mostrar o catálogo real quando houver fonte de municípios;
+              a lista de UFs da sessão, sozinha, não preenche o datalist de cidades. */}
           <p
             className={`catalog-status${catalogoDisponivel ? '' : ' is-unavailable'}`}
             role="status"
@@ -325,6 +327,8 @@ export function RoteiroForm({
                 {suggestionStatus === 'loading' ? 'Localizando…' : '⌖ Usar minha localização'}
               </button>
             </div>
+            {/* TODO(backend): preencher sugestoes e suggestionStatus com destinos e distâncias
+                reais após a integração do contrato de recomendação por localização. */}
             {suggestionStatus === 'available' && sugestoes.length > 0 ? (
               <div className="suggestion-list">
                 {sugestoes.map((sugestao) => {

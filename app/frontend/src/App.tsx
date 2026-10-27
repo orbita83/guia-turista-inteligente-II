@@ -49,6 +49,8 @@ export function App() {
             <UserBar usuario={data.usuario} isBusy={sessionLoading} onLogout={logout} />
             <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
+                {/* TODO(backend): ligar o catálogo de municípios e as sugestões por GPS
+                    quando a API expuser esses dados; o formulário já aceita ambos por props. */}
                 <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
               </section>
               <aside className="planning-aside" aria-label="Painéis da viagem">
