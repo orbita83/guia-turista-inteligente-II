@@ -16,6 +16,11 @@ fica à esquerda e o `aside` do painel à direita em desktop. O `aside` é monta
 a sessão; abaixo do breakpoint desktop os blocos empilham nessa
 ordem.
 
+O quadro “Status da API” consulta o `GET /healthz` existente ao iniciar a sessão e
+quando a conectividade do navegador muda. Mostra “ONLINE” apenas quando o retorno
+é `{ status: "ok" }`; sem confirmação mostra estado inconclusivo. É uma verificação
+pontual, não monitoramento contínuo nem indicação da saúde dos provedores.
+
 São dados reais nesta entrega: Tempo total, Tempo da API, rota, identidade de
 exibição, contagem de roteiros do usuário e evidências presentes na resposta para
 Open-Meteo, OSRM e Gemini. Processamento interno, rede externa, RTT, tipo de rede,

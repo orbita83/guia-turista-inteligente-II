@@ -5,7 +5,6 @@ import type {
   ConnectivityCondition,
   ProviderName,
   ProviderState,
-  ServiceCondition,
   TelemetryPanelState,
   TelemetrySnapshot,
 } from '../types/domain';
@@ -18,6 +17,7 @@ import {
 
 interface TelemetriaCardProps {
   state: TelemetryPanelState;
+  apiHealthStatus: 'checking' | 'online' | 'unavailable';
   onCopyRequestId: (requestId: string) => Promise<boolean>;
   connectivity?: ConnectivityCondition;
 }
@@ -36,12 +36,6 @@ const providerStates: Record<ProviderState, string> = {
   unknown: 'Sem dados',
 };
 
-function serviceLabel(service?: ServiceCondition): string {
-  if (service?.state === 'available-last-request') return 'Disponível na última solicitação';
-  if (service?.state === 'failed-last-request') return 'Falhou na última solicitação';
-  return 'Aguardando dados';
-}
-
 function connectivityLabel(connectivity?: ConnectivityCondition): string {
   if (connectivity?.state === 'online') return 'Online (indício do navegador)';
   if (connectivity?.state === 'offline') return 'Offline (indício do navegador)';
@@ -57,7 +51,12 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: s
   );
 }
 
-export function TelemetriaCard({ state, connectivity, onCopyRequestId }: TelemetriaCardProps) {
+export function TelemetriaCard({
+  state,
+  apiHealthStatus,
+  connectivity,
+  onCopyRequestId,
+}: TelemetriaCardProps) {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const snapshot: TelemetrySnapshot | undefined =
     state.kind === 'settled'
@@ -249,14 +248,23 @@ export function TelemetriaCard({ state, connectivity, onCopyRequestId }: Telemet
             <dl className="telemetry-service-grid">
               <Metric
                 label="Status da API"
-                value={serviceLabel(snapshot?.service)}
-                tone={snapshot?.service.state === 'available-last-request' ? 'server' : undefined}
+                value={
+                  apiHealthStatus === 'online'
+                    ? 'ONLINE'
+                    : apiHealthStatus === 'checking'
+                      ? 'Verificando…'
+                      : 'Sem confirmação'
+                }
+                tone={apiHealthStatus === 'online' ? 'server' : undefined}
               />
               {/* TODO(backend): consumir uptime da API operacional quando houver campo estável no contrato. */}
               <Metric label="Uptime backend" value="Aguardando dados" />
               {/* TODO(backend): consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
               <Metric label="Roteiros totais" value="Aguardando dados" />
             </dl>
+            <p className="telemetry-health-note">
+              Status da API: última verificação de /healthz; não é monitoramento contínuo.
+            </p>
             <p className="telemetry-provider-summary">
               Provedores concorrentes:{' '}
               {snapshot

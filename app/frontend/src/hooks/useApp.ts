@@ -10,6 +10,7 @@ import {
   entrarComoVisitante,
   excluirViagem,
   listarViagens,
+  verificarSaudeApi,
   type SessionResponse,
 } from '../services/api';
 import {
@@ -74,6 +75,9 @@ export function useApp() {
   const [persistenceById, setPersistenceById] = useState<Record<string, PersistenceStatus>>({});
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [telemetryState, setTelemetryState] = useState<TelemetryPanelState>({ kind: 'hidden' });
+  const [apiHealthStatus, setApiHealthStatus] = useState<'checking' | 'online' | 'unavailable'>(
+    'checking',
+  );
   const toastSequence = useRef(0);
   const attemptSequence = useRef(0);
   const sessionGeneration = useRef(0);
@@ -170,6 +174,23 @@ export function useApp() {
     if (networkStatus === 'offline') setHistoryStatus('offline');
     else setHistoryStatus((current) => (current === 'offline' ? 'ready' : current));
   }, [data.usuario, networkStatus]);
+
+  useEffect(() => {
+    if (!data.usuario?.id) {
+      setApiHealthStatus('checking');
+      return;
+    }
+    const controller = new AbortController();
+    setApiHealthStatus('checking');
+    verificarSaudeApi(controller.signal)
+      .then((healthy) => {
+        if (!controller.signal.aborted) setApiHealthStatus(healthy ? 'online' : 'unavailable');
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setApiHealthStatus('unavailable');
+      });
+    return () => controller.abort();
+  }, [data.usuario?.id, networkStatus]);
 
   const runSessionAction = useCallback(
     async (action: () => Promise<unknown>) => {
@@ -356,6 +377,7 @@ export function useApp() {
     historyError,
     persistenceById,
     telemetryState,
+    apiHealthStatus,
     connectivity: connectivityCondition(networkStatus),
     copyTelemetryRequestId: copyRequestId,
     dismissToast: (id: string) =>

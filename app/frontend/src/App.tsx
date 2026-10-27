@@ -22,6 +22,7 @@ export function App() {
     historyError,
     persistenceById,
     telemetryState,
+    apiHealthStatus,
     connectivity,
     copyTelemetryRequestId,
     dismissToast,
@@ -53,6 +54,7 @@ export function App() {
               <aside className="planning-aside" aria-label="Painéis da viagem">
                 <TelemetriaCard
                   state={telemetryState}
+                  apiHealthStatus={apiHealthStatus}
                   connectivity={connectivity}
                   onCopyRequestId={copyTelemetryRequestId}
                 />

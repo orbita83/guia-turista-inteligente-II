@@ -14,7 +14,13 @@ import {
 import { TelemetriaCard } from './TelemetriaCard';
 
 const renderPanel = (state = settledTelemetryFixture()) =>
-  render(<TelemetriaCard state={state} onCopyRequestId={vi.fn(async () => true)} />);
+  render(
+    <TelemetriaCard
+      state={state}
+      apiHealthStatus="online"
+      onCopyRequestId={vi.fn(async () => true)}
+    />,
+  );
 
 describe('TelemetriaCard', () => {
   it('aparece antes da primeira viagem com uma orientação apropriada', () => {
@@ -40,6 +46,8 @@ describe('TelemetriaCard', () => {
     expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
+    expect(screen.getByText('Status da API').nextElementSibling).toHaveTextContent('ONLINE');
+    expect(screen.getByText(/última verificação de \/healthz/)).toBeInTheDocument();
     expect(screen.getByText('Pessoa visitante')).toBeInTheDocument();
     expect(screen.getByText('Temporária (visitante)')).toBeInTheDocument();
     expect(screen.getByText('Conectividade do navegador').nextElementSibling).toHaveTextContent(
@@ -68,11 +76,25 @@ describe('TelemetriaCard', () => {
     expect(screen.getAllByText('Sem dados')[0].closest('li')).toHaveTextContent('Open-Meteo');
   });
 
+  it('não declara a API offline quando a verificação não foi confirmada', () => {
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture()}
+        apiHealthStatus="unavailable"
+        onCopyRequestId={vi.fn(async () => true)}
+      />,
+    );
+    expect(screen.getByText('Status da API').nextElementSibling).toHaveTextContent(
+      'Sem confirmação',
+    );
+  });
+
   it('mantém a medição anterior durante uma nova tentativa e em erro', () => {
     const previous = telemetrySnapshotFixture();
     const { rerender } = render(
       <TelemetriaCard
         state={loadingTelemetryFixture({ attemptId: 2, previous })}
+        apiHealthStatus="online"
         onCopyRequestId={vi.fn(async () => true)}
       />,
     );
@@ -84,6 +106,7 @@ describe('TelemetriaCard', () => {
     rerender(
       <TelemetriaCard
         state={errorTelemetryFixture({ attemptId: 2, previous })}
+        apiHealthStatus="online"
         onCopyRequestId={vi.fn(async () => true)}
       />,
     );
@@ -105,7 +128,13 @@ describe('TelemetriaCard', () => {
   it('mascara e copia o identificador apenas por ação explícita', async () => {
     const user = userEvent.setup();
     const copy = vi.fn(async () => true);
-    render(<TelemetriaCard state={settledTelemetryFixture()} onCopyRequestId={copy} />);
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture()}
+        apiHealthStatus="online"
+        onCopyRequestId={copy}
+      />,
+    );
     expect(screen.getByText('abcd1234…9ef0')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Copiar identificador de correlação' }));
     expect(copy).toHaveBeenCalledWith('abcd1234-5678-90ef-abcd-123456789ef0');

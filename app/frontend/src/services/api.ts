@@ -42,6 +42,15 @@ export class ApiContractError extends Error {
 
 const UNAVAILABLE = 'Aguardando dados';
 
+/** Verifica apenas a saúde do processo da API; não representa provedores externos. */
+export async function verificarSaudeApi(signal?: AbortSignal): Promise<boolean> {
+  const healthUrl = `${API_BASE_URL.replace(/\/api\/v1$/, '')}/healthz`;
+  const response = await fetch(healthUrl, { signal, headers: { Accept: 'application/json' } });
+  if (!response.ok) return false;
+  const payload: unknown = await response.json();
+  return recordValue(payload)?.status === 'ok';
+}
+
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)

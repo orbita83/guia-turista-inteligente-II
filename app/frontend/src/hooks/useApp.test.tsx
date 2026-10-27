@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
   entrarComoVisitante: vi.fn(),
   encerrarSessao: vi.fn(),
   excluirViagem: vi.fn(),
+  verificarSaudeApi: vi.fn(),
 }));
 
 vi.mock('../services/api', async (importOriginal) => {
@@ -70,6 +71,7 @@ describe('useApp telemetry lifecycle', () => {
     vi.clearAllMocks();
     api.carregarSessao.mockResolvedValue({ usuario, google_client_id: '', ufs: ['PE'] });
     api.listarViagens.mockResolvedValue({ viagens: [] });
+    api.verificarSaudeApi.mockResolvedValue(true);
   });
 
   it('moves from hidden to loading and settled', async () => {

@@ -63,6 +63,9 @@ describe('App', () => {
         if (url.endsWith('/roteiros/minhas-viagens')) {
           return Response.json({ viagens: [] });
         }
+        if (url.endsWith('/healthz')) {
+          return Response.json({ status: 'ok' });
+        }
         if (url.endsWith('/roteiros/planejar')) {
           return Response.json(
             { viagem },
@@ -94,6 +97,7 @@ describe('App', () => {
     expect(
       await screen.findByRole('region', { name: 'Telemetria & Desempenho' }),
     ).toBeInTheDocument();
+    expect(await screen.findByText('ONLINE')).toBeInTheDocument();
     const planner = screen.getByRole('region', { name: 'Planejamento da viagem' });
     const telemetryAside = screen.getByRole('complementary', { name: 'Painéis da viagem' });
     const planningLayout = document.querySelector('.planning-layout');

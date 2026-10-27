@@ -1,6 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { ApiContractError, ApiError, criarViagem, listarViagens } from './api';
+import { ApiContractError, ApiError, criarViagem, listarViagens, verificarSaudeApi } from './api';
+
+describe('saúde da API', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('confirma ONLINE somente com resposta ok de /healthz', async () => {
+    const fetchMock = vi.fn(async () => Response.json({ status: 'ok' }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(verificarSaudeApi()).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/healthz$/), expect.any(Object));
+
+    fetchMock.mockResolvedValueOnce(Response.json({ status: 'degraded' }));
+    await expect(verificarSaudeApi()).resolves.toBe(false);
+  });
+});
 
 const form = {
   origem_cidade: 'Recife',
