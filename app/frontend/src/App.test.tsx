@@ -82,10 +82,8 @@ describe('App', () => {
     expect(
       screen.queryByRole('region', { name: 'Telemetria e desempenho' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: 'Telemetria' })).not.toBeInTheDocument();
-    expect(document.querySelector('.planning-layout')).not.toHaveClass(
-      'planning-layout-with-telemetry',
-    );
+    expect(screen.getByRole('complementary', { name: 'Painéis da viagem' })).toBeInTheDocument();
+    expect(document.querySelector('.planning-layout')).toHaveClass('planning-layout-with-sidebar');
 
     await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
     await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
@@ -98,11 +96,13 @@ describe('App', () => {
       await screen.findByRole('region', { name: 'Telemetria e desempenho' }),
     ).toBeInTheDocument();
     const planner = screen.getByRole('region', { name: 'Planejamento da viagem' });
-    const telemetryAside = screen.getByRole('complementary', { name: 'Telemetria' });
+    const telemetryAside = screen.getByRole('complementary', { name: 'Painéis da viagem' });
     const planningLayout = document.querySelector('.planning-layout');
-    expect(planningLayout).toHaveClass('planning-layout-with-telemetry');
+    expect(planningLayout).toHaveClass('planning-layout-with-sidebar');
     expect(planningLayout?.firstElementChild).toBe(planner);
     expect(planningLayout?.lastElementChild).toBe(telemetryAside);
+    expect(telemetryAside.firstElementChild).toHaveClass('telemetry-panel');
+    expect(telemetryAside.lastElementChild).toHaveClass('history-panel');
     expect(await screen.findByText('Sessão e conexão')).toBeInTheDocument();
     expect(screen.getByText('Degradado')).toBeInTheDocument();
 

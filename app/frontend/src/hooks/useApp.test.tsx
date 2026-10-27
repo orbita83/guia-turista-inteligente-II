@@ -157,4 +157,60 @@ describe('useApp telemetry lifecycle', () => {
     pendingVisitor.resolve({ usuario: { ...usuario, id: 'user-2' } });
     await act(async () => visitorLogin);
   });
+
+  it('insere a viagem retornada sem recarregar sessão e remove localmente após exclusão', async () => {
+    api.criarViagem.mockResolvedValue(response(500));
+    api.listarViagens
+      .mockResolvedValueOnce({ viagens: [] })
+      .mockResolvedValue({ viagens: [viagem] });
+    api.excluirViagem.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+
+    await act(async () => result.current.submitTrip(form));
+    expect(result.current.data.viagens).toEqual([viagem]);
+    expect(api.carregarSessao).toHaveBeenCalledTimes(1);
+
+    const listCallsBeforeDelete = api.listarViagens.mock.calls.length;
+    await act(async () => result.current.deleteTrip('trip-1'));
+    expect(result.current.data.viagens).toEqual([]);
+    expect(api.listarViagens).toHaveBeenCalledTimes(listCallsBeforeDelete);
+  });
+
+  it('preserva a viagem quando a exclusão falha', async () => {
+    api.listarViagens.mockResolvedValue({ viagens: [viagem] });
+    api.excluirViagem.mockRejectedValue(new Error('offline'));
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.data.viagens).toEqual([viagem]));
+
+    await act(async () => result.current.deleteTrip('trip-1'));
+
+    expect(result.current.data.viagens).toEqual([viagem]);
+    expect(result.current.toasts.at(-1)?.mensagem).toMatch(/Não foi possível excluir/);
+  });
+
+  it('ignora uma listagem antiga depois da troca de identidade', async () => {
+    const oldTrips = deferred<{ viagens: (typeof viagem)[] }>();
+    const userB = { ...usuario, id: 'user-2', nome: 'Outra pessoa' };
+    const tripB = { ...viagem, id: 'trip-2', destino: 'Natal - RN' };
+    api.carregarSessao
+      .mockResolvedValueOnce({ usuario, google_client_id: '', ufs: ['PE'] })
+      .mockResolvedValueOnce({ usuario: userB, google_client_id: '', ufs: ['PE'] });
+    api.listarViagens
+      .mockReturnValueOnce(oldTrips.promise)
+      .mockResolvedValueOnce({ viagens: [tripB] });
+    api.entrarComoVisitante.mockResolvedValue({ usuario: userB });
+
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(api.listarViagens).toHaveBeenCalledTimes(1));
+
+    await act(async () => result.current.loginAsVisitor());
+    expect(result.current.data.usuario?.id).toBe('user-2');
+    expect(result.current.data.viagens).toEqual([tripB]);
+
+    oldTrips.resolve({ viagens: [viagem] });
+    await act(async () => Promise.resolve());
+    expect(result.current.data.usuario?.id).toBe('user-2');
+    expect(result.current.data.viagens).toEqual([tripB]);
+  });
 });
