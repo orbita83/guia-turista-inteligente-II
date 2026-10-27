@@ -103,6 +103,12 @@ img {
   min-width: 0;
 }
 
+.planning-aside {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
 .planning-column > .card,
 .planning-aside > .card {
   margin-bottom: 0;

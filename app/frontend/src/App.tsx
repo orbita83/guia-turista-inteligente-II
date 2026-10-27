@@ -1,7 +1,6 @@
 import {
   AppHeader,
   HistoricoViagens,
-  LoadingCard,
   LoginCard,
   RoteiroForm,
   TelemetriaCard,
@@ -13,13 +12,15 @@ import { useApp } from './hooks/useApp';
 export function App() {
   const {
     data,
-    jsonUrl,
     toasts,
     initialLoading,
     sessionLoading,
     isSubmitting,
-    deletingId,
+    deletingIds,
     pendingRoute,
+    historyStatus,
+    historyError,
+    persistenceById,
     telemetryState,
     connectivity,
     copyTelemetryRequestId,
@@ -45,33 +46,29 @@ export function App() {
         ) : data.usuario ? (
           <>
             <UserBar usuario={data.usuario} isBusy={sessionLoading} onLogout={logout} />
-            <div
-              className={`planning-layout${telemetryState.kind === 'hidden' ? '' : ' planning-layout-with-telemetry'}`}
-            >
+            <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
                 <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
               </section>
-              {telemetryState.kind !== 'hidden' ? (
-                <aside className="planning-aside" aria-label="Telemetria">
+              <aside className="planning-aside" aria-label="Painéis da viagem">
+                {telemetryState.kind !== 'hidden' ? (
                   <TelemetriaCard
                     state={telemetryState}
                     connectivity={connectivity}
                     onCopyRequestId={copyTelemetryRequestId}
                   />
-                </aside>
-              ) : null}
+                ) : null}
+                <HistoricoViagens
+                  viagens={data.viagens}
+                  status={historyStatus}
+                  errorMessage={historyError}
+                  deletingIds={deletingIds}
+                  pendingRoute={pendingRoute}
+                  persistenceById={persistenceById}
+                  onDelete={deleteTrip}
+                />
+              </aside>
             </div>
-            <HistoricoViagens
-              viagens={data.viagens}
-              jsonUrl={jsonUrl}
-              deletingId={deletingId}
-              loadingCard={
-                pendingRoute ? (
-                  <LoadingCard origem={pendingRoute.origem} destino={pendingRoute.destino} />
-                ) : null
-              }
-              onDelete={deleteTrip}
-            />
           </>
         ) : (
           <LoginCard

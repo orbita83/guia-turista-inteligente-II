@@ -30,6 +30,10 @@ export interface Viagem {
   diagnostico_ia?: Record<string, unknown>;
 }
 
+export type HistoryStatus = 'loading' | 'ready' | 'error' | 'offline';
+
+export type PersistenceStatus = 'pending' | 'unavailable';
+
 export interface RoteiroFormData {
   origem_cidade: string;
   origem_uf: string;
