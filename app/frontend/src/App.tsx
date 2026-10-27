@@ -4,6 +4,7 @@ import {
   LoadingCard,
   LoginCard,
   RoteiroForm,
+  TelemetriaCard,
   ToastContainer,
   UserBar,
 } from './components';
@@ -19,6 +20,9 @@ export function App() {
     isSubmitting,
     deletingId,
     pendingRoute,
+    telemetryState,
+    connectivity,
+    copyTelemetryRequestId,
     dismissToast,
     loginWithGoogle,
     loginAsVisitor,
@@ -41,7 +45,22 @@ export function App() {
         ) : data.usuario ? (
           <>
             <UserBar usuario={data.usuario} isBusy={sessionLoading} onLogout={logout} />
-            <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
+            <div
+              className={`planning-layout${telemetryState.kind === 'hidden' ? '' : ' planning-layout-with-telemetry'}`}
+            >
+              <section className="planning-column" aria-label="Planejamento da viagem">
+                <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
+              </section>
+              {telemetryState.kind !== 'hidden' ? (
+                <aside className="planning-aside" aria-label="Telemetria">
+                  <TelemetriaCard
+                    state={telemetryState}
+                    connectivity={connectivity}
+                    onCopyRequestId={copyTelemetryRequestId}
+                  />
+                </aside>
+              ) : null}
+            </div>
             <HistoricoViagens
               viagens={data.viagens}
               jsonUrl={jsonUrl}

@@ -21,7 +21,7 @@
 | CA-HIS-002 | Excluir viagem remove apenas o item do usuário ativo sem recarregar a SPA. | Fonte |
 | CA-EXP-001 | A aplicação gera GPX 1.1 válido contendo os pontos previstos da rota. | Fonte/Derivado |
 | CA-EXP-002 | Ações de Maps e WhatsApp usam a rota ativa e não dados de planejamento anterior. | Derivado |
-| CA-TEL-001 | Resposta expõe `X-Process-Time`; a UI diferencia tempo do servidor e tempo total. | Fonte |
+| CA-TEL-001 | Após o primeiro planejamento, a UI diferencia `X-Process-Time` do tempo total monotônico, mantém sinais ausentes como indisponíveis, mascara `X-Request-ID` e limpa o snapshot ao trocar identidade. | Fonte/Implementado no frontend |
 | CA-TEL-002 | `/healthz`, `/readyz` e `/metrics` respondem conforme finalidade operacional. | Fonte |
 | CA-DES-001 | Geocodificações e consultas independentes são executadas concorrentemente. | Fonte |
 | CA-DES-002 | Desconexão interrompe o pipeline e impede salvar resultado incompleto. | Fonte |
@@ -39,6 +39,15 @@
 - Dependências externas simuladas em testes e identificadas em homologação integrada.
 - Critérios com “questão” não viram gate numérico até ambiente e método serem aprovados.
 - Falhas conhecidas devem registrar impacto, contorno e decisão de aceite.
+
+### Evidência frontend de CA-TEL-001
+
+- `api.test.ts` valida headers ausentes, inválidos e válidos sem coerção para zero.
+- `useApp.test.tsx` valida concorrência, snapshot anterior e isolamento de identidade.
+- `TelemetriaCard.test.tsx` valida semântica textual, indisponibilidade, provedores e
+  correlação mascarada; `App.test.tsx` cobre a integração até o logout.
+- `RNF-TEL-001` é atendido pelo uso seguro de `X-Request-ID`; `RNF-TEL-004` é
+  atendido sem polling ou requisição adicional de telemetria.
 
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

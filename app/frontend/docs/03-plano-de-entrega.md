@@ -11,6 +11,23 @@ React e integrados aos contratos JSON do backend reorganizado. A tabela abaixo e
 referencia para modulos futuros descritos na arquitetura global; ela nao autoriza
 implementar esses recursos no escopo atual de reorganizacao.
 
+### Incremento concluído: painel de telemetria
+
+A parte visual de `UC-TEL-001` foi implementada no frontend com os contratos já
+disponíveis. Ela cobre `RF-TEL-001`–`003`, diferencia tempo do servidor e tempo do
+cliente, apresenta correlação mascarada, quatro provedores e isolamento por sessão.
+Não altera o backend e não promove `API-TEL-001` a contrato atual.
+
+Os sinais ausentes no contrato vigente — processamento interno, rede externa, RTT,
+uptime, conexões, totais sistêmicos, elevação e duração por provedor — permanecem
+indisponíveis. A disponibilidade mostrada é sempre relativa à última operação, e
+não monitoramento em tempo real.
+
+Na tela autenticada, formulário e telemetria compartilham uma faixa: o formulário
+fica à esquerda e o `aside` do painel à direita a partir de 1024 px. Antes da
+primeira tentativa, não há coluna reservada; abaixo desse breakpoint, formulário e
+telemetria são empilhados nessa ordem.
+
 ## Ordem de implementacao
 
 | Etapa | Entrega frontend | Dependências | Rastreabilidade principal |

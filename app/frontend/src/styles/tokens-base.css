@@ -21,6 +21,12 @@
   --accent-border: #bae6fd;
   --danger: #dc2626;
   --success: #047857;
+  --warning: #b45309;
+  --warning-surface: #fffbeb;
+  --warning-border: #f59e0b;
+  --status-unknown: #64748b;
+  --telemetry-rule: #cbd5e1;
+  --telemetry-ink: #1e3a5f;
   --radius-card: 14px;
   --radius-btn: 10px;
   --focus-ring: 0 0 0 3px rgba(2, 132, 199, 0.24);
@@ -83,4 +89,21 @@ img {
   width: 100%;
   max-width: 820px;
   margin: 0 auto;
+}
+
+.planning-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.planning-column,
+.planning-aside {
+  min-width: 0;
+}
+
+.planning-column > .card,
+.planning-aside > .card {
+  margin-bottom: 0;
 }
