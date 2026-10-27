@@ -35,6 +35,33 @@ export interface RoteiroFormData {
   origem_uf: string;
   destino_cidade: string;
   destino_uf: string;
+  duracao_dias?: number;
+  perfis?: PerfilViajante[];
+  propulsao?: TipoPropulsao;
+  consumo_km_l?: number;
+  capacidade_tanque_l?: number;
+  preco_combustivel_l?: number;
+  eficiencia_km_kwh?: number;
+  capacidade_bateria_kwh?: number;
+  preco_energia_kwh?: number;
+}
+
+export type TipoPropulsao = 'combustao' | 'eletrico';
+
+export type PerfilViajante =
+  | 'cultural'
+  | 'gastronomico'
+  | 'ecoturismo-aventura'
+  | 'familia'
+  | 'romantico-economico';
+
+export interface MunicipioOption {
+  nome: string;
+  uf: string;
+}
+
+export interface SugestaoDestino extends MunicipioOption {
+  distanciaKm: number;
 }
 
 export type TipoToast = 'erro' | 'error' | 'danger' | 'sucesso' | 'success' | 'info';
