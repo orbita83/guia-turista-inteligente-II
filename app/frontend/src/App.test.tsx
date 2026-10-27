@@ -78,7 +78,7 @@ describe('App', () => {
     );
 
     render(<App />);
-    await screen.findByRole('heading', { name: '🚗 Planejar Novo Roteiro' });
+    await screen.findByRole('heading', { name: 'Planejador de Viagens' });
     expect(
       screen.queryByRole('region', { name: 'Telemetria e desempenho' }),
     ).not.toBeInTheDocument();
@@ -87,11 +87,12 @@ describe('App', () => {
       'planning-layout-with-telemetry',
     );
 
-    await user.type(screen.getByLabelText('Origem:'), 'Recife');
+    await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
     await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
-    await user.type(screen.getByLabelText('Destino:'), 'Olinda');
+    await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
     await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
-    await user.click(screen.getByRole('button', { name: 'Gerar Guia com APIs & IA (Python)' }));
+    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
 
     expect(
       await screen.findByRole('region', { name: 'Telemetria e desempenho' }),

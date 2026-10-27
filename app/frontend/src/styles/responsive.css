@@ -119,6 +119,29 @@
 }
 
 @media (max-width: 639px) {
+  .suggestions-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .btn-location {
+    width: 100%;
+  }
+
+  .suggestion-list,
+  .propulsion-options,
+  .parameter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .suggestion-chip {
+    width: 100%;
+  }
+
+  .profile-options button {
+    flex: 1 1 145px;
+  }
+
   .toast-container {
     top: 0.85rem;
     right: 0.85rem;
