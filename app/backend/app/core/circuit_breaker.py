@@ -1,17 +1,16 @@
-
 """Disjuntor de circuito assíncrono para proteger integrações externas."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from enum import Enum
+from enum import StrEnum
 from time import monotonic
 from typing import Any, TypeVar
 
 T = TypeVar("T")
-_SEM_FALLBACK = object()
+_NO_FALLBACK: Any = object()
 
 
-class CircuitState(str, Enum):
+class CircuitState(StrEnum):
     """Estados possíveis do disjuntor de circuito."""
 
     CLOSED = "closed"
@@ -51,7 +50,7 @@ class CircuitBreaker:
 
     def _use_fallback(self, fallback: Any) -> Any:
         """Retorna a alternativa ou informa que ela não foi definida."""
-        if fallback is _SEM_FALLBACK:
+        if fallback is _NO_FALLBACK:
             raise CircuitOpenError(
                 f"O circuito '{self.name}' está aberto e não possui alternativa."
             )
@@ -63,55 +62,62 @@ class CircuitBreaker:
         self,
         operation: Callable[[], Awaitable[T]],
         *,
-        fallback: Any = _SEM_FALLBACK,
+        fallback: Any = _NO_FALLBACK,
         is_failure: Callable[[T], bool] | None = None,
     ) -> T:
-        """Executa uma operação protegida e contabiliza as falhas."""
+        """Executa uma operação protegida e contabiliza as falhas.
+
+        - Exceção na operação: conta como falha e devolve o fallback
+          (ou relança a exceção original, se não houver fallback).
+        - ``is_failure(resultado)`` verdadeiro: conta como falha, mas devolve o
+          resultado (para serviços que já devolvem a contingência sem lançar erro).
+          Se o próprio ``is_failure`` lançar exceção, ela é tratada como falha.
+        - Circuito aberto: devolve o fallback sem chamar a operação.
+        """
         self.total_calls += 1
         is_probe = False
 
         async with self._lock:
             if self.state == CircuitState.OPEN:
-                elapsed = monotonic() - (
-                    self.opened_at
-                    if self.opened_at is not None
-                    else monotonic()
+                still_waiting = (
+                    self.opened_at is not None
+                    and monotonic() - self.opened_at < self.recovery_timeout
                 )
-
-                if elapsed < self.recovery_timeout:
+                if still_waiting:
                     return self._use_fallback(fallback)
 
                 self.state = CircuitState.HALF_OPEN
 
             if self.state == CircuitState.HALF_OPEN:
-                if self._probe_in_progress:
+                if self._probe_in_progress:  # só uma chamada de teste por vez
                     return self._use_fallback(fallback)
 
                 self._probe_in_progress = True
                 is_probe = True
 
         try:
-            resultado = await operation()
-            falhou = is_failure(resultado) if is_failure else False
+            result = await operation()
+            failed = is_failure(result) if is_failure else False
 
         except asyncio.CancelledError:
+            # Cancelamento do cliente não é falha do provedor.
             raise
 
         except Exception:
             await self._record_failure(is_probe)
 
-            if fallback is _SEM_FALLBACK:
+            if fallback is _NO_FALLBACK:
                 raise
 
             return self._use_fallback(fallback)
 
         else:
-            if falhou:
+            if failed:
                 await self._record_failure(is_probe)
             else:
                 await self._record_success(is_probe)
 
-            return resultado
+            return result
 
         finally:
             if is_probe:
@@ -123,10 +129,7 @@ class CircuitBreaker:
         async with self._lock:
             self.failure_count += 1
 
-            if (
-                is_probe
-                or self.failure_count >= self.failure_threshold
-            ):
+            if is_probe or self.failure_count >= self.failure_threshold:
                 self.state = CircuitState.OPEN
                 self.opened_at = monotonic()
 
