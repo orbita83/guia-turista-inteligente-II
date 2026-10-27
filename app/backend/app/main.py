@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from time import perf_counter
 from uuid import uuid4
@@ -12,19 +12,34 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import get_settings
 from app.core.storage import TripStorage
 from app.routers import auth, trips
-
+from app.core.circuit_breaker import CircuitBreaker
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     settings.migrate_legacy_trips_file()
-    limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
-    app.state.http_client = httpx.AsyncClient(timeout=15.0, limits=limits)
+
+    limits = httpx.Limits(
+        max_keepalive_connections=5,
+        max_connections=10,
+    )
+    app.state.http_client = httpx.AsyncClient(
+        timeout=15.0,
+        limits=limits,
+    )
     app.state.trip_storage = TripStorage(settings.trips_file)
+
+    app.state.circuit_breakers = {
+        "geocode": CircuitBreaker("geocode"),
+        "weather": CircuitBreaker("weather"),
+        "route": CircuitBreaker("route"),
+    }
+
     try:
         yield
     finally:
         await app.state.http_client.aclose()
+
 
 
 settings = get_settings()
