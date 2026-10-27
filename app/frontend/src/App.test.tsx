@@ -29,7 +29,7 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
-  it('integra o painel após o planejamento e o remove antes do logout', async () => {
+  it('mostra o painel desde a sessão e atualiza seus dados após planejamento', async () => {
     const user = userEvent.setup();
     let loggedIn = true;
     const usuario = {
@@ -79,9 +79,8 @@ describe('App', () => {
 
     render(<App />);
     await screen.findByRole('heading', { name: 'Planejador de Viagens' });
-    expect(
-      screen.queryByRole('region', { name: 'Telemetria e desempenho' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Telemetria & Desempenho' })).toBeInTheDocument();
+    expect(screen.getByText(/dados de desempenho da sua próxima viagem/i)).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Painéis da viagem' })).toBeInTheDocument();
     expect(document.querySelector('.planning-layout')).toHaveClass('planning-layout-with-sidebar');
 
@@ -93,7 +92,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
 
     expect(
-      await screen.findByRole('region', { name: 'Telemetria e desempenho' }),
+      await screen.findByRole('region', { name: 'Telemetria & Desempenho' }),
     ).toBeInTheDocument();
     const planner = screen.getByRole('region', { name: 'Planejamento da viagem' });
     const telemetryAside = screen.getByRole('complementary', { name: 'Painéis da viagem' });
@@ -103,7 +102,7 @@ describe('App', () => {
     expect(planningLayout?.lastElementChild).toBe(telemetryAside);
     expect(telemetryAside.firstElementChild).toHaveClass('telemetry-panel');
     expect(telemetryAside.lastElementChild).toHaveClass('history-panel');
-    expect(await screen.findByText('Sessão e conexão')).toBeInTheDocument();
+    expect(await screen.findByText(/Sessão do usuário & conexão/)).toBeInTheDocument();
     expect(screen.getByText('Degradado')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Sair ➜' }));

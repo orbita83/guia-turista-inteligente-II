@@ -51,13 +51,11 @@ export function App() {
                 <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
               </section>
               <aside className="planning-aside" aria-label="Painéis da viagem">
-                {telemetryState.kind !== 'hidden' ? (
-                  <TelemetriaCard
-                    state={telemetryState}
-                    connectivity={connectivity}
-                    onCopyRequestId={copyTelemetryRequestId}
-                  />
-                ) : null}
+                <TelemetriaCard
+                  state={telemetryState}
+                  connectivity={connectivity}
+                  onCopyRequestId={copyTelemetryRequestId}
+                />
                 <HistoricoViagens
                   viagens={data.viagens}
                   status={historyStatus}

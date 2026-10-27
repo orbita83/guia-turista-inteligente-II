@@ -48,7 +48,12 @@ export function defaultProviders(): ProviderDiagnostic[] {
 function hasOperationData(values: string[]): boolean {
   return values.every((value) => {
     const normalized = value.trim().toLocaleLowerCase('pt-BR');
-    return normalized !== '' && normalized !== 'n/d' && normalized !== 'indisponível';
+    return (
+      normalized !== '' &&
+      normalized !== 'n/d' &&
+      normalized !== 'indisponível' &&
+      normalized !== 'aguardando dados'
+    );
   });
 }
 

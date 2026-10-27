@@ -25,8 +25,8 @@ não monitoramento em tempo real.
 
 Na tela autenticada, o formulário fica à esquerda e o `aside` fica à direita a
 partir de 1024 px. O histórico ocupa o `aside` desde o carregamento da identidade; a
-telemetria passa a aparecer acima dele após a primeira tentativa, sem reservar um
-card vazio antes disso. Abaixo do breakpoint, formulário, telemetria disponível e
+telemetria aparece acima dele desde o carregamento da identidade, com uma mensagem
+inicial até a primeira tentativa. Abaixo do breakpoint, formulário, telemetria e
 histórico são empilhados nessa ordem.
 
 ### Incremento concluído: histórico e persistência de viagens

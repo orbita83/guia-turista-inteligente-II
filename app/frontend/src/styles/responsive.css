@@ -97,8 +97,7 @@
   }
 
   .telemetry-details > div {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.15rem;
+    flex-wrap: wrap;
   }
   .telemetry-correlation {
     align-items: stretch;
