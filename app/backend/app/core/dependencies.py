@@ -8,11 +8,17 @@ VISITOR_TTL_SECONDS = 2 * 60 * 60
 
 
 def get_http_client(request: Request) -> httpx.AsyncClient:
-    return request.app.state.http_client
+    client = getattr(request.app.state, "http_client", None)
+    if client is None:
+        raise HTTPException(status_code=503, detail="Cliente HTTP indisponível.")
+    return client
 
 
 def get_storage(request: Request) -> Any:
-    return request.app.state.trip_storage
+    storage = getattr(request.app.state, "trip_storage", None)
+    if storage is None:
+        raise HTTPException(status_code=503, detail="Armazenamento indisponível.")
+    return storage
 
 
 def get_current_user(request: Request) -> dict[str, Any]:
@@ -27,7 +33,12 @@ def get_current_user(request: Request) -> dict[str, Any]:
         except (TypeError, ValueError):
             expired = True
         if expired:
-            request.app.state.trip_storage.forget_visitor(str(user["id"]))
+            storage = getattr(request.app.state, "trip_storage", None)
+            if storage is not None and hasattr(storage, "forget_visitor"):
+                try:
+                    storage.forget_visitor(str(user["id"]))
+                except Exception:
+                    pass
             request.session.clear()
             raise HTTPException(
                 status_code=401, detail="A sessão de visitante expirou."
