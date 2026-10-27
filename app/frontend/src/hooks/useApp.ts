@@ -222,6 +222,8 @@ export function useApp() {
 
   const reconcilePersistence = useCallback(
     async (tripId: string, userId: string, generation: number) => {
+      // TODO(backend): usar uma confirmação explícita da gravação em segundo plano quando
+      // houver contrato para ela; até lá, a presença do ID na listagem confirma a viagem.
       const delays = [0, 250, 750];
       for (const delay of delays) {
         if (delay > 0) await wait(delay);

@@ -73,6 +73,8 @@ export function parseTrip(value: unknown): Viagem | null {
   const diagnostics = recordValue(trip.diagnostico_ia);
   const createdAt = availableText(trip.criado_em, '');
 
+  // TODO(backend): consumir origem, destino, clima e percurso completos quando o contrato
+  // de planejamento/listagem os entregar; os campos ausentes seguem visíveis como "Aguardando dados".
   return {
     id,
     ...(createdAt ? { criado_em: createdAt } : {}),
