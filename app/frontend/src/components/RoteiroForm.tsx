@@ -395,7 +395,9 @@ export function RoteiroForm({
             <div className="suggestions-heading">
               <div>
                 <h3 id="suggestions-title">Sugestões acima de 400 km</h3>
-                <p>Quatro destinos turísticos próximos para uma viagem rodoviária.</p>
+                <p>
+                  Quatro destinos acima de 400 km de distância geográfica aproximada, em linha reta.
+                </p>
               </div>
               <button
                 type="button"
@@ -423,9 +425,9 @@ export function RoteiroForm({
                       onClick={() => selecionarSugestao(sugestao)}
                     >
                       <span>
-                        🚗 {sugestao.nome} ({sugestao.uf})
+                        📍 {sugestao.nome} ({sugestao.uf})
                       </span>
-                      <strong>📍 {sugestao.distanciaKm} km</strong>
+                      <strong>≈ {sugestao.distanciaKm} km em linha reta</strong>
                     </button>
                   );
                 })}

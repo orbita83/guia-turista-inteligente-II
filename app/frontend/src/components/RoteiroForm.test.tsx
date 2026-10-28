@@ -155,6 +155,7 @@ describe('RoteiroForm', () => {
     expect(onRequestSuggestions).toHaveBeenCalledOnce();
 
     await user.click(screen.getByRole('button', { name: /Juazeiro do Norte.*425 km/i }));
+    expect(screen.getByText('≈ 425 km em linha reta')).toBeInTheDocument();
     expect(screen.getByLabelText('Cidade de destino')).toHaveValue('Juazeiro do Norte');
     expect(screen.getByLabelText('UF de destino')).toHaveValue('CE');
     expect(screen.getByRole('button', { name: /Juazeiro do Norte.*425 km/i })).toHaveAttribute(

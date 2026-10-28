@@ -118,5 +118,11 @@
   restaura os da viagem criada na sessão quando disponíveis. `RoteiroResult.test.tsx`
   confirma que perfil e duração ausentes são apresentados como não informados.
 
+### Evidência frontend de F13 para CA-PLN-005
+
+- `geolocation.test.ts` preserva Haversine e as quatro sugestões; `RoteiroForm.test.tsx`
+  verifica que a distância aparece como aproximação em linha reta e o preenchimento
+  manual continua disponível.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 
