@@ -123,6 +123,9 @@ describe('App', () => {
     expect(telemetryAside.lastElementChild).toHaveClass('history-panel');
     expect(await screen.findByText(/Sessão do usuário & conexão/)).toBeInTheDocument();
     expect(screen.getByText('Degradado')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Guia do Viajante/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Atrativos & Gastronomia/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Clima em Olinda/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Pessoa' }));
     await user.click(screen.getByRole('button', { name: '🚪 Sair do Modo Visitante' }));

@@ -3,6 +3,7 @@ import {
   LoginCard,
   MapaRota,
   RoteiroForm,
+  RoteiroResult,
   TelemetriaCard,
   ToastContainer,
 } from './components';
@@ -28,6 +29,7 @@ export function App() {
     apiHealthStatus,
     sugestoes,
     suggestionStatus,
+    visitasPorViagem,
     connectivity,
     copyTelemetryRequestId,
     dismissToast,
@@ -39,6 +41,7 @@ export function App() {
     submitTrip,
     deleteTrip,
     selectTrip,
+    toggleVisitaAtrativo,
   } = useApp();
 
   return (
@@ -73,7 +76,21 @@ export function App() {
                   onSubmit={submitTrip}
                 />
 
-                {activeTrip ? <MapaRota viagem={activeTrip} formParams={activeTripForm} /> : null}
+                {activeTrip ? (
+                  <>
+                    <MapaRota viagem={activeTrip} formParams={activeTripForm} />
+                    {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
+                    <RoteiroResult
+                      viagem={activeTrip}
+                      visitasIds={
+                        visitasPorViagem[activeTrip.id] ?? activeTrip.atrativosVisitadosIds ?? []
+                      }
+                      onToggleVisita={(atrativoId) =>
+                        toggleVisitaAtrativo(activeTrip.id, atrativoId)
+                      }
+                    />
+                  </>
+                ) : null}
               </section>
               <aside className="planning-aside" aria-label="Painéis da viagem">
                 <TelemetriaCard
