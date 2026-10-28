@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import type { RoteiroFormData, Viagem } from '../types/domain';
+import type { RotaAlternativa, RoteiroFormData, Viagem } from '../types/domain';
 import {
   calcularAutonomiaVeiculo,
   calcularCustosViagem,
@@ -15,6 +15,38 @@ import {
 } from './routeCalculator';
 
 describe('routeCalculator', () => {
+  const route: RotaAlternativa = {
+    id: 'principal',
+    titulo: 'Rota principal',
+    tipoRotulo: 'Principal',
+    descricao: 'Via principal',
+    resumoDestaque: 'Rota recebida',
+    distanciaKm: 8,
+    tempoFormatado: '20 min',
+    pedagios: 0,
+    autonomiaKm: 300,
+    coordenadas: [
+      [-8.05, -34.88],
+      [-8.02, -34.85],
+    ],
+    paradas: [],
+    topografia: {
+      altitudeMaximaM: 10,
+      desnivelSubidaM: 2,
+      desnivelDescidaM: 1,
+      desnivelLiquidoM: 1,
+      cotaMinimaM: 2,
+      cotaMaximaM: 10,
+      penalizacaoConsumoPct: 0,
+    },
+    custos: {
+      combustivelOuEnergia: 5,
+      pedagios: 0,
+      total: 5,
+      passageiros: 1,
+      valorPorPassageiro: 5,
+    },
+  };
   it('extrai valor numérico de quilometragem de strings variadas', () => {
     expect(extrairKmDeTexto('800 km')).toBe(800);
     expect(extrairKmDeTexto('1.250,5 km')).toBe(1250.5);
@@ -78,7 +110,7 @@ describe('routeCalculator', () => {
     expect(custos4.valorPorPassageiro).toBe(Math.round((custos4.total / 4) * 100) / 100);
   });
 
-  it('gera duas alternativas de rotas (Principal e Econômica) com atualização atômica de métricas', () => {
+  it('retorna apenas rotas recebidas e não cria alternativas artificiais', () => {
     const viagem: Viagem = {
       id: 'trip-1',
       origem: 'Recife - PE',
@@ -88,30 +120,12 @@ describe('routeCalculator', () => {
       dicas_destino: 'Dicas de viagem',
     };
 
-    const rotas = gerarRotasAlternativas(viagem, undefined, 2);
-    expect(rotas).toHaveLength(2);
-
-    const [principal, economica] = rotas;
-    expect(principal.id).toBe('principal');
-    expect(economica.id).toBe('economica');
-
-    // A rota econômica evita pedágios
-    expect(economica.pedagios).toBeLessThan(principal.pedagios);
-    // A rota econômica é ligeiramente mais longa em distância e tempo
-    expect(economica.distanciaKm).toBeGreaterThan(principal.distanciaKm);
+    expect(gerarRotasAlternativas(viagem, undefined, 2)).toEqual([]);
+    expect(gerarRotasAlternativas({ ...viagem, rotas: [route] })).toEqual([route]);
   });
 
   it('gera XML GPX 1.1 válido com waypoints e track', () => {
-    const viagem: Viagem = {
-      id: 'trip-1',
-      origem: 'Recife - PE',
-      destino: 'Olinda - PE',
-      clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
-      percurso: { distancia: '10 km', tempo: '25 min' },
-      dicas_destino: 'Centro histórico',
-    };
-    const [rota] = gerarRotasAlternativas(viagem);
-    const gpx = gerarConteudoGpx('Recife - PE', 'Olinda - PE', rota);
+    const gpx = gerarConteudoGpx('Recife - PE', 'Olinda - PE', route);
 
     expect(gpx).toContain('<?xml version="1.0" encoding="UTF-8"?>');
     expect(gpx).toContain('<gpx version="1.1"');
@@ -125,16 +139,7 @@ describe('routeCalculator', () => {
     expect(maps).toContain('origin=Recife%20-%20PE');
     expect(maps).toContain('destination=Olinda%20-%20PE');
 
-    const viagem: Viagem = {
-      id: 'trip-1',
-      origem: 'Recife - PE',
-      destino: 'Olinda - PE',
-      clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
-      percurso: { distancia: '10 km', tempo: '25 min' },
-      dicas_destino: 'Centro histórico',
-    };
-    const [rota] = gerarRotasAlternativas(viagem);
-    const whatsapp = gerarLinkWhatsApp('Recife - PE', 'Olinda - PE', rota);
+    const whatsapp = gerarLinkWhatsApp('Recife - PE', 'Olinda - PE', route);
     expect(whatsapp).toContain('https://api.whatsapp.com/send?text=');
     expect(whatsapp).toContain(encodeURIComponent('Recife - PE'));
   });

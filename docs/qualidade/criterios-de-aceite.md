@@ -65,5 +65,11 @@
   impedir a leitura de viagens antigas. A disponibilidade desses campos em produção
   ainda depende da evolução do contrato do backend.
 
+### Evidência frontend de F02 para CA-MAP-001
+
+- `MapaRota.test.tsx` valida o estado sem geometria, a preservação do resumo textual e
+  a seleção apenas de alternativas recebidas. `routeCalculator.test.ts` confirma que
+  o cliente não inventa alternativas quando a API não as fornece.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

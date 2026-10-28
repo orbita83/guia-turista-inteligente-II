@@ -2,7 +2,6 @@ import type {
   CalculoCustosViagem,
   CoordenadaGPS,
   ParadaEstrategica,
-  PerfilTopografico,
   RotaAlternativa,
   RoteiroFormData,
   TipoPropulsao,
@@ -141,30 +140,6 @@ export function calcularAutonomiaVeiculo(form?: RoteiroFormData): number {
 // Relacionado à Issue #15 (geometria rodoviária).
 
 /**
- * Gera ou ajusta os waypoints rodoviários ao longo do corredor navegável real.
- * Não utiliza retas artificiais; traça a malha rodoviária com base em waypoints de BRs
- * ou geometria GeoJSON provida pelo backend / roteador OSRM.
- */
-export function gerarCoordenadasRota(
-  origem: CoordenadaGPS,
-  destino: CoordenadaGPS,
-  desvioCurvatura = 0,
-): CoordenadaGPS[] {
-  const pontos: CoordenadaGPS[] = [];
-  const totalPontos = 14;
-
-  for (let i = 0; i <= totalPontos; i++) {
-    const t = i / totalPontos;
-    // Modelagem de corredor rodoviário respeitando o relevo dinâmico e contorno de serras/litoral
-    const curvaturaRodoviaria = Math.sin(t * Math.PI) * desvioCurvatura;
-    const lat = origem[0] + (destino[0] - origem[0]) * t + curvaturaRodoviaria * 0.35;
-    const lon = origem[1] + (destino[1] - origem[1]) * t + curvaturaRodoviaria;
-    pontos.push([Number(lat.toFixed(5)), Number(lon.toFixed(5))]);
-  }
-  return pontos;
-}
-
-/**
  * Calcula paradas estratégicas antes do limite crítico de ~18% de autonomia (RN-CST-002),
  * acumulando as distâncias geodésicas reais ao longo da polyline rodoviária.
  */
@@ -282,141 +257,12 @@ export function calcularCustosViagem(
 
 export function gerarRotasAlternativas(
   viagem: Viagem,
-  form?: RoteiroFormData,
-  passageiros = 1,
-  propulsaoOverride?: TipoPropulsao,
+  _form?: RoteiroFormData,
+  _passageiros = 1,
+  _propulsaoOverride?: TipoPropulsao,
 ): RotaAlternativa[] {
-  const distanciaBaseKm = extrairKmDeTexto(viagem.percurso?.distancia);
-  const coordOrigem = obterCoordenadasLocal(viagem.origem, form?.origem_uf);
-  const coordDestino = obterCoordenadasLocal(viagem.destino, form?.destino_uf);
-  const propulsao = propulsaoOverride || form?.propulsao || 'combustao';
-  const formEfetivo: RoteiroFormData = {
-    origem_cidade: form?.origem_cidade || '',
-    origem_uf: form?.origem_uf || '',
-    destino_cidade: form?.destino_cidade || '',
-    destino_uf: form?.destino_uf || '',
-    ...form,
-    propulsao,
-  };
-  const autonomiaKm = calcularAutonomiaVeiculo(formEfetivo);
-
-  // Estimativa de pedágio regional (~R$ 0,085 / km na principal)
-  const pedagiosPrincipal = Math.round(distanciaBaseKm * 0.085);
-  // Na rota federal/econômica, praças de pedágio são reduzidas ou nulas
-  const pedagiosEconomica = Math.max(0, Math.round(pedagiosPrincipal * 0.25));
-
-  // ROTA 1: Principal (Menor Tempo / Rodovias Pedagiadas)
-  // Se a viagem trouxer geometria rodoviária real do backend, utiliza-a diretamente
-  const coordsPrincipal =
-    viagem.percurso?.geometria && viagem.percurso.geometria.length >= 2
-      ? viagem.percurso.geometria
-      : gerarCoordenadasRota(coordOrigem, coordDestino, 0.22);
-
-  const paradasPrincipal = calcularParadasEstrategicas(
-    distanciaBaseKm,
-    autonomiaKm,
-    propulsao,
-    coordsPrincipal,
-  );
-  const subidaPrinc = Math.round(distanciaBaseKm * 3.8);
-  const descidaPrinc = Math.round(distanciaBaseKm * 4.2);
-  const topografiaPrincipal: PerfilTopografico = {
-    altitudeMaximaM: Math.min(1850, Math.round(450 + (distanciaBaseKm % 700))),
-    desnivelSubidaM: subidaPrinc,
-    desnivelDescidaM: descidaPrinc,
-    desnivelLiquidoM: subidaPrinc - descidaPrinc,
-    cotaMinimaM: Math.max(5, Math.round(distanciaBaseKm * 0.04)),
-    cotaMaximaM: Math.min(1850, Math.round(450 + (distanciaBaseKm % 700))),
-    rendimentoRealKmL:
-      propulsao === 'eletrico'
-        ? Number(((formEfetivo.eficiencia_km_kwh ?? 6) / 1.065).toFixed(1))
-        : Number(((formEfetivo.consumo_km_l ?? 12) / 1.065).toFixed(1)),
-    penalizacaoConsumoPct: 6.9,
-  };
-  const tempoMinutosPrincipal = Math.round((distanciaBaseKm / 85) * 60);
-
-  // ROTA 2: Mais Econômica (Rodovias Federais / Evita Pedágios)
-  // ~8% mais longa em km e ~18% mais lenta em tempo
-  const distanciaEconomicaKm = Math.round(distanciaBaseKm * 1.08 * 10) / 10;
-  const coordsEconomica = gerarCoordenadasRota(coordOrigem, coordDestino, -0.42);
-  const paradasEconomica = calcularParadasEstrategicas(
-    distanciaEconomicaKm,
-    autonomiaKm,
-    propulsao,
-    coordsEconomica,
-  );
-  const subidaEcon = Math.round(distanciaEconomicaKm * 3.1);
-  const descidaEcon = Math.round(distanciaEconomicaKm * 3.3);
-  const topografiaEconomica: PerfilTopografico = {
-    altitudeMaximaM: Math.min(1600, Math.round(380 + (distanciaEconomicaKm % 500))),
-    desnivelSubidaM: subidaEcon,
-    desnivelDescidaM: descidaEcon,
-    desnivelLiquidoM: subidaEcon - descidaEcon,
-    cotaMinimaM: Math.max(10, Math.round(distanciaEconomicaKm * 0.05)),
-    cotaMaximaM: Math.min(1600, Math.round(380 + (distanciaEconomicaKm % 500))),
-    rendimentoRealKmL:
-      propulsao === 'eletrico'
-        ? Number(((formEfetivo.eficiencia_km_kwh ?? 6) / 1.04).toFixed(1))
-        : Number(((formEfetivo.consumo_km_l ?? 12) / 1.04).toFixed(1)),
-    penalizacaoConsumoPct: 4.0,
-  };
-  const tempoMinutosEconomica = Math.round((distanciaEconomicaKm / 70) * 60);
-  const diferencaTempoMinutos = Math.max(1, tempoMinutosEconomica - tempoMinutosPrincipal);
-  const distanciaBrsKm = Number((distanciaEconomicaKm * 0.731).toFixed(1));
-
-  const rotaPrincipal: RotaAlternativa = {
-    id: 'principal',
-    titulo: 'Sugestão 01 (Rodovia Principal / Menor Tempo)',
-    tipoRotulo: 'Menor Tempo',
-    descricao: 'Trajeto mais rápido via rodovias concessionadas duplicadas.',
-    resumoDestaque: 'Menor tempo e despesas de viagem',
-    diferencaTempoMinutos,
-    distanciaKm: distanciaBaseKm,
-    tempoFormatado: formatarMinutosEmTempo(tempoMinutosPrincipal),
-    pedagios: pedagiosPrincipal,
-    autonomiaKm,
-    topografia: topografiaPrincipal,
-    paradas: paradasPrincipal,
-    coordenadas: coordsPrincipal,
-    custos: calcularCustosViagem(
-      distanciaBaseKm,
-      pedagiosPrincipal,
-      formEfetivo,
-      topografiaPrincipal.penalizacaoConsumoPct,
-      passageiros,
-    ),
-  };
-
-  const rotaEconomica: RotaAlternativa = {
-    id: 'economica',
-    titulo: 'Sugestão 02 (Rodovias Federais / Mais Econômica)',
-    tipoRotulo: 'Mais Econômica',
-    descricao: 'Trajeto econômico prioritário em rodovias federais sem pedágio.',
-    resumoDestaque: `73.1% em BRs (${distanciaBrsKm} km)`,
-    percentualBrs: 73.1,
-    distanciaBrsKm,
-    distanciaKm: distanciaEconomicaKm,
-    tempoFormatado: formatarMinutosEmTempo(tempoMinutosEconomica),
-    pedagios: pedagiosEconomica,
-    autonomiaKm,
-    topografia: topografiaEconomica,
-    paradas: paradasEconomica,
-    coordenadas: coordsEconomica,
-    custos: calcularCustosViagem(
-      distanciaEconomicaKm,
-      pedagiosEconomica,
-      formEfetivo,
-      topografiaEconomica.penalizacaoConsumoPct,
-      passageiros,
-    ),
-  };
-
-  return [rotaPrincipal, rotaEconomica];
+  return viagem.rotas ?? [];
 }
-
-// --------------------------------------------------------------------------
-// Utilitários de Integração Externa (Google Maps, WhatsApp e GPX 1.1)
-// --------------------------------------------------------------------------
 
 export function gerarLinkGoogleMaps(origem: string, destino: string): string {
   const encOrigem = encodeURIComponent(origem);
