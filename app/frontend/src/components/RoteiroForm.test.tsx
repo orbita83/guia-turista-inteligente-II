@@ -88,5 +88,43 @@ describe('RoteiroForm', () => {
     await user.click(screen.getByRole('button', { name: /Juazeiro do Norte.*425 km/i }));
     expect(screen.getByLabelText('Cidade de destino')).toHaveValue('Juazeiro do Norte');
     expect(screen.getByLabelText('UF de destino')).toHaveValue('CE');
+    expect(screen.getByRole('button', { name: /Juazeiro do Norte.*425 km/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('apresenta estado de carregamento durante a busca por GPS e Haversine', () => {
+    render(
+      <RoteiroForm
+        ufs={['CE']}
+        isSubmitting={false}
+        suggestionStatus="loading"
+        onRequestSuggestions={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Localizando…/i })).toBeDisabled();
+    expect(
+      screen.getByText(/Buscando sua localização GPS e calculando destinos pelo Haversine…/i),
+    ).toBeInTheDocument();
+  });
+
+  it('exibe texto informativo e habilita o botão de GPS no estado idle', () => {
+    render(
+      <RoteiroForm
+        ufs={['CE']}
+        isSubmitting={false}
+        suggestionStatus="idle"
+        onRequestSuggestions={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Usar minha localização/i })).toBeEnabled();
+    expect(
+      screen.getByText(/Ative quando quiser receber recomendações a partir do seu GPS/i),
+    ).toBeInTheDocument();
   });
 });
