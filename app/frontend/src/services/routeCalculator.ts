@@ -5,6 +5,7 @@ import type {
   PerfilTopografico,
   RotaAlternativa,
   RoteiroFormData,
+  TipoPropulsao,
   Viagem,
 } from '../types/domain';
 
@@ -240,12 +241,21 @@ export function gerarRotasAlternativas(
   viagem: Viagem,
   form?: RoteiroFormData,
   passageiros = 1,
+  propulsaoOverride?: TipoPropulsao,
 ): RotaAlternativa[] {
   const distanciaBaseKm = extrairKmDeTexto(viagem.percurso?.distancia);
   const coordOrigem = obterCoordenadasLocal(viagem.origem, form?.origem_uf);
   const coordDestino = obterCoordenadasLocal(viagem.destino, form?.destino_uf);
-  const propulsao = form?.propulsao || 'combustao';
-  const autonomiaKm = calcularAutonomiaVeiculo(form);
+  const propulsao = propulsaoOverride || form?.propulsao || 'combustao';
+  const formEfetivo: RoteiroFormData = {
+    origem_cidade: form?.origem_cidade || '',
+    origem_uf: form?.origem_uf || '',
+    destino_cidade: form?.destino_cidade || '',
+    destino_uf: form?.destino_uf || '',
+    ...form,
+    propulsao,
+  };
+  const autonomiaKm = calcularAutonomiaVeiculo(formEfetivo);
 
   // Estimativa de pedágio regional (~R$ 0,085 / km na principal)
   const pedagiosPrincipal = Math.round(distanciaBaseKm * 0.085);
@@ -260,11 +270,20 @@ export function gerarRotasAlternativas(
     propulsao,
     coordsPrincipal,
   );
+  const subidaPrinc = Math.round(distanciaBaseKm * 3.8);
+  const descidaPrinc = Math.round(distanciaBaseKm * 4.2);
   const topografiaPrincipal: PerfilTopografico = {
     altitudeMaximaM: Math.min(1850, Math.round(450 + (distanciaBaseKm % 700))),
-    desnivelSubidaM: Math.round(distanciaBaseKm * 3.8),
-    desnivelDescidaM: Math.round(distanciaBaseKm * 4.2),
-    penalizacaoConsumoPct: 6.5,
+    desnivelSubidaM: subidaPrinc,
+    desnivelDescidaM: descidaPrinc,
+    desnivelLiquidoM: subidaPrinc - descidaPrinc,
+    cotaMinimaM: Math.max(5, Math.round(distanciaBaseKm * 0.04)),
+    cotaMaximaM: Math.min(1850, Math.round(450 + (distanciaBaseKm % 700))),
+    rendimentoRealKmL:
+      propulsao === 'eletrico'
+        ? Number(((formEfetivo.eficiencia_km_kwh ?? 6) / 1.065).toFixed(1))
+        : Number(((formEfetivo.consumo_km_l ?? 12) / 1.065).toFixed(1)),
+    penalizacaoConsumoPct: 6.9,
   };
   const tempoMinutosPrincipal = Math.round((distanciaBaseKm / 85) * 60);
 
@@ -278,19 +297,32 @@ export function gerarRotasAlternativas(
     propulsao,
     coordsEconomica,
   );
+  const subidaEcon = Math.round(distanciaEconomicaKm * 3.1);
+  const descidaEcon = Math.round(distanciaEconomicaKm * 3.3);
   const topografiaEconomica: PerfilTopografico = {
     altitudeMaximaM: Math.min(1600, Math.round(380 + (distanciaEconomicaKm % 500))),
-    desnivelSubidaM: Math.round(distanciaEconomicaKm * 3.1),
-    desnivelDescidaM: Math.round(distanciaEconomicaKm * 3.3),
+    desnivelSubidaM: subidaEcon,
+    desnivelDescidaM: descidaEcon,
+    desnivelLiquidoM: subidaEcon - descidaEcon,
+    cotaMinimaM: Math.max(10, Math.round(distanciaEconomicaKm * 0.05)),
+    cotaMaximaM: Math.min(1600, Math.round(380 + (distanciaEconomicaKm % 500))),
+    rendimentoRealKmL:
+      propulsao === 'eletrico'
+        ? Number(((formEfetivo.eficiencia_km_kwh ?? 6) / 1.04).toFixed(1))
+        : Number(((formEfetivo.consumo_km_l ?? 12) / 1.04).toFixed(1)),
     penalizacaoConsumoPct: 4.0,
   };
   const tempoMinutosEconomica = Math.round((distanciaEconomicaKm / 70) * 60);
+  const diferencaTempoMinutos = Math.max(1, tempoMinutosEconomica - tempoMinutosPrincipal);
+  const distanciaBrsKm = Number((distanciaEconomicaKm * 0.731).toFixed(1));
 
   const rotaPrincipal: RotaAlternativa = {
     id: 'principal',
     titulo: 'Sugestão 01 (Rodovia Principal / Menor Tempo)',
     tipoRotulo: 'Menor Tempo',
     descricao: 'Trajeto mais rápido via rodovias concessionadas duplicadas.',
+    resumoDestaque: 'Menor tempo e despesas de viagem',
+    diferencaTempoMinutos,
     distanciaKm: distanciaBaseKm,
     tempoFormatado: formatarMinutosEmTempo(tempoMinutosPrincipal),
     pedagios: pedagiosPrincipal,
@@ -301,7 +333,7 @@ export function gerarRotasAlternativas(
     custos: calcularCustosViagem(
       distanciaBaseKm,
       pedagiosPrincipal,
-      form,
+      formEfetivo,
       topografiaPrincipal.penalizacaoConsumoPct,
       passageiros,
     ),
@@ -312,6 +344,9 @@ export function gerarRotasAlternativas(
     titulo: 'Sugestão 02 (Rodovias Federais / Mais Econômica)',
     tipoRotulo: 'Mais Econômica',
     descricao: 'Trajeto econômico prioritário em rodovias federais sem pedágio.',
+    resumoDestaque: `73.1% em BRs (${distanciaBrsKm} km)`,
+    percentualBrs: 73.1,
+    distanciaBrsKm,
     distanciaKm: distanciaEconomicaKm,
     tempoFormatado: formatarMinutosEmTempo(tempoMinutosEconomica),
     pedagios: pedagiosEconomica,
@@ -322,7 +357,7 @@ export function gerarRotasAlternativas(
     custos: calcularCustosViagem(
       distanciaEconomicaKm,
       pedagiosEconomica,
-      form,
+      formEfetivo,
       topografiaEconomica.penalizacaoConsumoPct,
       passageiros,
     ),

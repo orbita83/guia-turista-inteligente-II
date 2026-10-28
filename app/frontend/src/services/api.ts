@@ -224,4 +224,30 @@ export function excluirViagem(tripId: string): Promise<void> {
   return request(`/roteiros/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
 }
 
+// TODO(backend): expor endpoint POST /api/v1/roteiros/stream-guia transmitindo eventos text/event-stream (SSE) com frames data: {"chunk": string, "done": boolean}\n\n.
+
+// TODO(backend): implementar endpoint PATCH /api/v1/roteiros/{id}/visitas recebendo { atrativo_id: string, visitado: boolean } com persistência atômica no armazenamento do usuário.
+export async function atualizarVisitaAtrativo(
+  tripId: string,
+  atrativoId: string,
+  visitado: boolean,
+): Promise<boolean> {
+  try {
+    await request(`/roteiros/${encodeURIComponent(tripId)}/visitas`, {
+      method: 'PATCH',
+      body: JSON.stringify({ atrativo_id: atrativoId, visitado }),
+    });
+    return true;
+  } catch (error) {
+    // Se o backend ainda não expõe a rota (404/405/501), permitimos persistência otimista no frontend
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.status === 405 || error.status === 501)
+    ) {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export const API_TRIPS_URL = `${API_BASE_URL}/roteiros/minhas-viagens/json`;

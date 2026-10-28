@@ -32,24 +32,47 @@ const FORM_COMBUSTAO_MOCK: RoteiroFormData = {
   preco_combustivel_l: 6.0,
 };
 
-describe('MapaRota', () => {
-  it('renderiza o cabeçalho e os 5 badges métricos da rota', () => {
+describe('MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12 e #14)', () => {
+  it('renderiza o cabeçalho e os 6 cards métricos da rota conforme wireframe da seção 3.3', () => {
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
-    expect(screen.getByRole('heading', { name: 'Rota e Autonomia' })).toBeInTheDocument();
-    expect(screen.getByText(/Recife - PE ➔ Salvador - BA/)).toBeInTheDocument();
+    // Cabeçalho oficial do wireframe
+    expect(screen.getByRole('heading', { name: /Mapa da Rota & Paradas/i })).toBeInTheDocument();
+    expect(
+      screen.getByText('Traçado rodoviário e paradas calculadas por autonomia.'),
+    ).toBeInTheDocument();
 
-    // Badges métricos
-    expect(screen.getByText('Distância')).toBeInTheDocument();
-    expect(screen.getByText('800 km')).toBeInTheDocument();
+    // 6 Cards Métricos do Wireframe
+    expect(screen.getByText('DISTÂNCIA')).toBeInTheDocument();
+    expect(screen.getAllByText(/800 km/).length).toBeGreaterThan(0);
 
-    expect(screen.getByText('Tempo')).toBeInTheDocument();
-    expect(screen.getByText('Pedágios')).toBeInTheDocument();
-    expect(screen.getByText('Autonomia')).toBeInTheDocument();
-    expect(screen.getByText('Desnível')).toBeInTheDocument();
+    expect(screen.getByText('DURAÇÃO')).toBeInTheDocument();
+    expect(screen.getByText('PARADAS')).toBeInTheDocument();
+    expect(screen.getByText('AUTONOMIA')).toBeInTheDocument();
+    expect(screen.getByText('SUGESTÃO DE ROTA')).toBeInTheDocument();
+    expect(screen.getByText('TOPOGRAFIA')).toBeInTheDocument();
   });
 
-  it('permite alternar entre rota principal e alternativa econômica com recálculo atômico', async () => {
+  it('permite alternar entre propulsão combustão e elétrica com recálculo instantâneo', async () => {
+    const user = userEvent.setup();
+    render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
+
+    const btnCombustao = screen.getByRole('button', { name: /Combustão/i });
+    const btnEletrico = screen.getByRole('button', { name: /Elétrico \(EV\)/i });
+
+    expect(btnCombustao).toHaveAttribute('aria-pressed', 'true');
+    expect(btnEletrico).toHaveAttribute('aria-pressed', 'false');
+
+    // Alterna para EV
+    await user.click(btnEletrico);
+    expect(btnEletrico).toHaveAttribute('aria-pressed', 'true');
+    expect(btnCombustao).toHaveAttribute('aria-pressed', 'false');
+
+    // Card de custo passa a indicar elétrico
+    expect(screen.getByText(/CUSTO TOTAL PREVISTO \(ELÉTRICO\)/i)).toBeInTheDocument();
+  });
+
+  it('permite alternar entre rota principal e alternativa econômica com recálculo atômico (Issue #14)', async () => {
     const user = userEvent.setup();
     const onRotaChange = vi.fn();
     render(
@@ -76,6 +99,28 @@ describe('MapaRota', () => {
     expect(screen.getByText('864 km')).toBeInTheDocument();
   });
 
+  it('exibe painel de sugestões de trajeto rodoviário detalhado com badge de exibição (Issue #14)', async () => {
+    const user = userEvent.setup();
+    render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
+
+    expect(
+      screen.getByText(/Sugestões de Trajeto Rodoviário \(2 opções disponíveis\)/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Sugestão 01 selecionada: trajeto principal mais ágil/i),
+    ).toBeInTheDocument();
+
+    const badgesExibicao = screen.getAllByText(/Em exibição/i);
+    expect(badgesExibicao.length).toBeGreaterThan(0);
+
+    // Clica na linha da Sugestão 02 na lista
+    const rowSugestao02 = screen.getByRole('option', { name: /Sugestão 02/i });
+    await user.click(rowSugestao02);
+
+    expect(rowSugestao02).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/Sugestão 02 selecionada:/i)).toBeInTheDocument();
+  });
+
   it('exibe paradas estratégicas antes do limite crítico de 18% para rotas longas', () => {
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
@@ -84,19 +129,29 @@ describe('MapaRota', () => {
     expect(screen.getByText(/Parada 1/i)).toBeInTheDocument();
   });
 
-  it('renderiza o perfil de topografia e relevo expansível', () => {
+  it('renderiza o perfil de topografia e relevo com cota e acréscimo de consumo', async () => {
+    const user = userEvent.setup();
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
-    expect(screen.getByText(/Topografia e Relevo da Rodovia/i)).toBeInTheDocument();
-    expect(screen.getByText('Altitude Máxima')).toBeInTheDocument();
+    expect(screen.getByText(/Topografia & Relevo da Rota/i)).toBeInTheDocument();
+    expect(screen.getByText(/Altitude Máxima/i)).toBeInTheDocument();
     expect(screen.getByText(/penalização no consumo nominal/i)).toBeInTheDocument();
+
+    // Toggle ocultar/ver perfil
+    const btnTogglePerfil = screen.getByRole('button', { name: /Ocultar perfil ▴/i });
+    await user.click(btnTogglePerfil);
+    expect(screen.getByRole('button', { name: /Ver perfil ▾/i })).toBeInTheDocument();
   });
 
   it('recalcula a cota individual na calculadora de rateio entre passageiros (1 a 8)', async () => {
     const user = userEvent.setup();
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
-    expect(screen.getByText('💰 Previsão de Custos e Rateio')).toBeInTheDocument();
+    expect(screen.getByText('Divisão de Custos entre Passageiros')).toBeInTheDocument();
+
+    // Abre o painel de ajuste
+    const btnAjustar = screen.getByRole('button', { name: /Ajustar ▾/i });
+    await user.click(btnAjustar);
 
     // Clica no botão de 4 passageiros
     const btn4 = screen.getByRole('radio', { name: '4' });

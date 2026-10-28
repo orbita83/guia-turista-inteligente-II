@@ -15,6 +15,7 @@ const api = vi.hoisted(() => ({
   encerrarSessao: vi.fn(),
   excluirViagem: vi.fn(),
   verificarSaudeApi: vi.fn(),
+  atualizarVisitaAtrativo: vi.fn(),
 }));
 
 vi.mock('../services/api', async (importOriginal) => {
@@ -361,5 +362,37 @@ describe('useApp GPS suggestions', () => {
     expect(result.current.suggestionStatus).toBe('unavailable');
     expect(result.current.sugestoes).toEqual([]);
     expect(result.current.toasts.at(-1)?.mensagem).toMatch(/Permissão de localização negada/);
+  });
+
+  it('permite alternar visita a atrativo com persistência local otimista e chamada à API', async () => {
+    api.atualizarVisitaAtrativo.mockResolvedValue({
+      ok: true,
+      viagem_id: 'trip-1',
+      atrativo_id: 'atrativo-marco-zero',
+      visitado: true,
+    });
+
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.toggleVisitaAtrativo('trip-1', 'atrativo-marco-zero');
+    });
+
+    expect(result.current.visitasPorViagem['trip-1']).toEqual(['atrativo-marco-zero']);
+    expect(api.atualizarVisitaAtrativo).toHaveBeenCalledWith('trip-1', 'atrativo-marco-zero', true);
+    expect(localStorage.getItem('guia_turista_visitas_user-1')).toContain('atrativo-marco-zero');
+
+    // Desmarcar visita
+    await act(async () => {
+      await result.current.toggleVisitaAtrativo('trip-1', 'atrativo-marco-zero');
+    });
+
+    expect(result.current.visitasPorViagem['trip-1']).toEqual([]);
+    expect(api.atualizarVisitaAtrativo).toHaveBeenCalledWith(
+      'trip-1',
+      'atrativo-marco-zero',
+      false,
+    );
   });
 });
