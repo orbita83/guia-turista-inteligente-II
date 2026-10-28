@@ -68,6 +68,8 @@ export interface SugestaoDestino extends MunicipioOption {
   distanciaKm: number;
 }
 
+export type SuggestionStatus = 'idle' | 'loading' | 'available' | 'unavailable';
+
 export type TipoToast = 'erro' | 'error' | 'danger' | 'sucesso' | 'success' | 'info';
 
 export interface ToastMessage {
