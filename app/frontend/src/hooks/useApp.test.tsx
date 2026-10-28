@@ -446,4 +446,29 @@ describe('useApp GPS suggestions', () => {
     expect(result.current.visitPersistenceByTrip['trip-1']).toBe('error');
     expect(result.current.toasts.at(-1)?.mensagem).toMatch(/Não foi possível salvar/);
   });
+
+  it('não desfaz outra visita confirmada quando uma gravação concorrente falha', async () => {
+    const failed = deferred<boolean>();
+    const confirmed = deferred<boolean>();
+    api.atualizarVisitaAtrativo.mockImplementation((_tripId: string, attrId: string) =>
+      attrId === 'a' ? failed.promise : confirmed.promise,
+    );
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = result.current.toggleVisitaAtrativo('trip-1', 'a');
+      second = result.current.toggleVisitaAtrativo('trip-1', 'b');
+    });
+    await act(async () => {
+      confirmed.resolve(true);
+      await second;
+    });
+    await act(async () => {
+      failed.reject(new Error('network'));
+      await first;
+    });
+    expect(result.current.visitasPorViagem['trip-1']).toEqual(['b']);
+  });
 });

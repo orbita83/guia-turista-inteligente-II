@@ -540,10 +540,6 @@ export function useApp() {
       try {
         const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
         if (generation !== sessionGeneration.current) return;
-        setVisitPersistenceByTrip((current) => ({
-          ...current,
-          [viagemId]: confirmed ? 'confirmed' : 'local',
-        }));
         if (!confirmed) {
           pendingVisitChanges.current[viagemId] = {
             ...pendingVisitChanges.current[viagemId],
@@ -553,9 +549,18 @@ export function useApp() {
         } else if (pendingVisitChanges.current[viagemId]) {
           delete pendingVisitChanges.current[viagemId][atrativoId];
         }
+        const hasPending = Object.keys(pendingVisitChanges.current[viagemId] ?? {}).length > 0;
+        setVisitPersistenceByTrip((current) => ({
+          ...current,
+          [viagemId]: hasPending ? 'local' : 'confirmed',
+        }));
       } catch {
         if (generation !== sessionGeneration.current) return;
-        const reverted = { ...visitasRef.current, [viagemId]: atuais };
+        const latest = visitasRef.current[viagemId] ?? [];
+        const restoredIds = jaVisitado
+          ? [...new Set([...latest, atrativoId])]
+          : latest.filter((id) => id !== atrativoId);
+        const reverted = { ...visitasRef.current, [viagemId]: restoredIds };
         visitasRef.current = reverted;
         setVisitasPorViagem(reverted);
         saveVisitas(data.usuario?.id, reverted);
