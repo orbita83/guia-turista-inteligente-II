@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { ApiContractError, ApiError, criarViagem, listarViagens, verificarSaudeApi } from './api';
+import {
+  ApiContractError,
+  ApiError,
+  criarViagem,
+  listarViagens,
+  parseTrip,
+  verificarSaudeApi,
+} from './api';
 
 describe('saúde da API', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -31,6 +38,99 @@ const trip = {
   percurso: { distancia: '8 km', tempo: '20 min' },
   dicas_destino: 'Centro histórico',
 };
+
+describe('F01 — campos opcionais da viagem', () => {
+  const route = {
+    id: 'principal',
+    titulo: 'Rota principal',
+    tipoRotulo: 'Mais rápida',
+    descricao: 'Via PE-001',
+    resumoDestaque: 'Trajeto principal',
+    distanciaKm: 8,
+    tempoFormatado: '20 min',
+    pedagios: 0,
+    autonomiaKm: 300,
+    coordenadas: [
+      [-8.05, -34.88],
+      [-8.02, -34.85],
+    ],
+    topografia: {
+      altitudeMaximaM: 30,
+      desnivelSubidaM: 10,
+      desnivelDescidaM: 5,
+      desnivelLiquidoM: 5,
+      cotaMinimaM: 2,
+      cotaMaximaM: 30,
+      penalizacaoConsumoPct: 1,
+    },
+    paradas: [],
+    custos: {
+      combustivelOuEnergia: 5,
+      pedagios: 0,
+      total: 5,
+      passageiros: 1,
+      valorPorPassageiro: 5,
+    },
+  };
+
+  it('preserva dados opcionais válidos no planejamento completo', () => {
+    const parsed = parseTrip({
+      ...trip,
+      clima: { ...trip.clima, sensacao: '29 °C', condicao: 'Chuva', icone: 'rain' },
+      percurso: { ...trip.percurso, geometria: route.coordenadas },
+      rotas: [route],
+      atrativos: [
+        {
+          id: 'marco-1',
+          nome: 'Marco Zero',
+          categoria: 'historico',
+          descricao: 'Praça histórica',
+          linkMaps: 'https://maps.google.com/?q=marco',
+          visitado: true,
+        },
+      ],
+      atrativosVisitadosIds: ['marco-1'],
+    });
+    expect(parsed?.clima).toMatchObject({ sensacao: '29 °C', condicao: 'Chuva', icone: 'rain' });
+    expect(parsed?.percurso.geometria).toEqual(route.coordenadas);
+    expect(parsed?.rotas?.[0]).toMatchObject(route);
+    expect(parsed?.atrativos?.[0]).toMatchObject({ id: 'marco-1', visitado: true });
+    expect(parsed?.atrativosVisitadosIds).toEqual(['marco-1']);
+  });
+
+  it('mantém viagens antigas e descarta apenas extras inválidos', () => {
+    const parsed = parseTrip({
+      ...trip,
+      clima: { ...trip.clima, sensacao: 30, condicao: 'N/D' },
+      percurso: {
+        ...trip.percurso,
+        geometria: [
+          [-8, -34],
+          [100, -34],
+        ],
+      },
+      rotas: [
+        {
+          ...route,
+          coordenadas: [
+            [-8, -34],
+            [Number.NaN, -34],
+          ],
+        },
+      ],
+      atrativos: [{ id: 'x', nome: 'Local', categoria: 'inventada', descricao: 'Texto' }],
+      atrativosVisitadosIds: ['x', 42],
+    });
+    expect(parsed).toMatchObject({ id: 'trip-1', origem: 'Recife - PE' });
+    expect(parsed?.clima.sensacao).toBeUndefined();
+    expect(parsed?.clima.condicao).toBeUndefined();
+    expect(parsed?.percurso.geometria).toBeUndefined();
+    expect(parsed?.rotas).toEqual([]);
+    expect(parsed?.atrativos).toEqual([]);
+    expect(parsed?.atrativosVisitadosIds).toBeUndefined();
+    expect(parseTrip(trip)?.rotas).toBeUndefined();
+  });
+});
 
 describe('criarViagem telemetry metadata', () => {
   afterEach(() => vi.restoreAllMocks());

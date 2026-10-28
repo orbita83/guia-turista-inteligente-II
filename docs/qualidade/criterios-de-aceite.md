@@ -58,5 +58,12 @@
 - `HistoricoViagens.test.tsx` cobre resumo compacto, “Aguardando dados”, carregamento,
   vazio, erro, persistência pendente e exclusão acessível.
 
+### Evidência frontend de F01 para CA-PLN-003, CA-MAP-001 e CA-HIS-001
+
+- `api.test.ts` verifica que campos opcionais válidos de clima, geometria, rotas,
+  atrativos e visitas atravessam o parser; campos malformados são descartados sem
+  impedir a leitura de viagens antigas. A disponibilidade desses campos em produção
+  ainda depende da evolução do contrato do backend.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

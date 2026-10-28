@@ -6,6 +6,7 @@ import type {
   Usuario,
   Viagem,
 } from '../types/domain';
+import { parseTripOptionalFields } from './tripOptionalFields';
 
 export interface SessionResponse {
   usuario: Usuario | null;
@@ -72,6 +73,7 @@ export function parseTrip(value: unknown): Viagem | null {
   const route = recordValue(trip.percurso);
   const diagnostics = recordValue(trip.diagnostico_ia);
   const createdAt = availableText(trip.criado_em, '');
+  const optionalFields = parseTripOptionalFields(trip);
 
   // TODO(backend): consumir origem, destino, clima e percurso completos quando o contrato
   // de planejamento/listagem os entregar; os campos ausentes seguem visíveis como "Aguardando dados".
@@ -84,13 +86,20 @@ export function parseTrip(value: unknown): Viagem | null {
       temperatura: availableText(weather?.temperatura),
       umidade: availableText(weather?.umidade),
       vento: availableText(weather?.vento),
+      ...optionalFields.clima,
     },
     percurso: {
       distancia: availableText(route?.distancia),
       tempo: availableText(route?.tempo),
+      ...optionalFields.percurso,
     },
     dicas_destino: availableText(trip.dicas_destino, ''),
     ...(diagnostics ? { diagnostico_ia: diagnostics } : {}),
+    ...(optionalFields.rotas ? { rotas: optionalFields.rotas } : {}),
+    ...(optionalFields.atrativos ? { atrativos: optionalFields.atrativos } : {}),
+    ...(optionalFields.atrativosVisitadosIds
+      ? { atrativosVisitadosIds: optionalFields.atrativosVisitadosIds }
+      : {}),
   };
 }
 
