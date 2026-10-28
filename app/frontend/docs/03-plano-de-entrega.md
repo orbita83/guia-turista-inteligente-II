@@ -1,9 +1,7 @@
 # Plano de entrega do frontend
 
-As correções incrementais F01–F18 estão organizadas em
-[`tasks-ajustes.md`](./tasks-ajustes.md). A F01 valida e preserva campos opcionais
-da API no frontend; o fornecimento desses campos continua dependente dos contratos
-do backend.
+As correções incrementais do frontend começam pela validação de campos opcionais
+da API. O fornecimento desses campos continua dependente dos contratos do backend.
 
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão

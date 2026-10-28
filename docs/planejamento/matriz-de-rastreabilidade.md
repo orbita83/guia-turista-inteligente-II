@@ -37,7 +37,6 @@ Esta matriz conecta necessidades de produto, regras, atributos de qualidade, cas
 | Organização do repositório | [ADR-002 — Monorepo com Turborepo](../arquitetura/decisoes/ADR-002-monorepo-com-turborepo.md) |
 | Painel de telemetria frontend | [Especificação e evidências](../../specs/001-painel-telemetria/quickstart.md) |
 | Histórico e persistência | [Especificação e cenários](../../specs/002-historico-viagens/quickstart.md) |
-| Correções do frontend F01–F18 | [Tarefas e evidência incremental](../../app/frontend/docs/tasks-ajustes.md) |
 
 ## Lacunas de cobertura conhecidas
 
