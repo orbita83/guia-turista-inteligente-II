@@ -26,6 +26,8 @@ export function App() {
     persistenceById,
     telemetryState,
     apiHealthStatus,
+    sugestoes,
+    suggestionStatus,
     connectivity,
     copyTelemetryRequestId,
     dismissToast,
@@ -33,6 +35,7 @@ export function App() {
     loginAsVisitor,
     restoreGoogleUser,
     logout,
+    solicitarSugestoesGps,
     submitTrip,
     deleteTrip,
     selectTrip,
@@ -60,9 +63,15 @@ export function App() {
           <>
             <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
-                {/* TODO(backend): ligar o catálogo de municípios e as sugestões por GPS
-                    quando a API expuser esses dados; o formulário já aceita ambos por props. */}
-                <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
+                {/* TODO(backend): ligar o catálogo de municípios quando a API expuser esses dados. */}
+                <RoteiroForm
+                  ufs={data.ufs}
+                  isSubmitting={isSubmitting}
+                  sugestoes={sugestoes}
+                  suggestionStatus={suggestionStatus}
+                  onRequestSuggestions={solicitarSugestoesGps}
+                  onSubmit={submitTrip}
+                />
 
                 {activeTrip ? <MapaRota viagem={activeTrip} formParams={activeTripForm} /> : null}
               </section>

@@ -69,6 +69,8 @@ export interface SugestaoDestino extends MunicipioOption {
   distanciaKm: number;
 }
 
+export type SuggestionStatus = 'idle' | 'loading' | 'available' | 'unavailable';
+
 export type CoordenadaGPS = [latitude: number, longitude: number];
 
 export type TipoParada = 'combustivel' | 'recarga';

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { PlanTripResponse } from '../services/api';
 import { SAVED_GOOGLE_USER_KEY } from '../services/savedGoogleUser';
@@ -282,5 +282,84 @@ describe('useApp telemetry lifecycle', () => {
     await act(async () => Promise.resolve());
     expect(result.current.data.usuario?.id).toBe('user-2');
     expect(result.current.data.viagens).toEqual([tripB]);
+  });
+});
+
+describe('useApp GPS suggestions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.carregarSessao.mockResolvedValue({ usuario, google_client_id: '', ufs: ['PE'] });
+    api.listarViagens.mockResolvedValue({ viagens: [] });
+    api.verificarSaudeApi.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('busca coordenadas GPS, calcula e disponibiliza 4 sugestões acima de 400 km com toast de sucesso', async () => {
+    const mockPosition = {
+      coords: {
+        latitude: -23.5505,
+        longitude: -46.6333,
+        accuracy: 10,
+      },
+    };
+
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        getCurrentPosition: vi.fn((success) => success(mockPosition)),
+      },
+      configurable: true,
+      writable: true,
+    });
+
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+
+    expect(result.current.suggestionStatus).toBe('idle');
+    expect(result.current.sugestoes).toEqual([]);
+
+    await act(async () => {
+      await result.current.solicitarSugestoesGps();
+    });
+
+    expect(result.current.suggestionStatus).toBe('available');
+    expect(result.current.sugestoes).toHaveLength(4);
+    for (const sugestao of result.current.sugestoes) {
+      expect(sugestao.distanciaKm).toBeGreaterThanOrEqual(400);
+    }
+    expect(result.current.toasts.at(-1)?.mensagem).toMatch(
+      /4 destinos recomendados acima de 400 km/,
+    );
+  });
+
+  it('lida com negação de permissão de geolocalização sem quebrar a aplicação', async () => {
+    const mockError = {
+      code: 1, // PERMISSION_DENIED
+      PERMISSION_DENIED: 1,
+      POSITION_UNAVAILABLE: 2,
+      TIMEOUT: 3,
+      message: 'User denied Geolocation',
+    };
+
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        getCurrentPosition: vi.fn((_success, error) => error(mockError)),
+      },
+      configurable: true,
+      writable: true,
+    });
+
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.solicitarSugestoesGps();
+    });
+
+    expect(result.current.suggestionStatus).toBe('unavailable');
+    expect(result.current.sugestoes).toEqual([]);
+    expect(result.current.toasts.at(-1)?.mensagem).toMatch(/Permissão de localização negada/);
   });
 });
