@@ -4,6 +4,8 @@ from typing import Any
 import httpx
 from fastapi import HTTPException, Request
 
+from app.core.circuit_breaker import CircuitBreaker
+
 VISITOR_TTL_SECONDS = 2 * 60 * 60
 
 
@@ -19,6 +21,19 @@ def get_storage(request: Request) -> Any:
     if storage is None:
         raise HTTPException(status_code=503, detail="Armazenamento indisponível.")
     return storage
+
+
+def get_circuit_breakers(request: Request) -> dict[str, CircuitBreaker]:
+    breakers = getattr(request.app.state, "circuit_breakers", None)
+    if not isinstance(breakers, dict) or any(
+        not isinstance(breakers.get(name), CircuitBreaker)
+        for name in ("weather", "guide")
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Disjuntores de integração indisponíveis.",
+        )
+    return breakers
 
 
 def get_current_user(request: Request) -> dict[str, Any]:

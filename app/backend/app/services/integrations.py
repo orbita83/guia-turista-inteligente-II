@@ -150,10 +150,19 @@ def _valid_coordinates(latitude: float, longitude: float) -> bool:
     )
 
 
+WEATHER_FALLBACK = {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
+
+
+def weather_result_is_failure(
+    result: dict[str, str], latitude: float, longitude: float
+) -> bool:
+    return _valid_coordinates(latitude, longitude) and result == WEATHER_FALLBACK
+
+
 async def get_weather(
     client: httpx.AsyncClient, latitude: float, longitude: float
 ) -> dict[str, str]:
-    fallback = {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
+    fallback = dict(WEATHER_FALLBACK)
     if not _valid_coordinates(latitude, longitude):
         return fallback
     try:

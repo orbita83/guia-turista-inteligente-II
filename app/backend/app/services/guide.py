@@ -1,7 +1,6 @@
 """Geração de guia turístico pelo Gemini com a contingência do monólito."""
 
 import asyncio
-import concurrent.futures
 import json
 import re
 from typing import Any
@@ -58,6 +57,17 @@ def _fallback_guide(destination: str) -> str:
     )
 
 
+def fallback_guide_with_diagnostics(
+    destination: str, reason: str
+) -> tuple[str, dict[str, Any]]:
+    return _fallback_guide(destination), {
+        "status": "fallback",
+        "modelo": MODEL,
+        "fallback_utilizado": True,
+        "motivo": reason,
+    }
+
+
 def _request_guide(destination: str, api_key: str, timeout_seconds: float) -> str:
     with genai.Client(
         api_key=api_key,
@@ -106,15 +116,19 @@ async def get_guide_with_diagnostics(
         "fallback_utilizado": True,
     }
     if not api_key.strip():
-        diagnostics["motivo"] = "chave_ausente"
-        return _fallback_guide(destination), diagnostics
+        return fallback_guide_with_diagnostics(destination, "chave_ausente")
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    task: concurrent.futures.Future[str] | None = None
+    task: asyncio.Future[str] | None = None
     try:
-        task = executor.submit(_request_guide, destination, api_key, timeout_seconds)
+        task = asyncio.get_running_loop().run_in_executor(
+            None,
+            _request_guide,
+            destination,
+            api_key,
+            timeout_seconds,
+        )
         text = await asyncio.wait_for(
-            asyncio.wrap_future(task),
+            task,
             timeout=timeout_seconds,
         )
         return text, {"status": "sucesso", "modelo": MODEL, "fallback_utilizado": False}
@@ -136,10 +150,8 @@ async def get_guide_with_diagnostics(
         diagnostics["motivo"] = "falha_inesperada"
     finally:
         if task is not None:
-            # A running worker thread cannot be stopped by Future.cancel().
             task.cancel()
-        executor.shutdown(wait=False, cancel_futures=True)
-    return _fallback_guide(destination), diagnostics
+    return fallback_guide_with_diagnostics(destination, str(diagnostics["motivo"]))
 
 
 async def get_guide(destination: str, *, api_key: str, timeout_seconds: float) -> str:

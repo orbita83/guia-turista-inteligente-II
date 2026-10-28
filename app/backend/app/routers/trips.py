@@ -3,11 +3,17 @@ import time
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from starlette.concurrency import run_in_threadpool
 
+from app.core.circuit_breaker import CircuitBreaker
 from app.core.config import get_settings
-from app.core.dependencies import get_current_user, get_http_client, get_storage
+from app.core.dependencies import (
+    get_circuit_breakers,
+    get_current_user,
+    get_http_client,
+    get_storage,
+)
 from app.schemas.trips import TripCreateRequest, TripCreateResponse, TripListResponse
 from app.services.trips import delete_trip, list_trips, plan_trip
 
@@ -15,6 +21,7 @@ router = APIRouter(prefix="/api/v1/roteiros", tags=["roteiros"])
 _locks_guard = asyncio.Lock()
 _active_requests: set[str] = set()
 _recent_requests: dict[str, float] = {}
+_DISCONNECT_MESSAGE = "http.disconnect"
 
 WARNING_TIMEOUT = (
     "O serviço Gemini excedeu o tempo limite da requisição. "
@@ -30,6 +37,13 @@ def _request_key(user_id: str, payload: TripCreateRequest) -> str:
         payload.destino_uf.strip().upper(),
     )
     return f"{user_id}:{':'.join(values)}"
+
+
+async def _wait_for_disconnect(request: Request) -> None:
+    while True:
+        message = await request.receive()
+        if message["type"] == _DISCONNECT_MESSAGE:
+            return
 
 
 @router.get("/minhas-viagens", response_model=TripListResponse)
@@ -55,9 +69,11 @@ async def get_my_trips_json(
 @router.post("/planejar", response_model=TripCreateResponse)
 async def create_trip(
     payload: TripCreateRequest,
+    request: Request,
     user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     client: httpx.AsyncClient = Depends(get_http_client),  # noqa: B008
     storage: Any = Depends(get_storage),  # noqa: B008
+    circuit_breakers: dict[str, CircuitBreaker] = Depends(get_circuit_breakers),  # noqa: B008
 ) -> TripCreateResponse:
     settings = get_settings()
     key = _request_key(str(user["id"]), payload)
@@ -83,15 +99,35 @@ async def create_trip(
 
     try:
         form = payload.model_dump()
-        trip = await plan_trip(
-            form,
-            user,
-            client=client,
-            storage=storage,
-            states=settings.states,
-            gemini_api_key=settings.gemini_api_key,
-            gemini_timeout_seconds=settings.gemini_timeout_seconds,
+        planning = asyncio.create_task(
+            plan_trip(
+                form,
+                user,
+                client=client,
+                storage=storage,
+                states=settings.states,
+                gemini_api_key=settings.gemini_api_key,
+                gemini_timeout_seconds=settings.gemini_timeout_seconds,
+                circuit_breakers=circuit_breakers,
+            )
         )
+        disconnect = asyncio.create_task(_wait_for_disconnect(request))
+        try:
+            done, _ = await asyncio.wait(
+                (planning, disconnect),
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if disconnect in done:
+                await disconnect
+                planning.cancel()
+                await asyncio.gather(planning, return_exceptions=True)
+                raise asyncio.CancelledError
+            trip = planning.result()
+        finally:
+            for task in (planning, disconnect):
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(planning, disconnect, return_exceptions=True)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except httpx.HTTPError as exc:

@@ -8,9 +8,19 @@ from typing import Any
 
 import httpx
 
+from app.core.circuit_breaker import CircuitBreaker
 from app.core.storage import TripStorage
-from app.services.guide import get_guide_with_diagnostics
-from app.services.integrations import geocode, get_route, get_weather
+from app.services.guide import (
+    fallback_guide_with_diagnostics,
+    get_guide_with_diagnostics,
+)
+from app.services.integrations import (
+    WEATHER_FALLBACK,
+    geocode,
+    get_route,
+    get_weather,
+    weather_result_is_failure,
+)
 
 
 class InvalidTripInput(ValueError):
@@ -33,6 +43,7 @@ async def plan_trip(
     states: dict[str, str],
     gemini_api_key: str,
     gemini_timeout_seconds: float,
+    circuit_breakers: dict[str, CircuitBreaker],
 ) -> dict[str, Any]:
     """Planeja e persiste uma viagem usando as mesmas integrações e respostas do Flask."""
     user_id = str(user["id"])
@@ -70,7 +81,13 @@ async def plan_trip(
         destination_name = resolved_destination
 
     weather_result, route_result = await asyncio.gather(
-        get_weather(client, latitude_destination, longitude_destination),
+        circuit_breakers["weather"].call(
+            lambda: get_weather(client, latitude_destination, longitude_destination),
+            fallback=dict(WEATHER_FALLBACK),
+            is_failure=lambda result: weather_result_is_failure(
+                result, latitude_destination, longitude_destination
+            ),
+        ),
         get_route(
             client,
             latitude_origin,
@@ -84,10 +101,25 @@ async def plan_trip(
     if route_result:
         route = route_result
 
-    guide, diagnostics = await get_guide_with_diagnostics(
-        destination_name,
-        api_key=gemini_api_key,
-        timeout_seconds=gemini_timeout_seconds,
+    guide, diagnostics = await circuit_breakers["guide"].call(
+        lambda: get_guide_with_diagnostics(
+            destination_name,
+            api_key=gemini_api_key,
+            timeout_seconds=gemini_timeout_seconds,
+        ),
+        fallback=lambda: fallback_guide_with_diagnostics(
+            destination_name, "circuito_aberto"
+        ),
+        is_failure=lambda result: (
+            result[1].get("fallback_utilizado") is True
+            and result[1].get("motivo")
+            not in {
+                "chave_ausente",
+                "chave_invalida",
+                "acesso_negado",
+                "requisicao_ou_chave_invalida",
+            }
+        ),
     )
     trip = {
         "id": str(uuid.uuid4()),
