@@ -13,6 +13,7 @@ import {
   verificarSaudeApi,
   type SessionResponse,
 } from '../services/api';
+import { obterCoordenadasNavegador, obterSugestoesDestino } from '../services/geolocation';
 import {
   connectivityCondition,
   copyRequestId,
@@ -25,6 +26,8 @@ import type {
   HistoryStatus,
   PersistenceStatus,
   RoteiroFormData,
+  SugestaoDestino,
+  SuggestionStatus,
   TelemetryPanelState,
   TelemetrySnapshot,
   ToastMessage,
@@ -80,6 +83,8 @@ export function useApp() {
   const [apiHealthStatus, setApiHealthStatus] = useState<'checking' | 'online' | 'unavailable'>(
     'checking',
   );
+  const [sugestoes, setSugestoes] = useState<SugestaoDestino[]>([]);
+  const [suggestionStatus, setSuggestionStatus] = useState<SuggestionStatus>('idle');
   const toastSequence = useRef(0);
   const attemptSequence = useRef(0);
   const sessionGeneration = useRef(0);
@@ -204,6 +209,8 @@ export function useApp() {
       setActiveTrip(null);
       setActiveTripForm(null);
       setHistoryStatus('loading');
+      setSugestoes([]);
+      setSuggestionStatus('idle');
       setHistoryError(undefined);
       updatePersistence(() => ({}));
       setData((current) => ({
@@ -373,6 +380,27 @@ export function useApp() {
     [addToast, data.usuario?.id, updatePersistence],
   );
 
+  const solicitarSugestoesGps = useCallback(async () => {
+    setSuggestionStatus('loading');
+    try {
+      const coords = await obterCoordenadasNavegador();
+      const recomendacoes = obterSugestoesDestino(coords.latitude, coords.longitude);
+      setSugestoes(recomendacoes);
+      setSuggestionStatus('available');
+      addToast(
+        `${recomendacoes.length} destinos recomendados acima de 400 km a partir do seu GPS.`,
+        'sucesso',
+      );
+    } catch (error) {
+      setSuggestionStatus('unavailable');
+      const mensagem =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível obter sua localização. O preenchimento manual continua disponível.';
+      addToast(mensagem, 'erro');
+    }
+  }, [addToast]);
+
   const selectTrip = useCallback((trip: Viagem) => {
     setActiveTrip(trip);
   }, []);
@@ -392,6 +420,8 @@ export function useApp() {
     persistenceById,
     telemetryState,
     apiHealthStatus,
+    sugestoes,
+    suggestionStatus,
     connectivity: connectivityCondition(networkStatus),
     copyTelemetryRequestId: copyRequestId,
     dismissToast: (id: string) =>
@@ -400,6 +430,7 @@ export function useApp() {
       runSessionAction(() => autenticarComGoogle(credential)),
     loginAsVisitor: () => runSessionAction(entrarComoVisitante),
     logout: () => runSessionAction(encerrarSessao),
+    solicitarSugestoesGps,
     submitTrip,
     deleteTrip,
     selectTrip,

@@ -5,8 +5,11 @@ import type {
   PerfilViajante,
   RoteiroFormData,
   SugestaoDestino,
+  SuggestionStatus,
   TipoPropulsao,
 } from '../types/domain';
+
+export type { SuggestionStatus };
 
 const FORMULARIO_INICIAL: Required<RoteiroFormData> = {
   origem_cidade: '',
@@ -33,8 +36,6 @@ const PERFIS: readonly { valor: PerfilViajante; rotulo: string; icone: string }[
 ];
 
 type ErrosFormulario = Partial<Record<'origem' | 'destino' | 'perfis', string>>;
-
-export type SuggestionStatus = 'idle' | 'loading' | 'available' | 'unavailable';
 
 export interface RoteiroFormProps {
   ufs: readonly string[];
@@ -353,9 +354,11 @@ export function RoteiroForm({
               </div>
             ) : (
               <p className="suggestions-empty" role="status">
-                {suggestionStatus === 'idle'
-                  ? 'Ative quando quiser receber recomendações a partir do seu GPS.'
-                  : 'Sugestões: Inacessível. O preenchimento manual continua disponível.'}
+                {suggestionStatus === 'loading'
+                  ? 'Buscando sua localização GPS e calculando destinos pelo Haversine…'
+                  : suggestionStatus === 'idle'
+                    ? 'Ative quando quiser receber recomendações a partir do seu GPS.'
+                    : 'Sugestões: Inacessível. O preenchimento manual continua disponível.'}
               </p>
             )}
           </section>
