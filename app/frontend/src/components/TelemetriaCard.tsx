@@ -211,8 +211,14 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Qualidade da conexão</dt>
-                {/* TODO(integração): exibir RTT/tipo de rede apenas se houver medição confiável; navigator.onLine não informa qualidade. */}
-                <dd>Aguardando dados</dd>
+                <dd>
+                  {currentConnectivity?.rtt.available
+                    ? `RTT estimado: ${currentConnectivity.rtt.value === 0 ? '≤ 25' : currentConnectivity.rtt.value} ms`
+                    : 'Aguardando dados'}
+                  {currentConnectivity?.networkType.available
+                    ? ` · ${currentConnectivity.networkType.value}`
+                    : ''}
+                </dd>
               </div>
               <div>
                 <dt>Conectividade do navegador</dt>

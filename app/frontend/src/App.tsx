@@ -11,7 +11,7 @@ import {
 } from './components';
 import { SessionHeader } from './components/SessionHeader';
 import type { AbaViagem, RotaAlternativa } from './types/domain';
-import { useApp } from './hooks/useApp';
+import { useViagem } from './hooks/useViagem';
 
 export function App() {
   const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
@@ -23,6 +23,7 @@ export function App() {
     initialLoading,
     sessionLoading,
     savedGoogleUser,
+    sessionTimerLabel,
     isSubmitting,
     deletingIds,
     pendingRoute,
@@ -50,7 +51,7 @@ export function App() {
     selectTrip,
     toggleVisitaAtrativo,
     retryLocalVisits,
-  } = useApp();
+  } = useViagem();
 
   useEffect(() => {
     setRotaAtivaId('principal');
@@ -63,6 +64,7 @@ export function App() {
       <SessionHeader
         usuario={data.usuario}
         savedGoogleUser={savedGoogleUser}
+        sessionTimerLabel={sessionTimerLabel}
         isBusy={sessionLoading}
         onVisitorLogin={loginAsVisitor}
         onRestoreGoogle={restoreGoogleUser}
