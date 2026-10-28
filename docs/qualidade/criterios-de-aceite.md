@@ -99,5 +99,11 @@
   existe, reversão após falha e sincronização posterior. A tela distingue esses
   estados e oferece nova tentativa quando há alterações locais pendentes.
 
+### Evidência frontend de F09 para CA-GUI-001 e CA-GUI-002
+
+- `streamingGuide.test.ts` diferencia SSE, reprodução de conteúdo existente,
+  cancelamento e encerramento sem `done`; `RoteiroResult.test.tsx` verifica que a
+  contingência concluída não é apresentada como transmissão ao vivo.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

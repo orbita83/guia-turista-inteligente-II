@@ -112,6 +112,7 @@ export function RoteiroResult({
   // Estado do Streaming
   const [streamText, setStreamText] = useState('');
   const [streamStatus, setStreamStatus] = useState<GuiaStreamingStatus>('idle');
+  const [streamMode, setStreamMode] = useState<'connecting' | 'sse' | 'fallback'>('connecting');
   const [copiado, setCopiado] = useState(false);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -166,6 +167,7 @@ export function RoteiroResult({
 
     setStreamText('');
     setStreamStatus('streaming');
+    setStreamMode('connecting');
 
     const payload = {
       destino: viagem.destino,
@@ -177,6 +179,7 @@ export function RoteiroResult({
     void streamGuiaTuristico(
       payload,
       {
+        onMode: setStreamMode,
         onChunk: (chunk) => {
           setStreamText((atual) => atual + chunk);
         },
@@ -379,17 +382,21 @@ export function RoteiroResult({
             {streamStatus === 'streaming' && (
               <span className="guide-status-badge is-streaming" role="status">
                 <span className="pulse-dot" aria-hidden="true" />
-                Transmitindo ao vivo…
+                {streamMode === 'sse'
+                  ? 'Transmitindo ao vivo…'
+                  : streamMode === 'fallback'
+                    ? 'Exibindo conteúdo existente…'
+                    : 'Conectando ao guia…'}
               </span>
             )}
             {streamStatus === 'completed' && (
               <span className="guide-status-badge is-completed" role="status">
-                ✓ Guia completo
+                {streamMode === 'sse' ? '✓ Transmissão concluída' : '✓ Conteúdo existente exibido'}
               </span>
             )}
             {streamStatus === 'error' && (
               <span className="guide-status-badge is-error" role="status">
-                ⚠️ Modo contingência
+                ⚠️ Falha na transmissão
               </span>
             )}
           </div>

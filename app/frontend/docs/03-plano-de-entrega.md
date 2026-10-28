@@ -8,6 +8,8 @@ O formulário mostra erros HTTP 422 por campo e valida os números do veículo a
 antes de enviar o planejamento.
 A marcação de visitas diferencia confirmação no servidor e salvamento local;
 falhas revertem a marcação e alterações locais pendentes podem ser sincronizadas.
+O guia identifica transmissão SSE e reprodução do conteúdo já recebido; somente
+o evento `done` confirma a conclusão de uma transmissão SSE.
 
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão

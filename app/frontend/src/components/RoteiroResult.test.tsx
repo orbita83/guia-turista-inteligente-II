@@ -46,7 +46,7 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(screen.getByText('18 km/h')).toBeInTheDocument();
     expect(screen.getByText('75%')).toBeInTheDocument();
     expect(screen.getByText('31 °C')).toBeInTheDocument();
-    expect(await screen.findByText(/✓ Guia completo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/✓ Conteúdo existente exibido/i)).toBeInTheDocument();
   });
 
   it('não inventa temperaturas nem condição para clima parcial', () => {
@@ -78,7 +78,9 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(screen.getByText('Gemini AI')).toBeInTheDocument();
 
     // Aguarda o término do streaming
-    expect(await screen.findByText(/✓ Guia completo/i, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/✓ Conteúdo existente exibido/i, {}, { timeout: 4000 }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Pelourinho e Farol da Barra/i)).toBeInTheDocument();
     expect(screen.getByText(/Acarajé tradicional/i)).toBeInTheDocument();
     expect(screen.getByText(/Use roupas leves/i)).toBeInTheDocument();
