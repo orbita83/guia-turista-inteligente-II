@@ -12,6 +12,9 @@ export interface ClimaViagem {
   temperatura: string;
   umidade: string;
   vento: string;
+  sensacao?: string;
+  condicao?: string;
+  icone?: string;
 }
 
 export interface PercursoViagem {
@@ -29,6 +32,38 @@ export interface Viagem {
   dicas_destino: string;
   diagnostico_ia?: Record<string, unknown>;
   rotas?: RotaAlternativa[];
+  atrativos?: AtrativoTuristico[];
+  atrativosVisitadosIds?: string[];
+}
+
+export type CategoriaAtrativo =
+  | 'historico'
+  | 'natureza'
+  | 'gastronomia'
+  | 'mirante'
+  | 'cultura'
+  | 'outro';
+
+export interface AtrativoTuristico {
+  id: string;
+  nome: string;
+  categoria: CategoriaAtrativo;
+  descricao: string;
+  visitado?: boolean;
+  horario?: string;
+  enderecoOuReferencia?: string;
+  icone?: string;
+}
+
+export type GuiaStreamingStatus = 'idle' | 'streaming' | 'completed' | 'error';
+
+export interface GuiaStreamPayload {
+  destino: string;
+  dias_estadia?: number;
+  estilo_viagem?: string;
+  clima_info?: ClimaViagem;
+  atrativos?: string[];
+  gastronomia?: string[];
 }
 
 export type HistoryStatus = 'loading' | 'ready' | 'error' | 'offline';
