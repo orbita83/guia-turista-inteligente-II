@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import {
   baixarArquivoGpx,
   gerarLinkGoogleMaps,
@@ -41,6 +41,20 @@ export function TripNavigationTabs({
     }
   };
 
+  const handleTabKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const tabs: AbaViagem[] = ['visao-geral', 'mapa', 'guia'];
+    const current = tabs.indexOf(abaAtiva);
+    let next = current;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    onAbaChange(tabs[next]);
+    event.currentTarget.querySelector<HTMLElement>(`#tab-${tabs[next]}`)?.focus();
+  };
+
   const handleGpx = () => {
     if (!geometriaValida(geometria) || !geometria) return;
     try {
@@ -64,13 +78,19 @@ export function TripNavigationTabs({
   return (
     <nav className="trip-navigation-container" aria-label="Navegação e ações da viagem planejada">
       {/* 1. Linha de Abas de Navegação (Issue #11) */}
-      <div className="trip-tabs-bar" role="tablist" aria-label="Seções do resultado da viagem">
+      <div
+        className="trip-tabs-bar"
+        role="tablist"
+        aria-label="Seções do resultado da viagem"
+        onKeyDown={handleTabKeys}
+      >
         <button
           type="button"
           role="tab"
           id="tab-visao-geral"
           aria-selected={abaAtiva === 'visao-geral'}
-          aria-controls="panel-visao-geral"
+          aria-controls="panel-mapa panel-guia"
+          tabIndex={abaAtiva === 'visao-geral' ? 0 : -1}
           className={`trip-tab-btn${abaAtiva === 'visao-geral' ? ' is-active' : ''}`}
           onClick={() => onAbaChange('visao-geral')}
         >
@@ -86,6 +106,7 @@ export function TripNavigationTabs({
           id="tab-mapa"
           aria-selected={abaAtiva === 'mapa'}
           aria-controls="panel-mapa"
+          tabIndex={abaAtiva === 'mapa' ? 0 : -1}
           className={`trip-tab-btn${abaAtiva === 'mapa' ? ' is-active' : ''}`}
           onClick={() => onAbaChange('mapa')}
         >
@@ -101,6 +122,7 @@ export function TripNavigationTabs({
           id="tab-guia"
           aria-selected={abaAtiva === 'guia'}
           aria-controls="panel-guia"
+          tabIndex={abaAtiva === 'guia' ? 0 : -1}
           className={`trip-tab-btn${abaAtiva === 'guia' ? ' is-active' : ''}`}
           onClick={() => onAbaChange('guia')}
         >

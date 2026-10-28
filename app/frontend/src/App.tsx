@@ -101,7 +101,13 @@ export function App() {
                     />
 
                     {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'mapa') && (
-                      <div id="panel-mapa" role="tabpanel" aria-labelledby="tab-mapa">
+                      <div
+                        id="panel-mapa"
+                        role="tabpanel"
+                        aria-labelledby={
+                          abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-mapa'
+                        }
+                      >
                         <MapaRota
                           viagem={activeTrip}
                           formParams={activeTripForm}
@@ -112,7 +118,13 @@ export function App() {
                     )}
 
                     {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'guia') && (
-                      <div id="panel-guia" role="tabpanel" aria-labelledby="tab-guia">
+                      <div
+                        id="panel-guia"
+                        role="tabpanel"
+                        aria-labelledby={
+                          abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-guia'
+                        }
+                      >
                         {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
                         <RoteiroResult
                           viagem={activeTrip}

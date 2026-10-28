@@ -129,5 +129,16 @@
 - `ErrorBoundary.test.tsx` provoca erro de renderização, verifica a mensagem
   acessível e a recuperação pelo botão de nova tentativa.
 
+### Auditoria frontend F15 para CA-PLN-004
+
+- `App.test.tsx` e `TripNavigationTabs.test.tsx` verificam setas de teclado, foco e
+  associação entre abas e painéis. Os filtros de atrativos agora são um grupo de
+  botões com `aria-pressed`, sem semântica de abas sem painéis.
+- `themeContrast.test.tsx` verifica os pares de contraste dos dois temas. O foco
+  visível está definido em `styles/tokens-base.css`; movimento reduzido em
+  `styles/responsive.css`. Mensagens de estado usam `role="status"` ou `role="alert"`.
+- A compatibilidade com leitores de tela específicos depende da homologação em
+  dispositivos assistivos, ainda fora da suíte automatizada.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

@@ -511,13 +511,12 @@ export function RoteiroResult({
 
         {/* Abas de Filtros */}
         {totalAtrativos > 0 && (
-          <div className="attractions-filter-tabs" role="tablist" aria-label="Filtrar atrativos">
+          <div className="attractions-filter-tabs" role="group" aria-label="Filtrar atrativos">
             {(['todos', 'pendentes', 'visitados', 'gastronomia'] as const).map((aba) => (
               <button
                 key={aba}
                 type="button"
-                role="tab"
-                aria-selected={filtroAtrativo === aba}
+                aria-pressed={filtroAtrativo === aba}
                 className={`filter-tab-btn${filtroAtrativo === aba ? ' is-active' : ''}`}
                 onClick={() => setFiltroAtrativo(aba)}
               >

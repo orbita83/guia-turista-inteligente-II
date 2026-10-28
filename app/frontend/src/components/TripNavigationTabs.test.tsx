@@ -62,6 +62,20 @@ describe('TripNavigationTabs (Issue #11: Abas e Ações da Viagem)', () => {
     expect(onAbaChange).toHaveBeenCalledWith('mapa');
   });
 
+  it('permite navegar entre abas com setas e mantém associação aos painéis', async () => {
+    const user = userEvent.setup();
+    const onAbaChange = vi.fn();
+    render(
+      <TripNavigationTabs viagem={MOCK_VIAGEM} abaAtiva="visao-geral" onAbaChange={onAbaChange} />,
+    );
+    const overview = screen.getByRole('tab', { name: /Visão Geral/i });
+    overview.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(onAbaChange).toHaveBeenCalledWith('mapa');
+    expect(screen.getByRole('tab', { name: /Mapa & Paradas/i })).toHaveFocus();
+    expect(overview).toHaveAttribute('aria-controls', 'panel-mapa panel-guia');
+  });
+
   it('apresenta a linha de ações com links externos corretos e botões funcionais', async () => {
     const user = userEvent.setup();
     const onExcluir = vi.fn();

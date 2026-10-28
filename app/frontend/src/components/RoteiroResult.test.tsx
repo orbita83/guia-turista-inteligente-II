@@ -130,7 +130,7 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(
       screen.getByText('Ainda não há atrativos confirmados para este destino.'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('tablist', { name: 'Filtrar atrativos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Filtrar atrativos' })).not.toBeInTheDocument();
   });
 
   it('filtra atrativos por categoria ao clicar nas abas', async () => {
@@ -138,7 +138,7 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     render(<RoteiroResult viagem={mockViagem} visitadosIds={['atrativo-1']} />);
 
     // Clica na aba Gastronomia
-    const abaGastronomia = screen.getByRole('tab', { name: /Gastronomia/i });
+    const abaGastronomia = screen.getByRole('button', { name: /Gastronomia/i });
     await user.click(abaGastronomia);
     expect(abaGastronomia).toHaveClass('is-active');
 
@@ -146,7 +146,7 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(screen.getByText(/Acarajé Completo com Vatapá/i)).toBeInTheDocument();
 
     // Clica na aba Visitados
-    const abaVisitados = screen.getByRole('tab', { name: /Visitados/i });
+    const abaVisitados = screen.getByRole('button', { name: /Visitados/i });
     await user.click(abaVisitados);
     expect(abaVisitados).toHaveClass('is-active');
   });
