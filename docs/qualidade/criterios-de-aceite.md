@@ -146,5 +146,13 @@
   Sprite de ícones não utilizado e manifesto PWA sem escopo offline definido seguem
   fora da implementação, conforme arquitetura de referência.
 
+### Evidência frontend F18 para CA-OPS-002
+
+- As suítes de API, formulário, mapa, histórico, visitas, streaming e GPX cobrem
+  respostas completas/parciais, validação, falha e sincronização. Testes que
+  esperavam alternativas, custos e paradas simulados foram removidos junto dos
+  helpers sem uso; `routeCalculator.test.ts` agora verifica apenas dados recebidos,
+  links e GPX com geometria válida.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 
