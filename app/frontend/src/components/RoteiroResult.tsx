@@ -476,24 +476,30 @@ export function RoteiroResult({
           </div>
         </div>
 
+        {totalAtrativos === 0 && (
+          <p role="status">Ainda não há atrativos confirmados para este destino.</p>
+        )}
+
         {/* Abas de Filtros */}
-        <div className="attractions-filter-tabs" role="tablist" aria-label="Filtrar atrativos">
-          {(['todos', 'pendentes', 'visitados', 'gastronomia'] as const).map((aba) => (
-            <button
-              key={aba}
-              type="button"
-              role="tab"
-              aria-selected={filtroAtrativo === aba}
-              className={`filter-tab-btn${filtroAtrativo === aba ? ' is-active' : ''}`}
-              onClick={() => setFiltroAtrativo(aba)}
-            >
-              {aba === 'todos' && 'Todos'}
-              {aba === 'pendentes' && 'A visitar'}
-              {aba === 'visitados' && `Visitados (${visitadosCount})`}
-              {aba === 'gastronomia' && 'Gastronomia'}
-            </button>
-          ))}
-        </div>
+        {totalAtrativos > 0 && (
+          <div className="attractions-filter-tabs" role="tablist" aria-label="Filtrar atrativos">
+            {(['todos', 'pendentes', 'visitados', 'gastronomia'] as const).map((aba) => (
+              <button
+                key={aba}
+                type="button"
+                role="tab"
+                aria-selected={filtroAtrativo === aba}
+                className={`filter-tab-btn${filtroAtrativo === aba ? ' is-active' : ''}`}
+                onClick={() => setFiltroAtrativo(aba)}
+              >
+                {aba === 'todos' && 'Todos'}
+                {aba === 'pendentes' && 'A visitar'}
+                {aba === 'visitados' && `Visitados (${visitadosCount})`}
+                {aba === 'gastronomia' && 'Gastronomia'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Seção 1: Pontos Turísticos & Atrativos */}
         {pontosTuristicos.length > 0 && (

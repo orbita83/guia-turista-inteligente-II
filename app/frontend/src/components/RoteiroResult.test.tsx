@@ -118,6 +118,14 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     );
   });
 
+  it('mostra estado vazio para destino sem atrativos confirmados', () => {
+    render(<RoteiroResult viagem={{ ...mockViagem, destino: 'Piripiri - PI' }} />);
+    expect(
+      screen.getByText('Ainda não há atrativos confirmados para este destino.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Filtrar atrativos' })).not.toBeInTheDocument();
+  });
+
   it('filtra atrativos por categoria ao clicar nas abas', async () => {
     const user = userEvent.setup();
     render(<RoteiroResult viagem={mockViagem} visitadosIds={['atrativo-1']} />);

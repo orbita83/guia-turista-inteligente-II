@@ -39,15 +39,8 @@ describe('atrativosService', () => {
     expect(nomes).toContain('Sequência de Fondue Tradicional');
   });
 
-  it('gera fallback dinâmico contextual para destinos não cadastrados no catálogo fixo', () => {
+  it('não inventa atrativos para destinos fora do catálogo', () => {
     const atrativos = obterAtrativosPorDestino('Piripiri - PI', ['ecoturismo-aventura']);
-    expect(atrativos.length).toBeGreaterThanOrEqual(4);
-
-    const nomes = atrativos.map((a) => a.nome);
-    expect(nomes.some((nome) => nome.includes('Piripiri'))).toBe(true);
-
-    const categorias = atrativos.map((a) => a.categoria);
-    expect(categorias).toContain('gastronomia');
-    expect(categorias).toContain('historico');
+    expect(atrativos).toEqual([]);
   });
 });

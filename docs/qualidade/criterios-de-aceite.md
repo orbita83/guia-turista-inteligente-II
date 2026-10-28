@@ -82,5 +82,10 @@
 - `RoteiroResult.test.tsx` confirma a apresentação de clima parcial recebido e
   mensagens de indisponibilidade no lugar de temperaturas e condição fixas.
 
+### Evidência frontend de F12 para CA-PLN-003
+
+- `atrativosService.test.ts` garante que destinos não catalogados não recebem locais
+  inventados; `RoteiroResult.test.tsx` verifica o estado vazio correspondente.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 
