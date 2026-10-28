@@ -1,5 +1,6 @@
 """Geração de guia turístico pelo Gemini com a contingência do monólito."""
 
+import asyncio
 import concurrent.futures
 import json
 import re
@@ -112,7 +113,10 @@ async def get_guide_with_diagnostics(
     task: concurrent.futures.Future[str] | None = None
     try:
         task = executor.submit(_request_guide, destination, api_key, timeout_seconds)
-        text = task.result(timeout=timeout_seconds)
+        text = await asyncio.wait_for(
+            asyncio.wrap_future(task),
+            timeout=timeout_seconds,
+        )
         return text, {"status": "sucesso", "modelo": MODEL, "fallback_utilizado": False}
     except (TimeoutError, httpx.TimeoutException):
         diagnostics["motivo"] = "timeout"
@@ -132,6 +136,7 @@ async def get_guide_with_diagnostics(
         diagnostics["motivo"] = "falha_inesperada"
     finally:
         if task is not None:
+            # A running worker thread cannot be stopped by Future.cancel().
             task.cancel()
         executor.shutdown(wait=False, cancel_futures=True)
     return _fallback_guide(destination), diagnostics
