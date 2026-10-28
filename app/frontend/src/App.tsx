@@ -2,6 +2,7 @@ import {
   AppHeader,
   HistoricoViagens,
   LoginCard,
+  MapaRota,
   RoteiroForm,
   TelemetriaCard,
   ToastContainer,
@@ -18,6 +19,8 @@ export function App() {
     isSubmitting,
     deletingIds,
     pendingRoute,
+    activeTrip,
+    activeTripForm,
     historyStatus,
     historyError,
     persistenceById,
@@ -34,6 +37,7 @@ export function App() {
     solicitarSugestoesGps,
     submitTrip,
     deleteTrip,
+    selectTrip,
   } = useApp();
 
   return (
@@ -52,6 +56,7 @@ export function App() {
             <UserBar usuario={data.usuario} isBusy={sessionLoading} onLogout={logout} />
             <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
+                {/* TODO(backend): ligar o catálogo de municípios quando a API expuser esses dados. */}
                 <RoteiroForm
                   ufs={data.ufs}
                   isSubmitting={isSubmitting}
@@ -60,6 +65,8 @@ export function App() {
                   onRequestSuggestions={solicitarSugestoesGps}
                   onSubmit={submitTrip}
                 />
+
+                {activeTrip ? <MapaRota viagem={activeTrip} formParams={activeTripForm} /> : null}
               </section>
               <aside className="planning-aside" aria-label="Painéis da viagem">
                 <TelemetriaCard
@@ -73,8 +80,10 @@ export function App() {
                   status={historyStatus}
                   errorMessage={historyError}
                   deletingIds={deletingIds}
+                  activeTripId={activeTrip?.id}
                   pendingRoute={pendingRoute}
                   persistenceById={persistenceById}
+                  onSelectTrip={selectTrip}
                   onDelete={deleteTrip}
                 />
               </aside>

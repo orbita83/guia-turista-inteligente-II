@@ -4,7 +4,9 @@ interface ViagemCardProps {
   viagem: Viagem;
   deleting?: boolean;
   disabled?: boolean;
+  isActive?: boolean;
   persistenceStatus?: PersistenceStatus;
+  onSelect?: (viagem: Viagem) => void;
   onDelete: (viagemId: string) => void | Promise<void>;
 }
 
@@ -23,13 +25,20 @@ export function ViagemCard({
   viagem,
   deleting = false,
   disabled = false,
+  isActive = false,
   persistenceStatus,
+  onSelect,
   onDelete,
 }: ViagemCardProps) {
   const routeLabel = `${viagem.origem} para ${viagem.destino}`;
 
   return (
-    <article className="history-trip" aria-label={`Viagem de ${routeLabel}`}>
+    <article
+      className={`history-trip${isActive ? ' is-active-trip' : ''}`}
+      aria-label={`Viagem de ${routeLabel}`}
+      onClick={() => onSelect?.(viagem)}
+      style={{ cursor: onSelect ? 'pointer' : undefined }}
+    >
       <div className="history-trip-topline">
         <h3 className="history-route">
           <span aria-hidden="true">🚗</span>
@@ -73,7 +82,10 @@ export function ViagemCard({
           className="history-delete"
           disabled={deleting || disabled}
           aria-label={`${deleting ? 'Excluindo' : 'Excluir'} viagem de ${routeLabel}`}
-          onClick={() => onDelete(viagem.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            void onDelete(viagem.id);
+          }}
         >
           <span aria-hidden="true">🗑️</span>
           {deleting ? 'Excluindo…' : 'Excluir'}
@@ -88,8 +100,10 @@ interface HistoricoViagensProps {
   status?: HistoryStatus;
   errorMessage?: string;
   deletingIds?: readonly string[];
+  activeTripId?: string | null;
   persistenceById?: Readonly<Record<string, PersistenceStatus>>;
   pendingRoute?: { origem: string; destino: string } | null;
+  onSelectTrip?: (viagem: Viagem) => void;
   onDelete: (viagemId: string) => void | Promise<void>;
 }
 
@@ -98,8 +112,10 @@ export function HistoricoViagens({
   status = 'ready',
   errorMessage,
   deletingIds = [],
+  activeTripId = null,
   persistenceById = {},
   pendingRoute,
+  onSelectTrip,
   onDelete,
 }: HistoricoViagensProps) {
   return (
@@ -155,7 +171,9 @@ export function HistoricoViagens({
             viagem={viagem}
             deleting={deletingIds.includes(viagem.id)}
             disabled={status === 'offline'}
+            isActive={viagem.id === activeTripId}
             persistenceStatus={persistenceById[viagem.id]}
+            onSelect={onSelectTrip}
             onDelete={onDelete}
           />
         ))}

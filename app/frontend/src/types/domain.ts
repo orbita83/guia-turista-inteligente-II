@@ -28,6 +28,7 @@ export interface Viagem {
   percurso: PercursoViagem;
   dicas_destino: string;
   diagnostico_ia?: Record<string, unknown>;
+  rotas?: RotaAlternativa[];
 }
 
 export type HistoryStatus = 'loading' | 'ready' | 'error' | 'offline';
@@ -69,6 +70,55 @@ export interface SugestaoDestino extends MunicipioOption {
 }
 
 export type SuggestionStatus = 'idle' | 'loading' | 'available' | 'unavailable';
+
+export type CoordenadaGPS = [latitude: number, longitude: number];
+
+export type TipoParada = 'combustivel' | 'recarga';
+
+export interface ParadaEstrategica {
+  id: string;
+  nome: string;
+  km: number;
+  tipo: TipoParada;
+  nivelBateriaOuTanquePct: number;
+  coordenadas: CoordenadaGPS;
+  descricao?: string;
+}
+
+export interface PerfilTopografico {
+  altitudeMaximaM: number;
+  desnivelSubidaM: number;
+  desnivelDescidaM: number;
+  penalizacaoConsumoPct: number;
+}
+
+export interface CalculoCustosViagem {
+  combustivelOuEnergia: number;
+  pedagios: number;
+  total: number;
+  passageiros: number;
+  valorPorPassageiro: number;
+}
+
+export interface RotaAlternativa {
+  id: 'principal' | 'economica';
+  titulo: string;
+  tipoRotulo: string;
+  descricao: string;
+  distanciaKm: number;
+  tempoFormatado: string;
+  pedagios: number;
+  autonomiaKm: number;
+  topografia: PerfilTopografico;
+  paradas: ParadaEstrategica[];
+  coordenadas: CoordenadaGPS[];
+  custos: CalculoCustosViagem;
+}
+
+export interface DadosMapaRota {
+  rotas: RotaAlternativa[];
+  rotaAtivaId: 'principal' | 'economica';
+}
 
 export type TipoToast = 'erro' | 'error' | 'danger' | 'sucesso' | 'success' | 'info';
 

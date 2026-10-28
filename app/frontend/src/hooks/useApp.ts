@@ -73,6 +73,8 @@ export function useApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [pendingRoute, setPendingRoute] = useState<PendingRoute | null>(null);
+  const [activeTrip, setActiveTrip] = useState<Viagem | null>(null);
+  const [activeTripForm, setActiveTripForm] = useState<RoteiroFormData | null>(null);
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>('loading');
   const [historyError, setHistoryError] = useState<string | undefined>();
   const [persistenceById, setPersistenceById] = useState<Record<string, PersistenceStatus>>({});
@@ -204,6 +206,8 @@ export function useApp() {
       setTelemetryState({ kind: 'hidden' });
       setIsSubmitting(false);
       setPendingRoute(null);
+      setActiveTrip(null);
+      setActiveTripForm(null);
       setHistoryStatus('loading');
       setSugestoes([]);
       setSuggestionStatus('idle');
@@ -228,22 +232,21 @@ export function useApp() {
   );
 
   const reconcilePersistence = useCallback(
-    async (tripId: string, userId: string, generation: number) => {
-      // TODO(backend): usar uma confirmação explícita da gravação em segundo plano quando
-      // houver contrato para ela; até lá, a presença do ID na listagem confirma a viagem.
-      const delays = [0, 250, 750];
+    async (tripId: string, expectedUserId: string, generation: number) => {
+      const delays = [400, 900, 1500];
       for (const delay of delays) {
-        if (delay > 0) await wait(delay);
+        await wait(delay);
         if (!mountedRef.current || generation !== sessionGeneration.current) return;
         try {
           const response = await listarViagens();
-          if (generation !== sessionGeneration.current) return;
-          const confirmed = response.viagens.some((trip) => trip.id === tripId);
-          if (!confirmed) continue;
+          if (!mountedRef.current || generation !== sessionGeneration.current) return;
+          const found = response.viagens.some((candidate) => candidate.id === tripId);
+          if (!found) continue;
+
           setData((current) => {
-            if (current.usuario?.id !== userId) return current;
+            if (current.usuario?.id !== expectedUserId) return current;
             const otherProvisional = current.viagens.filter(
-              (trip) => trip.id !== tripId && persistenceRef.current[trip.id],
+              (trip) => trip.id !== tripId && persistenceRef.current[trip.id] === 'pending',
             );
             const merged = [...otherProvisional, ...response.viagens].filter(
               (trip, index, all) =>
@@ -305,6 +308,8 @@ export function useApp() {
           connectivity: connectivityCondition(networkStatus),
         };
         setTelemetryState({ kind: 'settled', snapshot });
+        setActiveTrip(result.viagem);
+        setActiveTripForm(form);
         setData((current) =>
           current.usuario?.id === usuario.id
             ? { ...current, viagens: mergeTripFirst(current.viagens, result.viagem) }
@@ -357,6 +362,7 @@ export function useApp() {
             ? { ...current, viagens: current.viagens.filter((trip) => trip.id !== tripId) }
             : current,
         );
+        setActiveTrip((current) => (current?.id === tripId ? null : current));
         updatePersistence((current) => {
           const { [tripId]: _removed, ...remaining } = current;
           return remaining;
@@ -395,6 +401,10 @@ export function useApp() {
     }
   }, [addToast]);
 
+  const selectTrip = useCallback((trip: Viagem) => {
+    setActiveTrip(trip);
+  }, []);
+
   return {
     data,
     toasts,
@@ -403,6 +413,8 @@ export function useApp() {
     isSubmitting,
     deletingIds,
     pendingRoute,
+    activeTrip,
+    activeTripForm,
     historyStatus,
     historyError,
     persistenceById,
@@ -421,5 +433,6 @@ export function useApp() {
     solicitarSugestoesGps,
     submitTrip,
     deleteTrip,
+    selectTrip,
   };
 }
