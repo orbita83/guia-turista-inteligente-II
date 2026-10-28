@@ -189,7 +189,7 @@
 
 .telemetry-copy {
   padding: 0.35rem 0.55rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--control-border);
   background: var(--bg-card);
   color: var(--primary);
   font-size: 0.72rem;

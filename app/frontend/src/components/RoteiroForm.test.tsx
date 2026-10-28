@@ -19,7 +19,7 @@ describe('RoteiroForm', () => {
     await user.click(screen.getByText(/Personalizar parâmetros/i));
     await user.clear(screen.getByLabelText('Eficiência energética'));
     await user.type(screen.getByLabelText('Eficiência energética'), '7.2');
-    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByRole('button', { name: 'Econômico' }));
     await user.click(screen.getByRole('button', { name: /3 dias/i }));
     await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
 
@@ -28,7 +28,7 @@ describe('RoteiroForm', () => {
         propulsao: 'eletrico',
         eficiencia_km_kwh: 7.2,
         duracao_dias: 3,
-        perfis: ['cultural'],
+        perfis: ['economico'],
       }),
     );
   });

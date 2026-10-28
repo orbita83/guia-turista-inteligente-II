@@ -58,7 +58,7 @@ export type PerfilViajante =
   | 'gastronomico'
   | 'ecoturismo-aventura'
   | 'familia'
-  | 'romantico-economico';
+  | 'economico';
 
 export interface MunicipioOption {
   nome: string;

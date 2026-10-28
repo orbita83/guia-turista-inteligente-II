@@ -249,7 +249,7 @@ O formulário central consolida todos os parâmetros de entrada da viagem em uma
     - *Combustão:* Configuração de consumo médio (km/l), capacidade do reservatório (litros) e preço por litro.
     - *100% Elétrico (EV):* Configuração de eficiência energética (km/kWh), capacidade da bateria (kWh) e preço por kWh.
 4. **Duração da Viagem (1 a 5 dias):** Define o volume de planejamento diário a ser sintetizado pela inteligência artificial.
-5. **Perfil do Viajante:** Categorias selecionáveis (*Cultural*, *Gastronômico*, *Ecoturismo / Aventura*, *Família*, *Romântico / Econômico*).
+5. **Perfil do Viajante:** Categorias selecionáveis (*Cultural*, *Gastronômico*, *Ecoturismo / Aventura*, *Família*, *Econômico*).
 6. **Bloqueio Idempotente:** Ao submeter, o botão desativa imediatamente prevenindo requisições concorrentes duplicadas (`HTTP 409 Conflict`).
 
 ---

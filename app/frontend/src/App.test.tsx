@@ -6,6 +6,7 @@ import { App } from './App';
 
 describe('App', () => {
   beforeEach(() => {
+    localStorage.clear();
     vi.stubGlobal(
       'fetch',
       vi.fn(
@@ -18,12 +19,26 @@ describe('App', () => {
     );
   });
 
+  it('persiste o tema escuro e permite voltar ao claro', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Ativar tema escuro' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(localStorage.getItem('guia_turista_theme')).toBe('dark');
+
+    unmount();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Ativar tema claro' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    expect(localStorage.getItem('guia_turista_theme')).toBe('light');
+  });
+
   afterEach(() => vi.unstubAllGlobals());
 
   it('identifica a aplicação e apresenta a entrada de visitante', async () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: '🇧🇷 Guia do Turista Brasil' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Guia do Turista Brasil' })).toBeInTheDocument();
     expect(
       await screen.findByRole('button', { name: '👤 Entrar como Visitante' }),
     ).toBeInTheDocument();
@@ -109,7 +124,8 @@ describe('App', () => {
     expect(await screen.findByText(/Sessão do usuário & conexão/)).toBeInTheDocument();
     expect(screen.getByText('Degradado')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Sair ➜' }));
+    await user.click(screen.getByRole('button', { name: 'Pessoa' }));
+    await user.click(screen.getByRole('button', { name: '🚪 Sair do Modo Visitante' }));
     expect(
       await screen.findByRole('button', { name: '👤 Entrar como Visitante' }),
     ).toBeInTheDocument();

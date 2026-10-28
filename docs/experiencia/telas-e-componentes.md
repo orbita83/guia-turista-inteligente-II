@@ -44,7 +44,7 @@ Fonte principal: [Telas e Componentes](../modulo-guia-turista-inteligente.md#3-t
 - Sugestões usam a posição do navegador e consideram destinos rodoviários no critério descrito como `>400 km` na fonte.
 - Veículo a combustão e elétrico expõem parâmetros próprios.
 - Ocupação aceita de 1 a 8 passageiros.
-- Perfil do viajante contempla cultural, gastronômico, ecoturismo/aventura, família e romântico/econômico.
+- Perfil do viajante contempla cultural, gastronômico, ecoturismo/aventura, família e econômico.
 
 > **Questão em aberto:** a expressão `>400 km` é ambígua para “raio” e “mais próximos”. Confirmar se representa distância mínima, máxima ou universo de busca.
 
