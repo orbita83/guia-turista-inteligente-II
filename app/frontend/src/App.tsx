@@ -2,6 +2,7 @@ import {
   AppHeader,
   HistoricoViagens,
   LoginCard,
+  MapaRota,
   RoteiroForm,
   TelemetriaCard,
   ToastContainer,
@@ -18,6 +19,8 @@ export function App() {
     isSubmitting,
     deletingIds,
     pendingRoute,
+    activeTrip,
+    activeTripForm,
     historyStatus,
     historyError,
     persistenceById,
@@ -31,6 +34,7 @@ export function App() {
     logout,
     submitTrip,
     deleteTrip,
+    selectTrip,
   } = useApp();
 
   return (
@@ -52,6 +56,8 @@ export function App() {
                 {/* TODO(backend): ligar o catálogo de municípios e as sugestões por GPS
                     quando a API expuser esses dados; o formulário já aceita ambos por props. */}
                 <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
+
+                {activeTrip ? <MapaRota viagem={activeTrip} formParams={activeTripForm} /> : null}
               </section>
               <aside className="planning-aside" aria-label="Painéis da viagem">
                 <TelemetriaCard
@@ -65,8 +71,10 @@ export function App() {
                   status={historyStatus}
                   errorMessage={historyError}
                   deletingIds={deletingIds}
+                  activeTripId={activeTrip?.id}
                   pendingRoute={pendingRoute}
                   persistenceById={persistenceById}
+                  onSelectTrip={selectTrip}
                   onDelete={deleteTrip}
                 />
               </aside>
