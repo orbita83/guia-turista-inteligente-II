@@ -77,5 +77,10 @@
   que o gráfico usa amostras recebidas e mostra indisponibilidade na ausência delas.
   Indicadores de relevo sem dados de origem deixam de ser exibidos.
 
+### Evidência frontend de F04 para CA-PLN-003
+
+- `RoteiroResult.test.tsx` confirma a apresentação de clima parcial recebido e
+  mensagens de indisponibilidade no lugar de temperaturas e condição fixas.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

@@ -76,7 +76,7 @@ function formatarPerfilViagem(perfis?: readonly string[]): string {
 }
 
 function obterIconeClima(condicao?: string): string {
-  if (!condicao) return '☀️';
+  if (!condicao) return '🌡️';
   const c = condicao.toLowerCase();
   if (c.includes('chuva') || c.includes('chuv')) return '🌧️';
   if (c.includes('nublado') || c.includes('parcialmente')) return '🌤️';
@@ -84,6 +84,13 @@ function obterIconeClima(condicao?: string): string {
   if (c.includes('neve')) return '❄️';
   if (c.includes('nevoeiro') || c.includes('névoa')) return '🌫️';
   return '☀️';
+}
+
+function climaDisponivel(value?: string): string | null {
+  const normalized = value?.trim();
+  return normalized && normalized !== 'Aguardando dados' && normalized.toUpperCase() !== 'N/D'
+    ? normalized
+    : null;
 }
 
 export function RoteiroResult({
@@ -301,7 +308,7 @@ export function RoteiroResult({
         <div className="weather-banner-header">
           <div className="weather-destination-group">
             <span className="weather-icon" aria-hidden="true">
-              {obterIconeClima(viagem.clima.condicao)}
+              {obterIconeClima(climaDisponivel(viagem.clima.condicao) ?? undefined)}
             </span>
             <h3
               id="weather-title"
@@ -312,33 +319,40 @@ export function RoteiroResult({
             </h3>
             <span className="sr-only">Clima em {viagem.destino}</span>
           </div>
-          <span className="weather-provider-badge">Open-Meteo API</span>
+          {(climaDisponivel(viagem.clima.temperatura) ||
+            climaDisponivel(viagem.clima.condicao)) && (
+            <span className="weather-provider-badge">Open-Meteo API</span>
+          )}
         </div>
 
         <div className="weather-banner-details">
           <div className="weather-highlight">
-            <strong className="weather-temp-val">{viagem.clima.temperatura || '27.1°C'}</strong>
+            <strong className="weather-temp-val">
+              {climaDisponivel(viagem.clima.temperatura) ?? 'Temperatura indisponível'}
+            </strong>
             <span className="weather-dot-sep">·</span>
-            <span className="weather-cond-label">{viagem.clima.condicao || 'Céu Limpo'}</span>
+            <span className="weather-cond-label">
+              {climaDisponivel(viagem.clima.condicao) ?? 'Condição indisponível'}
+            </span>
           </div>
 
           <div className="weather-sub-metrics">
             <div className="weather-sub-item">
               <span className="weather-sub-label">Sensação:</span>
               <strong className="weather-sub-val">
-                {viagem.clima.sensacao || viagem.clima.temperatura || '28.8°C'}
+                {climaDisponivel(viagem.clima.sensacao) ?? 'Indisponível'}
               </strong>
             </div>
-            {viagem.clima.vento && (
+            {climaDisponivel(viagem.clima.vento) && (
               <div className="weather-sub-item">
                 <span className="weather-sub-label">Vento:</span>
-                <strong className="weather-sub-val">{viagem.clima.vento}</strong>
+                <strong className="weather-sub-val">{climaDisponivel(viagem.clima.vento)}</strong>
               </div>
             )}
-            {viagem.clima.umidade && (
+            {climaDisponivel(viagem.clima.umidade) && (
               <div className="weather-sub-item">
                 <span className="weather-sub-label">Umidade:</span>
-                <strong className="weather-sub-val">{viagem.clima.umidade}</strong>
+                <strong className="weather-sub-val">{climaDisponivel(viagem.clima.umidade)}</strong>
               </div>
             )}
           </div>

@@ -49,6 +49,28 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(await screen.findByText(/✓ Guia completo/i)).toBeInTheDocument();
   });
 
+  it('não inventa temperaturas nem condição para clima parcial', () => {
+    render(
+      <RoteiroResult
+        viagem={{
+          ...mockViagem,
+          clima: {
+            temperatura: 'Aguardando dados',
+            umidade: 'N/D',
+            vento: '',
+            sensacao: '30 °C',
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('Temperatura indisponível')).toBeInTheDocument();
+    expect(screen.getByText('Condição indisponível')).toBeInTheDocument();
+    expect(screen.getByText('30 °C')).toBeInTheDocument();
+    expect(screen.queryByText('Céu Limpo')).not.toBeInTheDocument();
+    expect(screen.queryByText('27.1°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('28.8°C')).not.toBeInTheDocument();
+  });
+
   it('exibe o Guia do Viajante com selo Gemini AI e seções estruturadas', async () => {
     render(<RoteiroResult viagem={mockViagem} />);
 
