@@ -49,6 +49,8 @@ export interface AtrativoTuristico {
   nome: string;
   categoria: CategoriaAtrativo;
   descricao: string;
+  destaque?: string;
+  linkMaps?: string;
   visitado?: boolean;
   horario?: string;
   enderecoOuReferencia?: string;
@@ -124,6 +126,10 @@ export interface PerfilTopografico {
   altitudeMaximaM: number;
   desnivelSubidaM: number;
   desnivelDescidaM: number;
+  desnivelLiquidoM: number;
+  cotaMinimaM: number;
+  cotaMaximaM: number;
+  rendimentoRealKmL?: number;
   penalizacaoConsumoPct: number;
 }
 
@@ -140,6 +146,10 @@ export interface RotaAlternativa {
   titulo: string;
   tipoRotulo: string;
   descricao: string;
+  resumoDestaque: string;
+  percentualBrs?: number;
+  distanciaBrsKm?: number;
+  diferencaTempoMinutos?: number;
   distanciaKm: number;
   tempoFormatado: string;
   pedagios: number;
