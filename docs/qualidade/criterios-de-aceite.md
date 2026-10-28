@@ -17,8 +17,8 @@
 | CA-GUI-001 | O guia chega progressivamente e o frontend acrescenta os chunks na ordem recebida. | Fonte |
 | CA-GUI-002 | O stream termina com sinal inequívoco de conclusão e não permanece carregando. | Derivado |
 | CA-GUI-003 | O roteiro de IA respeita seções e limites de concisão definidos na documentação. | Fonte |
-| CA-HIS-001 | Nova viagem é respondida antes da persistência em background e aparece no histórico após conclusão. | Fonte/Derivado |
-| CA-HIS-002 | Excluir viagem remove apenas o item do usuário ativo sem recarregar a SPA. | Fonte |
+| CA-HIS-001 | A interface mantém visível a viagem retornada pelo contrato existente durante a reconciliação, sem duplicar nem afirmar persistência sem confirmação observável. | Fonte/Derivado; backend fora do escopo desta entrega |
+| CA-HIS-002 | A interface remove localmente a viagem após resposta de sucesso do contrato existente, sem recarregar a SPA; falha preserva o card. | Fonte/Implementado no frontend |
 | CA-EXP-001 | A aplicação gera GPX 1.1 válido contendo os pontos previstos da rota. | Fonte/Derivado |
 | CA-EXP-002 | Ações de Maps e WhatsApp usam a rota ativa e não dados de planejamento anterior. | Derivado |
 | CA-TEL-001 | Após o primeiro planejamento, a UI diferencia `X-Process-Time` do tempo total monotônico, mantém sinais ausentes como indisponíveis, mascara `X-Request-ID` e limpa o snapshot ao trocar identidade. | Fonte/Implementado no frontend |
@@ -48,6 +48,15 @@
   correlação mascarada; `App.test.tsx` cobre a integração até o logout.
 - `RNF-TEL-001` é atendido pelo uso seguro de `X-Request-ID`; `RNF-TEL-004` é
   atendido sem polling ou requisição adicional de telemetria.
+
+### Evidência frontend de CA-HIS-001 e CA-HIS-002
+
+- `api.test.ts` valida e normaliza respostas completas e parciais, descartando itens
+  sem identificador seguro.
+- `useApp.test.tsx` cobre item provisório, confirmação, exclusão local sem reload,
+  falha preservando o catálogo e resposta atrasada de outra identidade.
+- `HistoricoViagens.test.tsx` cobre resumo compacto, “Aguardando dados”, carregamento,
+  vazio, erro, persistência pendente e exclusão acessível.
 
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

@@ -15,7 +15,7 @@ abaixo podem coexistir na tela principal e mudar conforme sessão e resultado.
 | Telemetria | `TelemetriaCard.tsx` | Usuário ativo, latência da API, tempo total, correlação e provedores. | Fonte |
 | Rota e viabilidade | `MapaRota.tsx` | Leaflet, alternativas, métricas, paradas, custos e altimetria. | Fonte |
 | Resultado de destino | `RoteiroResult.tsx` | Clima, guia em streaming, atrativos e gastronomia. | Fonte |
-| Histórico | `HistoricoViagens.tsx` | Viagens do usuário ativo e exclusão reativa. | Fonte |
+| Histórico | `HistoricoViagens.tsx` | Resumo compacto das viagens do usuário ativo, disponibilidade por campo, reconciliação e exclusão reativa. | Fonte/Implementado |
 | Ações da viagem | `BotoesControleViagem.tsx` | Maps, WhatsApp e download GPX 1.1. | Fonte |
 | Feedback global | `Toast.tsx`, `ErrorBoundary.tsx` | Sucesso, aviso, erro e contenção de falha de renderização. | Fonte |
 | Rodapé | `Footer.tsx` | Créditos pedagógicos em elemento semântico. | Fonte |
@@ -37,9 +37,10 @@ abaixo podem coexistir na tela principal e mudar conforme sessão e resultado.
 └──────────────────────────────────────────────────────────────┘
 ```
 
-O arranjo exato em desktop não foi determinado. Em telas estreitas, todas as
-áreas devem formar uma sequência de leitura lógica; o mapa não pode ser a única
-forma de acessar informações essenciais.
+Na composição implementada a partir de 1024 px, o planejador ocupa a coluna esquerda
+e o `aside` ocupa a direita; telemetria vem primeiro e “Viagens Salvas” logo abaixo.
+Em telas estreitas, o `aside` sucede o planejador e mantém telemetria antes do
+histórico. Todas as áreas preservam sequência de leitura lógica.
 
 ## Estados da interface
 
@@ -53,6 +54,8 @@ forma de acessar informações essenciais.
 | Streaming | Texto cresce progressivamente; término explícito. | Fonte |
 | Sucesso | Todos os painéis correspondem à rota selecionada. | Derivado |
 | Histórico vazio | Explica que não há viagens e direciona para planejar a primeira. | Derivado/Legado |
+| Persistência pendente | Mantém a viagem retornada visível com “Salvando viagem…” até a confirmação pela listagem. | Derivado/Implementado |
+| Confirmação indisponível | Preserva o card e não declara salvamento concluído sem evidência. | Derivado/Implementado |
 | Sem alternativa | Somente rota principal, sem aba inerte. | Derivado |
 | Erro recuperável | Mensagem específica, ação para tentar novamente e dados anteriores preservados. | Derivado |
 | Sessão expirada | Anúncio e retorno a estado seguro, sem expor dados anteriores. | Derivado |
@@ -76,7 +79,7 @@ Prevalece a especificação-alvo.
 | `MapaRota.tsx` | Mapa e alternativa textual, seleção de rota, métricas coerentes, paradas, custos e relevo. |
 | `RoteiroResult.tsx` | Clima, guia progressivo estruturado, gastronomia e estados de visita. |
 | `TelemetriaCard.tsx` | Separar tempo do servidor de tempo percebido; identificar correlação e provedores. |
-| `HistoricoViagens.tsx` | Estado vazio, lista por identidade e exclusão sem reload. |
+| `HistoricoViagens.tsx` | Cards compactos por identidade, fallbacks por campo, estados de persistência e exclusão confirmada sem reload. |
 | `BotoesControleViagem.tsx` | Ações externas e download, com feedback e preservação do roteiro em falha. |
 | `Toast.tsx` | Feedback de sucesso, erro e informação com semântica acessível. |
 | `ErrorBoundary.tsx` | Isolar falhas e oferecer recuperação possível. |

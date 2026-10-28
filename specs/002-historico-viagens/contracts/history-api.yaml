@@ -1,0 +1,111 @@
+openapi: 3.1.0
+info:
+  title: Contrato de Histórico de Viagens
+  version: 1.0.0
+  description: >-
+    Referência dos contratos de servidor existentes consumidos pelo frontend.
+    Este arquivo não autoriza alterações de backend nem define novo contrato.
+paths:
+  /api/v1/roteiros/planejar:
+    post:
+      summary: Solicita o planejamento conforme contrato atual
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Resposta de planejamento conforme contrato atual; não inferir confirmação de persistência além do payload observável
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [viagem, aviso]
+                properties:
+                  viagem:
+                    $ref: '#/components/schemas/Viagem'
+                  aviso:
+                    type: [string, 'null']
+        '401':
+          description: Sessão ausente ou expirada
+        '409':
+          description: Planejamento equivalente em andamento ou repetido recentemente
+        '422':
+          description: Entrada inválida
+        '502':
+          description: Falha dos serviços necessários ao planejamento
+  /api/v1/roteiros/minhas-viagens:
+    get:
+      summary: Lista somente o catálogo da identidade ativa
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Catálogo em ordem definida pelo backend
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [viagens]
+                properties:
+                  viagens:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Viagem'
+        '401':
+          description: Sessão ausente ou expirada
+  /api/v1/roteiros/{roteiro_id}:
+    delete:
+      summary: Exclui uma viagem do catálogo da identidade ativa
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: roteiro_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '204':
+          description: Item removido
+        '401':
+          description: Sessão ausente ou expirada
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+  schemas:
+    Viagem:
+      type: object
+      required: [id, origem, destino, clima, percurso, dicas_destino]
+      properties:
+        id:
+          type: string
+          minLength: 1
+        criado_em:
+          type: string
+        origem:
+          type: string
+        destino:
+          type: string
+        clima:
+          type: object
+          properties:
+            temperatura: { type: string }
+            umidade: { type: string }
+            vento: { type: string }
+          additionalProperties: true
+        percurso:
+          type: object
+          properties:
+            distancia: { type: string }
+            tempo: { type: string }
+          additionalProperties: true
+        dicas_destino:
+          type: string
+        diagnostico_ia:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+

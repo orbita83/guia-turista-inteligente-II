@@ -1,6 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { ApiError, criarViagem } from './api';
+import { ApiContractError, ApiError, criarViagem, listarViagens, verificarSaudeApi } from './api';
+
+describe('saúde da API', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('confirma ONLINE somente com resposta ok de /healthz', async () => {
+    const fetchMock = vi.fn(async () => Response.json({ status: 'ok' }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(verificarSaudeApi()).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/healthz$/), expect.any(Object));
+
+    fetchMock.mockResolvedValueOnce(Response.json({ status: 'degraded' }));
+    await expect(verificarSaudeApi()).resolves.toBe(false);
+  });
+});
 
 const form = {
   origem_cidade: 'Recife',
@@ -81,5 +95,48 @@ describe('criarViagem telemetry metadata', () => {
       message: 'Roteiro em processamento.',
       status: 409,
     });
+  });
+});
+
+describe('histórico na fronteira HTTP', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('normaliza campos ausentes sem rejeitar a viagem identificada', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ viagens: [{ id: 'partial', origem: 'Recife - PE' }] })),
+    );
+
+    const result = await listarViagens();
+
+    expect(result.viagens).toEqual([
+      expect.objectContaining({
+        id: 'partial',
+        origem: 'Recife - PE',
+        destino: 'Aguardando dados',
+        clima: expect.objectContaining({ temperatura: 'Aguardando dados' }),
+        percurso: { distancia: 'Aguardando dados', tempo: 'Aguardando dados' },
+      }),
+    ]);
+  });
+
+  it('descarta itens sem identificador seguro e preserva os válidos', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ viagens: [{ origem: 'Sem id' }, trip] })),
+    );
+
+    await expect(listarViagens()).resolves.toMatchObject({
+      viagens: [expect.objectContaining({ id: 'trip-1' })],
+    });
+  });
+
+  it('rejeita envelope de listagem inválido', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ viagens: 'não é lista' })),
+    );
+
+    await expect(listarViagens()).rejects.toBeInstanceOf(ApiContractError);
   });
 });

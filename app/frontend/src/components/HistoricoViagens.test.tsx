@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import { ViagemCard } from './HistoricoViagens';
+import { HistoricoViagens, ViagemCard } from './HistoricoViagens';
 
 const viagem = {
   id: 'viagem-1',
@@ -13,36 +14,101 @@ const viagem = {
 };
 
 describe('ViagemCard', () => {
-  it('expande o guia ao clicar no cartão e mantém o accordion acessível', () => {
-    const { container } = render(<ViagemCard viagem={viagem} onDelete={vi.fn()} />);
+  it('apresenta o resumo compacto do wireframe e uma exclusão acessível', () => {
+    render(<ViagemCard viagem={viagem} onDelete={vi.fn()} />);
 
-    const details = document.getElementById('detalhes-viagem-1');
-    expect(details).toHaveClass('hidden');
-
-    fireEvent.click(container.querySelector('.tele-badge')!);
-    expect(details).not.toHaveClass('hidden');
-    expect(screen.getByRole('button', { name: /São Paulo - SP/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    expect(
+      screen.getByRole('heading', { name: /São Paulo - SP.*Rio de Janeiro - RJ/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('6 h')).toBeInTheDocument();
+    expect(screen.getByText('25 °C')).toBeInTheDocument();
+    expect(screen.getByText('430 km')).toBeInTheDocument();
+    expect(screen.queryByText('Praias, museus e culinária local.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Maps/ })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Excluir viagem de São Paulo - SP para Rio de Janeiro - RJ',
+      }),
+    ).toBeEnabled();
   });
 
-  it('não alterna o accordion ao clicar em ações ou no texto do guia', () => {
+  it('explica por campo que os dados ainda não chegaram e preserva os demais', () => {
+    render(
+      <ViagemCard
+        viagem={{
+          ...viagem,
+          clima: { ...viagem.clima, temperatura: 'Aguardando dados' },
+          percurso: { distancia: 'Aguardando dados', tempo: '2 h' },
+        }}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('2 h')).toBeInTheDocument();
+    expect(screen.getAllByText('Aguardando dados')).toHaveLength(2);
+  });
+
+  it('bloqueia repetição somente no card em exclusão', async () => {
+    const user = userEvent.setup();
     const onDelete = vi.fn();
-    render(<ViagemCard viagem={viagem} onDelete={onDelete} />);
+    render(<ViagemCard viagem={viagem} deleting onDelete={onDelete} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /São Paulo - SP/ }));
-    fireEvent.click(screen.getByText('Praias, museus e culinária local.'));
-    expect(screen.getByRole('button', { name: /São Paulo - SP/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    const button = screen.getByRole('button', { name: /Excluindo viagem/ });
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe('HistoricoViagens', () => {
+  it('apresenta orientação no estado vazio', () => {
+    render(<HistoricoViagens viagens={[]} status="ready" onDelete={vi.fn()} />);
+
+    expect(screen.getByRole('heading', { name: 'Viagens Salvas' })).toBeInTheDocument();
+    expect(screen.getByText(/Planeje sua primeira viagem/)).toBeInTheDocument();
+  });
+
+  it('distingue carregamento de histórico vazio', () => {
+    render(<HistoricoViagens viagens={[]} status="loading" onDelete={vi.fn()} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando viagens salvas');
+    expect(screen.queryByText(/Planeje sua primeira viagem/)).not.toBeInTheDocument();
+  });
+
+  it('mantém cards confirmados ao comunicar erro recuperável', () => {
+    render(
+      <HistoricoViagens
+        viagens={[viagem]}
+        status="error"
+        errorMessage="Não foi possível atualizar o histórico."
+        onDelete={vi.fn()}
+      />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Excluir' }));
-    expect(onDelete).toHaveBeenCalledWith('viagem-1');
-    expect(screen.getByRole('button', { name: /São Paulo - SP/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível atualizar o histórico.');
+    expect(screen.getByText('430 km')).toBeInTheDocument();
+  });
+
+  it('comunica persistência pendente e confirmação indisponível sem duplicar cards', () => {
+    const { rerender } = render(
+      <HistoricoViagens
+        viagens={[viagem]}
+        status="ready"
+        persistenceById={{ 'viagem-1': 'pending' }}
+        onDelete={vi.fn()}
+      />,
     );
+    expect(screen.getByText('Salvando viagem…')).toBeInTheDocument();
+
+    rerender(
+      <HistoricoViagens
+        viagens={[viagem]}
+        status="ready"
+        persistenceById={{ 'viagem-1': 'unavailable' }}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Ainda não foi possível confirmar')).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
   });
 });

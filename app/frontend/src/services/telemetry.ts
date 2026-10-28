@@ -38,6 +38,7 @@ export function safeRoute(origin: string, destination: string): RouteSummary {
 }
 
 export function defaultProviders(): ProviderDiagnostic[] {
+  // TODO(backend): substituir durações desconhecidas quando o planejamento retornar métricas por provedor.
   return (['open-meteo', 'osrm', 'open-elevation', 'gemini'] as const).map((provider) => ({
     provider,
     state: 'unknown',
@@ -48,7 +49,12 @@ export function defaultProviders(): ProviderDiagnostic[] {
 function hasOperationData(values: string[]): boolean {
   return values.every((value) => {
     const normalized = value.trim().toLocaleLowerCase('pt-BR');
-    return normalized !== '' && normalized !== 'n/d' && normalized !== 'indisponível';
+    return (
+      normalized !== '' &&
+      normalized !== 'n/d' &&
+      normalized !== 'indisponível' &&
+      normalized !== 'aguardando dados'
+    );
   });
 }
 
@@ -70,6 +76,8 @@ function geminiDiagnostic(value: unknown): ProviderDiagnostic {
 }
 
 export function providerDiagnostics(viagem: Viagem): ProviderDiagnostic[] {
+  // TODO(backend): trocar os estados inferidos do resultado por diagnósticos explícitos quando vierem no contrato.
+  // TODO(backend): incluir dados reais de Open-Elevation; o payload atual não confirma sua execução.
   const climateAvailable = hasOperationData([
     viagem.clima.temperatura,
     viagem.clima.umidade,
@@ -99,6 +107,7 @@ export function providerDiagnostics(viagem: Viagem): ProviderDiagnostic[] {
 }
 
 export function sessionSummary(usuario: Usuario, userTripCount: number): SessionSummary {
+  // TODO(backend): ler início e duração da sessão quando a API passar a fornecê-los.
   return {
     displayName: usuario.nome.trim() || (usuario.tipo === 'google' ? 'Conta Google' : 'Visitante'),
     kind: usuario.tipo,
@@ -110,6 +119,8 @@ export function sessionSummary(usuario: Usuario, userTripCount: number): Session
 }
 
 export function serviceCondition(success: boolean): ServiceCondition {
+  // TODO(backend): ler uptime, conexões ativas e total sistêmico de um contrato operacional.
+  // O sucesso desta operação indica apenas disponibilidade na última solicitação.
   return {
     state: success ? 'available-last-request' : 'failed-last-request',
     uptime: unavailableValue(),
@@ -125,6 +136,7 @@ export function unknownConnectivity(): ConnectivityCondition {
 export function connectivityCondition(
   state: ConnectivityCondition['state'],
 ): ConnectivityCondition {
+  // TODO(integração): preencher RTT e tipo de rede somente com uma fonte confiável; online/offline não mede qualidade.
   return { state, rtt: unavailableValue(), networkType: unavailableValue() };
 }
 

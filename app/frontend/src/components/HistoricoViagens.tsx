@@ -1,99 +1,83 @@
-﻿import { useState } from 'react';
-
-import type { MouseEvent } from 'react';
-import type { Viagem } from '../types/domain';
+import type { HistoryStatus, PersistenceStatus, Viagem } from '../types/domain';
 
 interface ViagemCardProps {
   viagem: Viagem;
   deleting?: boolean;
+  disabled?: boolean;
+  persistenceStatus?: PersistenceStatus;
   onDelete: (viagemId: string) => void | Promise<void>;
 }
 
-function criarMapsUrl(viagem: Viagem) {
-  const params = new URLSearchParams({
-    api: '1',
-    origin: viagem.origem,
-    destination: viagem.destino,
-    travelmode: 'driving',
-  });
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+function Metric({ icon, label, value }: { icon: string; label: string; value: string }) {
+  const unavailable = value === 'Aguardando dados';
+  return (
+    <span className={`history-metric${unavailable ? ' is-unavailable' : ''}`}>
+      <span aria-hidden="true">{icon}</span>
+      <span className="sr-only">{label}: </span>
+      {value}
+    </span>
+  );
 }
 
-export function ViagemCard({ viagem, deleting = false, onDelete }: ViagemCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  const detailsId = `detalhes-${viagem.id}`;
-
-  const alternarCard = (event: MouseEvent<HTMLElement>) => {
-    if (
-      event.target instanceof Element &&
-      event.target.closest('.btn-actions, .btn, button, a, form, input, .viagem-detalhes')
-    ) {
-      return;
-    }
-    setExpanded((atual) => !atual);
-  };
+export function ViagemCard({
+  viagem,
+  deleting = false,
+  disabled = false,
+  persistenceStatus,
+  onDelete,
+}: ViagemCardProps) {
+  const routeLabel = `${viagem.origem} para ${viagem.destino}`;
 
   return (
-    <article
-      className="viagem-card"
-      id={`card-${viagem.id}`}
-      title="Clique no cartão para expandir ou recolher o guia"
-      onClick={alternarCard}
-    >
-      <div className="viagem-header">
-        <div className="viagem-rota-info">
-          <h3 className="viagem-rota-titulo">
-            <button
-              type="button"
-              className="viagem-accordion-trigger"
-              aria-expanded={expanded}
-              aria-controls={detailsId}
-              onClick={() => setExpanded((atual) => !atual)}
-            >
-              <span>{viagem.origem}</span>
-              <span className="viagem-rota-seta" aria-hidden="true">
-                ➔
-              </span>
-              <span>{viagem.destino}</span>
-              <span className={`indicador-accordion${expanded ? ' ativo' : ''}`} aria-hidden="true">
-                {expanded ? '▲' : '▼'}
-              </span>
-            </button>
-          </h3>
-        </div>
-        <div className="btn-actions">
-          <a
-            href={criarMapsUrl(viagem)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-maps btn"
-          >
-            🗺️ Maps
-          </a>
-          <button
-            type="button"
-            className="btn-danger btn"
-            disabled={deleting}
-            onClick={() => onDelete(viagem.id)}
-          >
-            {deleting ? 'Excluindo...' : 'Excluir'}
-          </button>
-        </div>
+    <article className="history-trip" aria-label={`Viagem de ${routeLabel}`}>
+      <div className="history-trip-topline">
+        <h3 className="history-route">
+          <span aria-hidden="true">🚗</span>
+          <span>{viagem.origem}</span>
+          <span className="history-route-arrow" aria-hidden="true">
+            →
+          </span>
+          <span>{viagem.destino}</span>
+        </h3>
+        <span className="history-duration">
+          <span aria-hidden="true">⚡</span>
+          <span className="sr-only">Duração: </span>
+          {viagem.percurso.tempo}
+        </span>
       </div>
 
-      <div className="telemetria-grid" aria-label="Resumo da viagem">
-        <span className="tele-badge">🌡️ {viagem.clima.temperatura}</span>
-        <span className="tele-badge">💧 {viagem.clima.umidade}</span>
-        <span className="tele-badge">💨 {viagem.clima.vento}</span>
-        <span className="tele-badge tele-badge-destaque">🚗 {viagem.percurso.distancia}</span>
-        <span className="tele-badge tele-badge-tempo">⏱️ {viagem.percurso.tempo}</span>
+      <div className="history-trip-meta" aria-label="Resumo da viagem">
+        <Metric icon="☀️" label="Temperatura" value={viagem.clima.temperatura} />
+        <span className="history-meta-separator" aria-hidden="true">
+          •
+        </span>
+        <Metric icon="🛣️" label="Distância" value={viagem.percurso.distancia} />
       </div>
 
-      <div id={detailsId} className={`viagem-detalhes${expanded ? '' : ' hidden'}`}>
-        <section className="secao-guia" aria-label="Guia turístico">
-          <h4 className="secao-guia-header">🏛️ Guia Turístico &amp; Culinária do Destino</h4>
-          <div className="guia-texto">{viagem.dicas_destino}</div>
-        </section>
+      <div className="history-trip-footer">
+        {persistenceStatus ? (
+          <span className={`history-persistence is-${persistenceStatus}`} role="status">
+            {persistenceStatus === 'pending' ? (
+              <>
+                <span className="spinner-mini" aria-hidden="true" /> Salvando viagem…
+              </>
+            ) : (
+              'Ainda não foi possível confirmar'
+            )}
+          </span>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          className="history-delete"
+          disabled={deleting || disabled}
+          aria-label={`${deleting ? 'Excluindo' : 'Excluir'} viagem de ${routeLabel}`}
+          onClick={() => onDelete(viagem.id)}
+        >
+          <span aria-hidden="true">🗑️</span>
+          {deleting ? 'Excluindo…' : 'Excluir'}
+        </button>
       </div>
     </article>
   );
@@ -101,54 +85,89 @@ export function ViagemCard({ viagem, deleting = false, onDelete }: ViagemCardPro
 
 interface HistoricoViagensProps {
   viagens: readonly Viagem[];
-  jsonUrl: string;
-  deletingId?: string | null;
-  loadingCard?: React.ReactNode;
+  status?: HistoryStatus;
+  errorMessage?: string;
+  deletingIds?: readonly string[];
+  persistenceById?: Readonly<Record<string, PersistenceStatus>>;
+  pendingRoute?: { origem: string; destino: string } | null;
   onDelete: (viagemId: string) => void | Promise<void>;
 }
 
 export function HistoricoViagens({
   viagens,
-  jsonUrl,
-  deletingId,
-  loadingCard,
+  status = 'ready',
+  errorMessage,
+  deletingIds = [],
+  persistenceById = {},
+  pendingRoute,
   onDelete,
 }: HistoricoViagensProps) {
   return (
-    <section className="card" aria-labelledby="historico-title">
-      <div className="historico-header">
-        <h2 id="historico-title" className="form-title">
-          📍 Seus Roteiros Salvos
-        </h2>
-        <a
-          href={jsonUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-toggle btn-json"
-          title="Visualizar estrutura e metadados brutos do arquivo JSON de viagens"
-        >
-          📄 Ver JSON (API)
-        </a>
-      </div>
+    <section className="card history-panel" aria-labelledby="historico-title">
+      <header className="history-heading">
+        <span className="history-heading-icon" aria-hidden="true">
+          🗂️
+        </span>
+        <div>
+          <h2 id="historico-title">Viagens Salvas</h2>
+          <p>Histórico de viagens salvas</p>
+        </div>
+      </header>
 
-      {loadingCard}
+      {status === 'loading' ? (
+        <p className="history-state" role="status">
+          <span className="spinner-inline" aria-hidden="true" />
+          Carregando viagens salvas…
+        </p>
+      ) : null}
 
-      <div id="listaViagens">
-        {viagens.length > 0 ? (
-          viagens.map((viagem) => (
-            <ViagemCard
-              key={viagem.id}
-              viagem={viagem}
-              deleting={deletingId === viagem.id}
-              onDelete={onDelete}
-            />
-          ))
-        ) : loadingCard ? null : (
-          <p id="msgSemRoteiros" className="empty-message">
-            Nenhum roteiro salvo ainda. Planeje sua primeira rota acima!
+      {status === 'offline' || status === 'error' ? (
+        <p className="history-state is-error" role="alert">
+          {errorMessage ??
+            (status === 'offline'
+              ? 'Você está offline. As viagens confirmadas continuam disponíveis.'
+              : 'Não foi possível atualizar o histórico. Tente novamente.')}
+        </p>
+      ) : null}
+
+      {pendingRoute ? (
+        <article className="history-trip is-planning" aria-label="Viagem em processamento">
+          <div className="history-trip-topline">
+            <h3 className="history-route">
+              <span aria-hidden="true">🚗</span>
+              <span>{pendingRoute.origem}</span>
+              <span className="history-route-arrow" aria-hidden="true">
+                →
+              </span>
+              <span>{pendingRoute.destino}</span>
+            </h3>
+          </div>
+          <p className="history-planning-status" role="status">
+            <span className="spinner-mini" aria-hidden="true" /> Gerando viagem…
           </p>
-        )}
+        </article>
+      ) : null}
+
+      <div className="history-list" aria-live="polite">
+        {viagens.map((viagem) => (
+          <ViagemCard
+            key={viagem.id}
+            viagem={viagem}
+            deleting={deletingIds.includes(viagem.id)}
+            disabled={status === 'offline'}
+            persistenceStatus={persistenceById[viagem.id]}
+            onDelete={onDelete}
+          />
+        ))}
       </div>
+
+      {status !== 'loading' && !pendingRoute && viagens.length === 0 ? (
+        <div className="history-empty">
+          <span aria-hidden="true">🧭</span>
+          <p>Nenhuma viagem salva ainda.</p>
+          <small>Planeje sua primeira viagem para vê-la aqui.</small>
+        </div>
+      ) : null}
     </section>
   );
 }

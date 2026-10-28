@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
 import type {
+  AvailableValue,
   ConnectivityCondition,
   ProviderName,
   ProviderState,
-  ServiceCondition,
   TelemetryPanelState,
   TelemetrySnapshot,
 } from '../types/domain';
@@ -17,32 +17,9 @@ import {
 
 interface TelemetriaCardProps {
   state: TelemetryPanelState;
+  apiHealthStatus: 'checking' | 'online' | 'unavailable';
   onCopyRequestId: (requestId: string) => Promise<boolean>;
   connectivity?: ConnectivityCondition;
-}
-
-function TimingMetrics({ snapshot }: { snapshot?: TelemetrySnapshot }) {
-  const missing = unavailableValue<number>();
-  return (
-    <dl className="telemetry-metrics">
-      <div className="telemetry-metric telemetry-metric-primary">
-        <dt>Tempo total</dt>
-        <dd>{formatDuration(snapshot?.totalTimeMs ?? missing)}</dd>
-      </div>
-      <div className="telemetry-metric telemetry-metric-primary">
-        <dt>Tempo da API</dt>
-        <dd>{formatDuration(snapshot?.apiTimeMs ?? missing)}</dd>
-      </div>
-      <div className="telemetry-metric">
-        <dt>Processamento interno</dt>
-        <dd>Indisponível</dd>
-      </div>
-      <div className="telemetry-metric">
-        <dt>Rede externa</dt>
-        <dd>Indisponível</dd>
-      </div>
-    </dl>
-  );
 }
 
 const providerNames: Record<ProviderName, string> = {
@@ -56,30 +33,48 @@ const providerStates: Record<ProviderState, string> = {
   available: 'Disponível na operação',
   degraded: 'Degradado',
   unavailable: 'Indisponível',
-  unknown: 'Desconhecido',
+  unknown: 'Sem dados',
 };
 
-function serviceLabel(service: ServiceCondition): string {
-  if (service.state === 'available-last-request') return 'Disponível na última solicitação';
-  if (service.state === 'failed-last-request') return 'Falhou na última solicitação';
-  return 'Desconhecido';
+function connectivityLabel(connectivity?: ConnectivityCondition): string {
+  if (connectivity?.state === 'online') return 'Online (indício do navegador)';
+  if (connectivity?.state === 'offline') return 'Offline (indício do navegador)';
+  return 'Aguardando dados';
 }
 
-function connectivityLabel(connectivity: ConnectivityCondition): string {
-  if (connectivity.state === 'online') return 'Online (indício do navegador)';
-  if (connectivity.state === 'offline') return 'Offline (indício do navegador)';
-  return 'Desconhecida';
+function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="telemetry-metric">
+      <dt>{label}</dt>
+      <dd className={tone ? `is-${tone}` : undefined}>{value}</dd>
+    </div>
+  );
 }
 
-export function TelemetriaCard({ state, connectivity, onCopyRequestId }: TelemetriaCardProps) {
+export function TelemetriaCard({
+  state,
+  apiHealthStatus,
+  connectivity,
+  onCopyRequestId,
+}: TelemetriaCardProps) {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-  if (state.kind === 'hidden') return null;
-
-  const snapshot = state.kind === 'settled' ? state.snapshot : state.previous;
-  const route = state.kind === 'settled' ? state.snapshot.route : state.route;
+  const snapshot: TelemetrySnapshot | undefined =
+    state.kind === 'settled'
+      ? state.snapshot
+      : state.kind === 'loading' || state.kind === 'error'
+        ? state.previous
+        : undefined;
+  const route =
+    state.kind === 'settled'
+      ? state.snapshot.route
+      : state.kind === 'loading' || state.kind === 'error'
+        ? state.route
+        : undefined;
   const trigger = snapshot ? latencyAlertLabel(snapshot.totalTimeMs, snapshot.apiTimeMs) : null;
-  const hasPrevious = state.kind !== 'settled' && Boolean(state.previous);
   const currentConnectivity = connectivity ?? snapshot?.connectivity;
+  const missing = unavailableValue<number>();
+  const displayDuration = (value: AvailableValue<number>) =>
+    value.available ? formatDuration(value) : 'Aguardando dados';
 
   const handleCopy = async (requestId: string) => {
     setCopyFeedback(null);
@@ -97,143 +92,188 @@ export function TelemetriaCard({ state, connectivity, onCopyRequestId }: Telemet
     >
       <header className="telemetry-heading">
         <span className="telemetry-heading-mark" aria-hidden="true">
-          ▥
+          📊
         </span>
-        <div>
-          <h2 id="telemetry-title">Telemetria e desempenho</h2>
-          <p>Leitura da operação mais recente neste navegador.</p>
-        </div>
+        <h2 id="telemetry-title">Telemetria &amp; Desempenho</h2>
       </header>
 
-      {state.kind === 'loading' ? (
-        <p className="telemetry-notice telemetry-notice-loading" role="status">
-          <span className="spinner-inline" aria-hidden="true" />
-          Medindo o tempo do planejamento
+      {state.kind === 'hidden' ? (
+        <p className="telemetry-empty" role="status">
+          Os dados de desempenho da sua próxima viagem aparecerão aqui após o planejamento.
         </p>
-      ) : null}
-
-      {state.kind === 'error' ? (
-        <p className="telemetry-notice telemetry-notice-error" role="status">
-          {snapshot
-            ? 'Não foi possível medir a nova tentativa. Mantivemos os dados da tentativa anterior.'
-            : 'Não foi possível medir esta tentativa. Nenhum valor foi estimado.'}
-        </p>
-      ) : null}
-
-      {trigger && state.kind === 'settled' ? (
-        <p className="telemetry-notice telemetry-notice-warning" role="status">
-          <strong>{trigger}</strong> ultrapassou 1.000 ms, uma referência de demonstração — não um
-          SLO.
-        </p>
-      ) : null}
-
-      {hasPrevious && state.kind === 'loading' ? (
-        <p className="telemetry-previous">Exibindo dados da tentativa anterior enquanto medimos.</p>
-      ) : null}
-
-      <section className="telemetry-block" aria-labelledby="telemetry-trip-title">
-        <div className="telemetry-block-heading">
-          <h3 id="telemetry-trip-title">Última viagem</h3>
-          <p>
-            {route.origin} <span aria-hidden="true">→</span> {route.destination}
-          </p>
-        </div>
-        <TimingMetrics snapshot={snapshot} />
-      </section>
-
-      {snapshot ? (
-        <section className="telemetry-block" aria-labelledby="telemetry-session-title">
-          <div className="telemetry-block-heading">
-            <h3 id="telemetry-session-title">Sessão e conexão</h3>
-            <p>Dados limitados à identidade ativa.</p>
-          </div>
-          <dl className="telemetry-details">
-            <div>
-              <dt>Usuário ativo</dt>
-              <dd>{snapshot.session.displayName}</dd>
-            </div>
-            <div>
-              <dt>Persistência</dt>
-              <dd>
-                {snapshot.session.persistence === 'permanente'
-                  ? 'Permanente (conta Google)'
-                  : 'Temporária (visitante)'}
-              </dd>
-            </div>
-            <div>
-              <dt>Meus roteiros</dt>
-              <dd>{snapshot.session.userTripCount}</dd>
-            </div>
-            <div>
-              <dt>Conectividade do navegador</dt>
-              <dd>
-                {currentConnectivity ? connectivityLabel(currentConnectivity) : 'Desconhecida'}
-              </dd>
-            </div>
-            <div>
-              <dt>Qualidade da conexão</dt>
-              <dd>Indisponível</dd>
-            </div>
-            <div>
-              <dt>Uptime do backend</dt>
-              <dd>Indisponível</dd>
-            </div>
-          </dl>
-          {snapshot.requestId.available ? (
-            <div className="telemetry-correlation">
-              <div>
-                <span>Correlação</span>
-                <code>{maskRequestId(snapshot.requestId.value)}</code>
-              </div>
-              <button
-                type="button"
-                className="telemetry-copy"
-                onClick={() =>
-                  void handleCopy(snapshot.requestId.available ? snapshot.requestId.value : '')
-                }
-              >
-                Copiar identificador de correlação
-              </button>
-            </div>
-          ) : (
-            <p className="telemetry-correlation-missing">Correlação: Indisponível</p>
-          )}
-          {copyFeedback ? (
-            <p className="telemetry-copy-feedback" role="status">
-              {copyFeedback}
+      ) : (
+        <>
+          {state.kind === 'loading' ? (
+            <p className="telemetry-notice telemetry-notice-loading" role="status">
+              <span className="spinner-inline" aria-hidden="true" /> Medindo o tempo do planejamento
             </p>
           ) : null}
-        </section>
-      ) : null}
+          {state.kind === 'error' ? (
+            <p className="telemetry-notice telemetry-notice-error" role="status">
+              {snapshot
+                ? 'Não foi possível medir a nova tentativa. Mantivemos os dados da tentativa anterior.'
+                : 'Não foi possível medir esta tentativa. Nenhum valor foi estimado.'}
+            </p>
+          ) : null}
+          {trigger && state.kind === 'settled' ? (
+            <div className="telemetry-notice telemetry-notice-warning" role="status">
+              <strong>⚠️ Aviso de latência</strong>
+              <p>
+                {trigger} ultrapassou 1.000 ms, uma referência de demonstração, não um limite de
+                serviço.
+              </p>
+            </div>
+          ) : null}
+          {state.kind === 'loading' && snapshot ? (
+            <p className="telemetry-previous">
+              Exibindo dados da tentativa anterior enquanto medimos.
+            </p>
+          ) : null}
 
-      {snapshot ? (
-        <section className="telemetry-block" aria-labelledby="telemetry-service-title">
-          <div className="telemetry-block-heading">
-            <h3 id="telemetry-service-title">Condição do serviço</h3>
-            <p>{serviceLabel(snapshot.service)}</p>
-          </div>
-          <p className="telemetry-provider-summary">
-            {
-              snapshot.providers.filter(({ state: providerState }) => providerState === 'available')
-                .length
-            }{' '}
-            de {snapshot.providers.length} provedores com dados confirmados
-          </p>
-          <ul className="telemetry-providers">
-            {snapshot.providers.map((provider) => (
-              <li key={provider.provider}>
-                <div>
-                  <strong>{providerNames[provider.provider]}</strong>
-                  <span className={`telemetry-state telemetry-state-${provider.state}`}>
-                    {providerStates[provider.state]}
-                  </span>
-                </div>
-                <small>Tempo do provedor: Indisponível</small>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+          <section className="telemetry-block" aria-labelledby="telemetry-trip-title">
+            <h3 id="telemetry-trip-title">
+              ⚡ Última viagem{route ? ` (${route.origin} → ${route.destination})` : ''}
+            </h3>
+            <dl className="telemetry-metrics">
+              <Metric
+                label="Tempo total"
+                value={displayDuration(snapshot?.totalTimeMs ?? missing)}
+                tone="total"
+              />
+              {/* TODO(backend): ligar a duração de geocoding quando o contrato de planejamento expuser essa etapa. */}
+              <Metric label="Geocoding" value="Aguardando dados" />
+              {/* TODO(backend): ligar a duração agregada das APIs e da IA quando vier no payload; não inferir pelo tempo total. */}
+              <Metric label="APIs + IA Gemini" value="Aguardando dados" />
+              <Metric
+                label="Servidor local (Tempo da API)"
+                value={displayDuration(snapshot?.apiTimeMs ?? missing)}
+                tone="server"
+              />
+            </dl>
+            <div className="telemetry-api-detail">
+              <strong>Detalhamento por API:</strong>
+              {snapshot ? (
+                <ul>
+                  {snapshot.providers.map((provider) => (
+                    <li key={provider.provider}>
+                      {providerNames[provider.provider]}:{' '}
+                      <span>{providerStates[provider.state]}</span>
+                      {/* TODO(backend): usar a duração individual de cada provedor quando a API a fornecer. */}
+                      {' · Tempo: '}
+                      {displayDuration(provider.durationMs)}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span> Aguardando dados da primeira viagem.</span>
+              )}
+            </div>
+          </section>
+
+          <section className="telemetry-block" aria-labelledby="telemetry-session-title">
+            <h3 id="telemetry-session-title">👤 Sessão do usuário &amp; conexão</h3>
+            <dl className="telemetry-details">
+              <div>
+                <dt>Usuário ativo</dt>
+                <dd>{snapshot?.session.displayName ?? 'Aguardando dados'}</dd>
+              </div>
+              <div>
+                <dt>Início da sessão</dt>
+                {/* TODO(backend): preencher sessionStartedAt a partir do contrato de sessão quando disponível. */}
+                <dd>
+                  {snapshot?.session.sessionStartedAt.available
+                    ? snapshot.session.sessionStartedAt.value
+                    : 'Aguardando dados'}
+                </dd>
+              </div>
+              <div>
+                <dt>Tempo total da sessão</dt>
+                {/* TODO(backend): preencher sessionDuration a partir de um dado de sessão confiável; não estimar pela montagem do card. */}
+                <dd>
+                  {snapshot?.session.sessionDuration.available
+                    ? formatDuration(snapshot.session.sessionDuration)
+                    : 'Aguardando dados'}
+                </dd>
+              </div>
+              <div>
+                <dt>Persistência dos dados</dt>
+                <dd>
+                  {snapshot
+                    ? snapshot.session.persistence === 'permanente'
+                      ? 'Permanente (conta Google)'
+                      : 'Temporária (visitante)'
+                    : 'Aguardando dados'}
+                </dd>
+              </div>
+              <div>
+                <dt>Meus roteiros</dt>
+                <dd>{snapshot?.session.userTripCount ?? 'Aguardando dados'}</dd>
+              </div>
+              <div>
+                <dt>Qualidade da conexão</dt>
+                {/* TODO(integração): exibir RTT/tipo de rede apenas se houver medição confiável; navigator.onLine não informa qualidade. */}
+                <dd>Aguardando dados</dd>
+              </div>
+              <div>
+                <dt>Conectividade do navegador</dt>
+                <dd>{connectivityLabel(currentConnectivity)}</dd>
+              </div>
+            </dl>
+            {snapshot?.requestId.available ? (
+              <div className="telemetry-correlation">
+                <span>
+                  Correlação: <code>{maskRequestId(snapshot.requestId.value)}</code>
+                </span>
+                <button
+                  type="button"
+                  className="telemetry-copy"
+                  onClick={() =>
+                    void handleCopy(snapshot.requestId.available ? snapshot.requestId.value : '')
+                  }
+                >
+                  Copiar identificador de correlação
+                </button>
+              </div>
+            ) : (
+              <p className="telemetry-correlation-missing">Correlação: Aguardando dados</p>
+            )}
+            {copyFeedback ? (
+              <p className="telemetry-copy-feedback" role="status">
+                {copyFeedback}
+              </p>
+            ) : null}
+          </section>
+
+          <section className="telemetry-block" aria-label="Condição do serviço">
+            <dl className="telemetry-service-grid">
+              <Metric
+                label="Status da API"
+                value={
+                  apiHealthStatus === 'online'
+                    ? 'ONLINE'
+                    : apiHealthStatus === 'checking'
+                      ? 'Verificando…'
+                      : 'Sem confirmação'
+                }
+                tone={apiHealthStatus === 'online' ? 'server' : undefined}
+              />
+              {/* TODO(backend): consumir uptime da API operacional quando houver campo estável no contrato. */}
+              <Metric label="Uptime backend" value="Aguardando dados" />
+              {/* TODO(backend): consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
+              <Metric label="Roteiros totais" value="Aguardando dados" />
+            </dl>
+            <p className="telemetry-health-note">
+              Status da API: última verificação de /healthz; não é monitoramento contínuo.
+            </p>
+            <p className="telemetry-provider-summary">
+              Provedores concorrentes:{' '}
+              {snapshot
+                ? snapshot.providers.map(({ provider }) => providerNames[provider]).join(', ')
+                : 'Aguardando dados'}
+            </p>
+          </section>
+        </>
+      )}
     </section>
   );
 }

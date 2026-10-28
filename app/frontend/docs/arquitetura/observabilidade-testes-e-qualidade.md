@@ -5,15 +5,21 @@
 ### Estado implementado do painel
 
 O frontend implementa `TelemetriaCard` sem endpoint novo, polling ou persistência.
-O painel permanece oculto até a primeira tentativa, mede o tempo total com
+O painel aparece desde o carregamento da identidade, com uma mensagem inicial até a
+primeira tentativa. Mede o tempo total com
 `performance.now()` e lê defensivamente `X-Process-Time` e `X-Request-ID` somente
 na resposta de planejamento. O snapshot fica em memória e é removido antes de
 login, entrada como visitante ou logout.
 
 Na tela autenticada, formulário e telemetria compartilham uma faixa: o formulário
-fica à esquerda e o `aside` do painel à direita em desktop. O `aside` só é montado
-após a primeira tentativa; abaixo do breakpoint desktop os blocos empilham nessa
+fica à esquerda e o `aside` do painel à direita em desktop. O `aside` é montado com
+a sessão; abaixo do breakpoint desktop os blocos empilham nessa
 ordem.
+
+O quadro “Status da API” consulta o `GET /healthz` existente ao iniciar a sessão e
+quando a conectividade do navegador muda. Mostra “ONLINE” apenas quando o retorno
+é `{ status: "ok" }`; sem confirmação mostra estado inconclusivo. É uma verificação
+pontual, não monitoramento contínuo nem indicação da saúde dos provedores.
 
 São dados reais nesta entrega: Tempo total, Tempo da API, rota, identidade de
 exibição, contagem de roteiros do usuário e evidências presentes na resposta para

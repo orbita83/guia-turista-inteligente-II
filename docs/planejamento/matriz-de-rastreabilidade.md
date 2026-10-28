@@ -13,7 +13,7 @@ Esta matriz conecta necessidades de produto, regras, atributos de qualidade, cas
 | Mapa, rota e relevo | `RF-MAP-001`–`005` | `RN-MAP-001`–`003` | `RNF-DES-009` | `UC-MAP-001` | `API-MAP-001` | `CA-MAP-001`–`003` | Fase 4 |
 | Custos e autonomia | `RF-CST-001`–`005` | `RN-CST-001`–`005` | — | `UC-MAP-001` | `API-CST-001` | `CA-CST-001` | Fase 4 |
 | Guia, clima e atrações | `RF-GUI-001`–`006` | `RN-GUI-001`–`007` | `RNF-DES-004`, `006`, `009` | `UC-GUI-001`–`002` | `API-GUI-001`, `API-HIS-003` | `CA-GUI-001`–`003`, `CA-DES-002` | Fase 3 e Fase 6 |
-| Histórico | `RF-HIS-001`–`003` | `RN-HIS-001`–`004` | `RNF-HIS-001`–`002` | `UC-HIS-001` | `API-HIS-001`–`003` | `CA-HIS-001`–`002` | Fase 5 |
+| Histórico | UI `RF-HIS-001`–`003` implementada no frontend | `RN-HIS-001`–`004` conforme contratos vigentes | UX coberta por testes frontend; persistência/isolamento server-side fora desta entrega | `UC-HIS-001` | `API-HIS-*` são dependências existentes, sem alteração | `CA-HIS-001`–`002` cobertos na UI conforme sinais disponíveis | Fase 5 |
 | Exportação e compartilhamento | `RF-EXP-001`–`004` | `RN-EXP-001`–`002` | `RNF-DES-006` | `UC-EXP-001` | `API-EXP-001`–`002` | `CA-EXP-001`–`002` | Fase 6 |
 | Telemetria | `RF-TEL-001`–`003` implementados no frontend; `004`–`005` operacionais | — | `RNF-TEL-001`, `004` cobertos no painel; `002`–`003`, `005` operacionais | `UC-TEL-001` | headers atuais de `API-PLN-001`; `API-TEL-001`–`002` futuros; `API-OPS-001`–`002` | `CA-TEL-001` implementado no frontend; `CA-TEL-002` operacional | Fase 3 e Fase 7 |
 | Concorrência e resiliência | `RF-PLN-005`–`007` | `RN-DES-001`–`005` | `RNF-DES-001`–`009` | `UC-PLN-001` | `API-PLN-001` | `CA-PLN-002`, `CA-DES-001`–`003` | Fase 2, Fase 3 e Fase 7 |
@@ -36,6 +36,7 @@ Esta matriz conecta necessidades de produto, regras, atributos de qualidade, cas
 | Decisão de frontend | [ADR-001 — TypeScript e Vite+](../arquitetura/decisoes/ADR-001-typescript-e-vite-plus.md) |
 | Organização do repositório | [ADR-002 — Monorepo com Turborepo](../arquitetura/decisoes/ADR-002-monorepo-com-turborepo.md) |
 | Painel de telemetria frontend | [Especificação e evidências](../../specs/001-painel-telemetria/quickstart.md) |
+| Histórico e persistência | [Especificação e cenários](../../specs/002-historico-viagens/quickstart.md) |
 
 ## Lacunas de cobertura conhecidas
 
@@ -43,7 +44,9 @@ Esta matriz conecta necessidades de produto, regras, atributos de qualidade, cas
 2. `API-AUT-001`, `API-CST-001`, `API-EXP-001`, `API-EXP-002` e `API-TEL-001` ainda dependem da estabilização de métodos, caminhos ou schemas; o painel atual usa apenas os headers e o payload já existentes em `API-PLN-001`.
 3. Metas de latência ainda não possuem ambiente, volume e percentis definidos; portanto não são SLOs de produção.
 4. Emissões (`RF-CST-005`), estado online/offline (`RNF-UX-006`) e encerramento com `sendBeacon` (`RF-AUT-005`) precisam de critérios específicos antes da homologação final.
-5. A confiança em `X-User-Id` precisa ser substituída ou protegida por um modelo verificável de autenticação/autorização.
+5. O histórico já usa exclusivamente a sessão assinada; `X-User-Id` não autentica
+   nem seleciona catálogo. A evolução futura de autenticação não pode regredir esse
+   isolamento.
 
 ## Regra de atualização
 

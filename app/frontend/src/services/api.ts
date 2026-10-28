@@ -33,6 +33,85 @@ export class ApiError extends Error {
   }
 }
 
+export class ApiContractError extends Error {
+  constructor(message = 'A API retornou dados de viagem inválidos.') {
+    super(message);
+    this.name = 'ApiContractError';
+  }
+}
+
+const UNAVAILABLE = 'Aguardando dados';
+
+/** Verifica apenas a saúde do processo da API; não representa provedores externos. */
+export async function verificarSaudeApi(signal?: AbortSignal): Promise<boolean> {
+  const healthUrl = `${API_BASE_URL.replace(/\/api\/v1$/, '')}/healthz`;
+  const response = await fetch(healthUrl, { signal, headers: { Accept: 'application/json' } });
+  if (!response.ok) return false;
+  const payload: unknown = await response.json();
+  return recordValue(payload)?.status === 'ok';
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function availableText(value: unknown, fallback = UNAVAILABLE): string {
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.trim();
+  return normalized && normalized.toUpperCase() !== 'N/D' ? normalized : fallback;
+}
+
+export function parseTrip(value: unknown): Viagem | null {
+  const trip = recordValue(value);
+  if (!trip) return null;
+  const id = availableText(trip.id, '');
+  if (!id) return null;
+  const weather = recordValue(trip.clima);
+  const route = recordValue(trip.percurso);
+  const diagnostics = recordValue(trip.diagnostico_ia);
+  const createdAt = availableText(trip.criado_em, '');
+
+  // TODO(backend): consumir origem, destino, clima e percurso completos quando o contrato
+  // de planejamento/listagem os entregar; os campos ausentes seguem visíveis como "Aguardando dados".
+  return {
+    id,
+    ...(createdAt ? { criado_em: createdAt } : {}),
+    origem: availableText(trip.origem),
+    destino: availableText(trip.destino),
+    clima: {
+      temperatura: availableText(weather?.temperatura),
+      umidade: availableText(weather?.umidade),
+      vento: availableText(weather?.vento),
+    },
+    percurso: {
+      distancia: availableText(route?.distancia),
+      tempo: availableText(route?.tempo),
+    },
+    dicas_destino: availableText(trip.dicas_destino, ''),
+    ...(diagnostics ? { diagnostico_ia: diagnostics } : {}),
+  };
+}
+
+function parseTripsResponse(value: unknown): TripsResponse {
+  const payload = recordValue(value);
+  if (!payload || !Array.isArray(payload.viagens)) throw new ApiContractError();
+  return {
+    viagens: payload.viagens.map(parseTrip).filter((trip): trip is Viagem => trip !== null),
+  };
+}
+
+function parsePlanTripResponse(value: unknown): Omit<PlanTripResponse, 'metadata'> {
+  const payload = recordValue(value);
+  const viagem = parseTrip(payload?.viagem);
+  if (!payload || !viagem) throw new ApiContractError();
+  return {
+    viagem,
+    aviso: typeof payload.aviso === 'string' || payload.aviso === null ? payload.aviso : null,
+  };
+}
+
 function requestHeaders(init?: RequestInit): Headers {
   const headers = new Headers(init?.headers);
   headers.set('Accept', 'application/json');
@@ -115,7 +194,7 @@ export function encerrarSessao(): Promise<void> {
 }
 
 export function listarViagens(signal?: AbortSignal): Promise<TripsResponse> {
-  return request('/roteiros/minhas-viagens', { signal });
+  return request<unknown>('/roteiros/minhas-viagens', { signal }).then(parseTripsResponse);
 }
 
 export async function criarViagem(data: RoteiroFormData): Promise<PlanTripResponse> {
@@ -131,7 +210,7 @@ export async function criarViagem(data: RoteiroFormData): Promise<PlanTripRespon
   });
   const apiTimeMs = parseProcessTime(response.headers.get('X-Process-Time'));
   const requestId = parseRequestId(response.headers.get('X-Request-ID'));
-  const payload = await parseResponse<Omit<PlanTripResponse, 'metadata'>>(response);
+  const payload = parsePlanTripResponse(await parseResponse<unknown>(response));
   const elapsed = performance.now() - startedAt;
   const totalTimeMs: AvailableValue<number> =
     Number.isFinite(elapsed) && elapsed >= 0

@@ -14,147 +14,130 @@ import {
 import { TelemetriaCard } from './TelemetriaCard';
 
 const renderPanel = (state = settledTelemetryFixture()) =>
-  render(<TelemetriaCard state={state} onCopyRequestId={vi.fn(async () => true)} />);
+  render(
+    <TelemetriaCard
+      state={state}
+      apiHealthStatus="online"
+      onCopyRequestId={vi.fn(async () => true)}
+    />,
+  );
 
-describe('TelemetriaCard timing states', () => {
-  it('renders nothing while telemetry is hidden', () => {
-    const { container } = renderPanel(hiddenTelemetryFixture());
-    expect(container).toBeEmptyDOMElement();
+describe('TelemetriaCard', () => {
+  it('aparece antes da primeira viagem com uma orientação apropriada', () => {
+    renderPanel(hiddenTelemetryFixture());
+    expect(screen.getByRole('region', { name: 'Telemetria & Desempenho' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('aparecerão aqui após o planejamento');
+    expect(screen.queryByText('Última viagem')).not.toBeInTheDocument();
   });
 
-  it('announces measurement during the first attempt', () => {
-    renderPanel(loadingTelemetryFixture());
-    expect(screen.getByRole('status')).toHaveTextContent('Medindo o tempo do planejamento');
-    expect(screen.getByRole('region', { name: 'Telemetria e desempenho' })).toHaveAttribute(
-      'aria-busy',
-      'true',
-    );
-  });
-
-  it('separates total and API duration without inventing internal metrics', () => {
+  it('organiza as métricas e seções como no wireframe sem inventar valores', () => {
     renderPanel();
     expect(screen.getByText('Tempo total').nextElementSibling).toHaveTextContent('620 ms');
-    expect(screen.getByText('Tempo da API').nextElementSibling).toHaveTextContent('480 ms');
-    expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent(
-      'Indisponível',
+    expect(screen.getByText('Geocoding').nextElementSibling).toHaveTextContent('Aguardando dados');
+    expect(screen.getByText('APIs + IA Gemini').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
     );
-    expect(screen.getByText('Rede externa').nextElementSibling).toHaveTextContent('Indisponível');
+    expect(screen.getByText('Servidor local (Tempo da API)').nextElementSibling).toHaveTextContent(
+      '480 ms',
+    );
+    expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
+    );
+    expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
+    );
+    expect(screen.getByText('Status da API').nextElementSibling).toHaveTextContent('ONLINE');
+    expect(screen.getByText(/última verificação de \/healthz/)).toBeInTheDocument();
+    expect(screen.getByText('Pessoa visitante')).toBeInTheDocument();
+    expect(screen.getByText('Temporária (visitante)')).toBeInTheDocument();
+    expect(screen.getByText('Conectividade do navegador').nextElementSibling).toHaveTextContent(
+      'Online (indício do navegador)',
+    );
+    expect(screen.getByText(/Provedores concorrentes:/)).toHaveTextContent(
+      'Open-Meteo, OSRM, Open-Elevation, Gemini',
+    );
   });
 
-  it('identifies exactly which measured value crossed the demonstration threshold', () => {
-    renderPanel(
-      settledTelemetryFixture(
-        telemetrySnapshotFixture({ totalTimeMs: available(1_240), apiTimeMs: available(1_100) }),
-      ),
+  it('usa fallback para medição ausente e não declara provedor desconhecido como disponível', () => {
+    const snapshot = telemetrySnapshotFixture({
+      apiTimeMs: unavailable('missing'),
+      providers: [
+        { provider: 'open-meteo', state: 'unknown', durationMs: unavailable() },
+        { provider: 'osrm', state: 'degraded', durationMs: unavailable() },
+        { provider: 'open-elevation', state: 'unknown', durationMs: unavailable() },
+        { provider: 'gemini', state: 'unknown', durationMs: unavailable() },
+      ],
+    });
+    renderPanel(settledTelemetryFixture(snapshot));
+    expect(screen.getByText('Servidor local (Tempo da API)').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
     );
-    expect(screen.getByRole('status')).toHaveTextContent('Tempo total e Tempo da API');
-    expect(screen.getByRole('status')).toHaveTextContent('referência de demonstração');
+    expect(screen.getByText('Degradado').closest('li')).toHaveTextContent('OSRM');
+    expect(screen.getAllByText('Sem dados')[0].closest('li')).toHaveTextContent('Open-Meteo');
   });
 
-  it('renders missing measurements as unavailable', () => {
-    renderPanel(
-      settledTelemetryFixture(telemetrySnapshotFixture({ apiTimeMs: unavailable('missing') })),
+  it('não declara a API offline quando a verificação não foi confirmada', () => {
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture()}
+        apiHealthStatus="unavailable"
+        onCopyRequestId={vi.fn(async () => true)}
+      />,
     );
-    expect(screen.getByText('Tempo da API').nextElementSibling).toHaveTextContent('Indisponível');
+    expect(screen.getByText('Status da API').nextElementSibling).toHaveTextContent(
+      'Sem confirmação',
+    );
   });
 
-  it('keeps the previous snapshot visible and labelled during retry and failure', () => {
+  it('mantém a medição anterior durante uma nova tentativa e em erro', () => {
     const previous = telemetrySnapshotFixture();
     const { rerender } = render(
       <TelemetriaCard
         state={loadingTelemetryFixture({ attemptId: 2, previous })}
+        apiHealthStatus="online"
         onCopyRequestId={vi.fn(async () => true)}
       />,
     );
     expect(screen.getByText(/dados da tentativa anterior/i)).toBeInTheDocument();
-
+    expect(screen.getByRole('region', { name: 'Telemetria & Desempenho' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     rerender(
       <TelemetriaCard
         state={errorTelemetryFixture({ attemptId: 2, previous })}
+        apiHealthStatus="online"
         onCopyRequestId={vi.fn(async () => true)}
       />,
     );
-    expect(screen.getByText(/não foi possível medir a nova tentativa/i)).toBeInTheDocument();
+    expect(screen.getByText(/Não foi possível medir a nova tentativa/i)).toBeInTheDocument();
     expect(screen.getByText('Tempo total').nextElementSibling).toHaveTextContent('620 ms');
   });
-});
 
-describe('TelemetriaCard provider diagnostics', () => {
-  it('lists all providers with a textual state and an honest summary', () => {
-    renderPanel();
-    expect(screen.getByText('3 de 4 provedores com dados confirmados')).toBeInTheDocument();
-    for (const name of ['Open-Meteo', 'OSRM', 'Open-Elevation', 'Gemini']) {
-      expect(screen.getByText(name)).toBeInTheDocument();
-    }
-    expect(screen.getAllByText('Tempo do provedor: Indisponível')).toHaveLength(4);
-  });
-
-  it('renders degraded and unknown as explicit text rather than color alone', () => {
-    const snapshot = telemetrySnapshotFixture({
-      providers: [
-        { provider: 'open-meteo', state: 'available', durationMs: unavailable() },
-        { provider: 'osrm', state: 'available', durationMs: unavailable() },
-        { provider: 'open-elevation', state: 'unknown', durationMs: unavailable() },
-        {
-          provider: 'gemini',
-          state: 'degraded',
-          durationMs: unavailable(),
-          reason: 'fallback',
-        },
-      ],
-    });
-    renderPanel(settledTelemetryFixture(snapshot));
-    expect(screen.getByText('Degradado')).toBeInTheDocument();
-    expect(screen.getByText('Desconhecido')).toBeInTheDocument();
-  });
-
-  it('describes service availability as limited to the last request', () => {
-    renderPanel();
-    expect(screen.getByText('Disponível na última solicitação')).toBeInTheDocument();
-    expect(screen.queryByText(/^online$/i)).not.toBeInTheDocument();
-  });
-});
-
-describe('TelemetriaCard session, connectivity and correlation', () => {
-  it('shows a safe session summary and unavailable operational metrics', () => {
-    renderPanel();
-    expect(screen.getByText('Pessoa visitante')).toBeInTheDocument();
-    expect(screen.getByText('Temporária (visitante)')).toBeInTheDocument();
-    expect(screen.getByText('Meus roteiros').nextElementSibling).toHaveTextContent('2');
-    expect(screen.getByText('Conectividade do navegador').nextElementSibling).toHaveTextContent(
-      'Online (indício do navegador)',
+  it('avisa sobre limiar medido sem atribuir o atraso à rede', () => {
+    renderPanel(
+      settledTelemetryFixture(
+        telemetrySnapshotFixture({ totalTimeMs: available(1240), apiTimeMs: available(1100) }),
+      ),
     );
-    expect(screen.getByText('Qualidade da conexão').nextElementSibling).toHaveTextContent(
-      'Indisponível',
-    );
-    expect(screen.getByText('Uptime do backend').nextElementSibling).toHaveTextContent(
-      'Indisponível',
-    );
+    expect(screen.getByRole('status')).toHaveTextContent('Aviso de latência');
+    expect(screen.getByRole('status')).toHaveTextContent('Tempo total e Tempo da API');
+    expect(screen.getByRole('status')).not.toHaveTextContent('rede externa');
   });
 
-  it('masks the request ID and copies only after an explicit action', async () => {
+  it('mascara e copia o identificador apenas por ação explícita', async () => {
     const user = userEvent.setup();
     const copy = vi.fn(async () => true);
-    const fullId = 'abcd1234-5678-90ef-abcd-123456789ef0';
-    render(<TelemetriaCard state={settledTelemetryFixture()} onCopyRequestId={copy} />);
-
-    expect(screen.getByText('abcd1234…9ef0')).toBeInTheDocument();
-    expect(screen.queryByText(fullId)).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Copiar identificador de correlação' }));
-    expect(copy).toHaveBeenCalledWith(fullId);
-    expect(screen.getByRole('status')).toHaveTextContent('Identificador copiado');
-  });
-
-  it('announces a clipboard failure without removing the masked ID', async () => {
-    const user = userEvent.setup();
     render(
       <TelemetriaCard
         state={settledTelemetryFixture()}
-        onCopyRequestId={vi.fn(async () => false)}
+        apiHealthStatus="online"
+        onCopyRequestId={copy}
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Copiar identificador de correlação' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Não foi possível copiar');
     expect(screen.getByText('abcd1234…9ef0')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Copiar identificador de correlação' }));
+    expect(copy).toHaveBeenCalledWith('abcd1234-5678-90ef-abcd-123456789ef0');
+    expect(screen.getByRole('status')).toHaveTextContent('Identificador copiado');
   });
 });

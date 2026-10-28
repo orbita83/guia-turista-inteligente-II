@@ -44,59 +44,6 @@
     padding: 0.75rem 0.85rem;
   }
 
-  .viagem-card {
-    margin-top: 1.4rem;
-    padding: 1.4rem;
-    border-radius: 16px;
-  }
-
-  .viagem-header {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  .viagem-rota-info {
-    flex: 1 1 auto;
-  }
-  .viagem-rota-titulo,
-  .viagem-toggle,
-  .viagem-accordion-trigger {
-    font-size: 1.2rem;
-  }
-
-  .btn-actions {
-    display: inline-flex;
-    width: auto;
-    flex-shrink: 0;
-    flex-flow: row nowrap;
-    align-items: center;
-  }
-
-  .form-deletar,
-  .btn-maps,
-  .btn-danger {
-    width: auto;
-  }
-  .btn-maps,
-  .btn-danger {
-    padding: 0 14px;
-  }
-  .tele-badge {
-    padding: 5px 10px;
-    font-size: 0.82rem;
-  }
-  .secao-guia {
-    padding: 1.2rem;
-  }
-  .secao-guia-header {
-    font-size: 1rem;
-  }
-  .guia-texto {
-    font-size: 0.92rem;
-  }
-
   .telemetry-heading h2 {
     font-size: 1.4rem;
   }
@@ -111,7 +58,7 @@
     max-width: 1320px;
   }
 
-  .planning-layout-with-telemetry {
+  .planning-layout-with-sidebar {
     grid-template-columns: minmax(0, 1.62fr) minmax(340px, 1fr);
     align-items: start;
     gap: 1.4rem;
@@ -150,8 +97,7 @@
   }
 
   .telemetry-details > div {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.15rem;
+    flex-wrap: wrap;
   }
   .telemetry-correlation {
     align-items: stretch;

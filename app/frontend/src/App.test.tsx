@@ -29,7 +29,7 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
-  it('integra o painel após o planejamento e o remove antes do logout', async () => {
+  it('mostra o painel desde a sessão e atualiza seus dados após planejamento', async () => {
     const user = userEvent.setup();
     let loggedIn = true;
     const usuario = {
@@ -63,6 +63,9 @@ describe('App', () => {
         if (url.endsWith('/roteiros/minhas-viagens')) {
           return Response.json({ viagens: [] });
         }
+        if (url.endsWith('/healthz')) {
+          return Response.json({ status: 'ok' });
+        }
         if (url.endsWith('/roteiros/planejar')) {
           return Response.json(
             { viagem },
@@ -79,13 +82,10 @@ describe('App', () => {
 
     render(<App />);
     await screen.findByRole('heading', { name: 'Planejador de Viagens' });
-    expect(
-      screen.queryByRole('region', { name: 'Telemetria e desempenho' }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: 'Telemetria' })).not.toBeInTheDocument();
-    expect(document.querySelector('.planning-layout')).not.toHaveClass(
-      'planning-layout-with-telemetry',
-    );
+    expect(screen.getByRole('region', { name: 'Telemetria & Desempenho' })).toBeInTheDocument();
+    expect(screen.getByText(/dados de desempenho da sua próxima viagem/i)).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Painéis da viagem' })).toBeInTheDocument();
+    expect(document.querySelector('.planning-layout')).toHaveClass('planning-layout-with-sidebar');
 
     await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
     await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
@@ -95,15 +95,18 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
 
     expect(
-      await screen.findByRole('region', { name: 'Telemetria e desempenho' }),
+      await screen.findByRole('region', { name: 'Telemetria & Desempenho' }),
     ).toBeInTheDocument();
+    expect(await screen.findByText('ONLINE')).toBeInTheDocument();
     const planner = screen.getByRole('region', { name: 'Planejamento da viagem' });
-    const telemetryAside = screen.getByRole('complementary', { name: 'Telemetria' });
+    const telemetryAside = screen.getByRole('complementary', { name: 'Painéis da viagem' });
     const planningLayout = document.querySelector('.planning-layout');
-    expect(planningLayout).toHaveClass('planning-layout-with-telemetry');
+    expect(planningLayout).toHaveClass('planning-layout-with-sidebar');
     expect(planningLayout?.firstElementChild).toBe(planner);
     expect(planningLayout?.lastElementChild).toBe(telemetryAside);
-    expect(await screen.findByText('Sessão e conexão')).toBeInTheDocument();
+    expect(telemetryAside.firstElementChild).toHaveClass('telemetry-panel');
+    expect(telemetryAside.lastElementChild).toHaveClass('history-panel');
+    expect(await screen.findByText(/Sessão do usuário & conexão/)).toBeInTheDocument();
     expect(screen.getByText('Degradado')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Sair ➜' }));
