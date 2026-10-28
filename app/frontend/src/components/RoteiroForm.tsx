@@ -29,7 +29,7 @@ const PERFIS: readonly { valor: PerfilViajante; rotulo: string; icone: string }[
   { valor: 'gastronomico', rotulo: 'Gastronômico', icone: '🍲' },
   { valor: 'ecoturismo-aventura', rotulo: 'Ecoturismo / Aventura', icone: '🌿' },
   { valor: 'familia', rotulo: 'Família', icone: '👨‍👩‍👧' },
-  { valor: 'romantico-economico', rotulo: 'Romântico / Econômico', icone: '🎒' },
+  { valor: 'economico', rotulo: 'Econômico', icone: '🎒' },
 ];
 
 type ErrosFormulario = Partial<Record<'origem' | 'destino' | 'perfis', string>>;
