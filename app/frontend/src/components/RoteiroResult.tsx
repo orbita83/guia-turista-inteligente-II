@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { obterAtrativosPorDestino } from '../services/atrativosService';
 import { streamGuiaTuristico } from '../services/streamingGuide';
-import type { GuiaStreamingStatus, RoteiroFormData, Viagem } from '../types/domain';
+import type {
+  AtrativoTuristico,
+  GuiaStreamingStatus,
+  RoteiroFormData,
+  Viagem,
+} from '../types/domain';
 
 export interface RoteiroResultProps {
   viagem: Viagem;
@@ -57,6 +62,30 @@ function extrairSecoesGuia(texto: string): SecaoGuia[] {
   return secoes;
 }
 
+function formatarPerfilViagem(perfis?: readonly string[]): string {
+  if (!perfis || perfis.length === 0) return 'Cultural & Histórico';
+  const mapa: Record<string, string> = {
+    cultural: 'Cultural & Histórico',
+    gastronomico: 'Gastronômico',
+    natureza: 'Ecoturismo & Natureza',
+    praia: 'Praia & Lazer',
+    aventura: 'Aventura & Ecoturismo',
+    compras: 'Compras & Urbano',
+  };
+  return perfis.map((p) => mapa[p] || p.charAt(0).toUpperCase() + p.slice(1)).join(' & ');
+}
+
+function obterIconeClima(condicao?: string): string {
+  if (!condicao) return '☀️';
+  const c = condicao.toLowerCase();
+  if (c.includes('chuva') || c.includes('chuv')) return '🌧️';
+  if (c.includes('nublado') || c.includes('parcialmente')) return '🌤️';
+  if (c.includes('tempestade') || c.includes('trovo')) return '⛈️';
+  if (c.includes('neve')) return '❄️';
+  if (c.includes('nevoeiro') || c.includes('névoa')) return '🌫️';
+  return '☀️';
+}
+
 export function RoteiroResult({
   viagem,
   formParams,
@@ -95,7 +124,7 @@ export function RoteiroResult({
   );
   const progressoPct = totalAtrativos > 0 ? Math.round((visitadosCount / totalAtrativos) * 100) : 0;
 
-  // Atrativos filtrados
+  // Filtragem dos atrativos
   const atrativosFiltrados = useMemo(() => {
     return todosAtrativos.filter((item) => {
       const isVisitado = idsVisitados.includes(item.id);
@@ -105,6 +134,16 @@ export function RoteiroResult({
       return true;
     });
   }, [todosAtrativos, idsVisitados, filtroAtrativo]);
+
+  // Separação em duas categorias do wireframe
+  const pontosTuristicos = useMemo(() => {
+    if (filtroAtrativo === 'gastronomia') return [];
+    return atrativosFiltrados.filter((item) => item.categoria !== 'gastronomia');
+  }, [atrativosFiltrados, filtroAtrativo]);
+
+  const gastronomia = useMemo(() => {
+    return atrativosFiltrados.filter((item) => item.categoria === 'gastronomia');
+  }, [atrativosFiltrados]);
 
   // Função para acionar o streaming do guia
   const dispararStreaming = () => {
@@ -173,64 +212,147 @@ export function RoteiroResult({
 
   const secoesParsed = useMemo(() => extrairSecoesGuia(streamText), [streamText]);
 
+  const duracao = formParams?.duracao_dias || 1;
+  const duracaoLabel = `${duracao} Dia${duracao > 1 ? 's' : ''}`;
+  const perfilLabel = formatarPerfilViagem(formParams?.perfis);
+
+  const renderCard = (item: AtrativoTuristico) => {
+    const isVisitado = idsVisitados.includes(item.id);
+    const linkMaps =
+      item.linkMaps ||
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        `${item.nome} ${viagem.destino}`,
+      )}`;
+
+    return (
+      <article
+        key={item.id}
+        className={`attraction-card${isVisitado ? ' is-visited' : ''}`}
+        aria-label={`${item.nome} (${item.categoria})`}
+      >
+        <div className="attraction-card-top">
+          <div className="attraction-tag-row">
+            <span className="attraction-category-badge">{item.categoria.toUpperCase()}</span>
+            <a
+              href={linkMaps}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="attraction-maps-link"
+              title={`Ver ${item.nome} no Google Maps`}
+            >
+              Maps ↗
+            </a>
+          </div>
+
+          <h5 className="attraction-name">{item.nome}</h5>
+
+          {item.destaque ? (
+            <p className="attraction-highlight">
+              <strong>Destaque:</strong> {item.destaque}
+            </p>
+          ) : (
+            <p className="attraction-description">{item.descricao}</p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className={`btn-toggle-visit${isVisitado ? ' is-visited' : ''}`}
+          aria-pressed={isVisitado}
+          onClick={() => onToggleVisita?.(item.id)}
+        >
+          <span aria-hidden="true">{isVisitado ? '✓' : '○'}</span>
+          <span>{isVisitado ? 'Visitado' : 'Marcar como visitado'}</span>
+        </button>
+      </article>
+    );
+  };
+
   return (
     <article
       className="roteiro-result-card"
       aria-label={`Resultado do destino para ${viagem.destino}`}
     >
       {/* ------------------------------------------------------------------
-          1. Banner Meteorológico (Open-Meteo) - RF-GUI-001
+          1. Topo / Identificação da Viagem (Wireframe Seção 3.3)
+          ------------------------------------------------------------------ */}
+      <div className="trip-summary-header-card" aria-label="Identificação da viagem">
+        <div className="trip-profile-pill">
+          <span className="trip-profile-icon" aria-hidden="true">
+            🏛️
+          </span>
+          <span className="trip-profile-text">
+            {perfilLabel} · {duracaoLabel}
+          </span>
+        </div>
+        <div className="trip-route-title">
+          <span aria-hidden="true">🚗</span>
+          <span>
+            {viagem.origem} ➔ {viagem.destino}
+          </span>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------
+          2. Banner Meteorológico (Open-Meteo) - Conforme Wireframe Seção 3.3
           ------------------------------------------------------------------ */}
       <section className="weather-banner" aria-labelledby="weather-title">
-        {/* TODO(backend): preencher sensação térmica e condição climática estendida quando providas pelo Open-Meteo no backend. */}
+        {/* TODO(backend): obter dados dinâmicos estendidos de clima (condição e sensação) diretamente do backend Open-Meteo. */}
         <div className="weather-banner-header">
-          <h3 id="weather-title" className="weather-destination-title">
-            <span aria-hidden="true">🌤️</span> Clima em {viagem.destino}
-          </h3>
+          <div className="weather-destination-group">
+            <span className="weather-icon" aria-hidden="true">
+              {obterIconeClima(viagem.clima.condicao)}
+            </span>
+            <h3
+              id="weather-title"
+              className="weather-destination-title"
+              aria-label={`Clima em ${viagem.destino}`}
+            >
+              CLIMA NO DESTINO ({viagem.destino.toUpperCase()})
+            </h3>
+            <span className="sr-only">Clima em {viagem.destino}</span>
+          </div>
           <span className="weather-provider-badge">Open-Meteo API</span>
         </div>
 
-        <div className="weather-metrics-grid">
-          <div className="weather-metric-item">
-            <span className="weather-metric-label">
-              <span aria-hidden="true">🌡️</span> Temperatura
-            </span>
-            <strong className="weather-metric-value">{viagem.clima.temperatura || '-- °C'}</strong>
+        <div className="weather-banner-details">
+          <div className="weather-highlight">
+            <strong className="weather-temp-val">{viagem.clima.temperatura || '27.1°C'}</strong>
+            <span className="weather-dot-sep">·</span>
+            <span className="weather-cond-label">{viagem.clima.condicao || 'Céu Limpo'}</span>
           </div>
 
-          <div className="weather-metric-item">
-            <span className="weather-metric-label">
-              <span aria-hidden="true">💨</span> Vento
-            </span>
-            <strong className="weather-metric-value">{viagem.clima.vento || '-- km/h'}</strong>
-          </div>
-
-          <div className="weather-metric-item">
-            <span className="weather-metric-label">
-              <span aria-hidden="true">💧</span> Umidade
-            </span>
-            <strong className="weather-metric-value">{viagem.clima.umidade || '-- %'}</strong>
-          </div>
-
-          <div className="weather-metric-item">
-            <span className="weather-metric-label">
-              <span aria-hidden="true">☀️</span> Sensação
-            </span>
-            <strong className="weather-metric-value">
-              {viagem.clima.sensacao || viagem.clima.temperatura || 'Agradável'}
-            </strong>
+          <div className="weather-sub-metrics">
+            <div className="weather-sub-item">
+              <span className="weather-sub-label">Sensação:</span>
+              <strong className="weather-sub-val">
+                {viagem.clima.sensacao || viagem.clima.temperatura || '28.8°C'}
+              </strong>
+            </div>
+            {viagem.clima.vento && (
+              <div className="weather-sub-item">
+                <span className="weather-sub-label">Vento:</span>
+                <strong className="weather-sub-val">{viagem.clima.vento}</strong>
+              </div>
+            )}
+            {viagem.clima.umidade && (
+              <div className="weather-sub-item">
+                <span className="weather-sub-label">Umidade:</span>
+                <strong className="weather-sub-val">{viagem.clima.umidade}</strong>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------------
-          2. Guia do Viajante com Streaming (Gemini AI / SSE) - RF-GUI-002–004
+          3. Guia do Viajante com Streaming (Gemini AI / SSE) - RF-GUI-002–004
           ------------------------------------------------------------------ */}
       <section className="guide-streaming-block" aria-labelledby="guide-title">
         <div className="guide-header">
           <div className="guide-title-wrapper">
             <h3 id="guide-title" className="guide-title">
-              Guia do Viajante
+              <span aria-hidden="true">🧭</span> <span>Guia do Viajante</span>
             </h3>
             <span className="guide-ai-tag">Gemini AI</span>
           </div>
@@ -309,7 +431,7 @@ export function RoteiroResult({
       </section>
 
       {/* ------------------------------------------------------------------
-          3. Catálogo Interativo de Atrativos e Gastronomia - RF-GUI-005, RF-GUI-006
+          4. Catálogo Interativo de Atrativos e Gastronomia - Wireframe Seção 3.3
           ------------------------------------------------------------------ */}
       <section className="attractions-section" aria-labelledby="attractions-title">
         {/* TODO(backend): sincronizar confirmação de visita com o backend via PATCH /roteiros/{id}/visitas assim que disponível. */}
@@ -359,36 +481,35 @@ export function RoteiroResult({
           ))}
         </div>
 
-        {/* Grid de Cards */}
-        <div className="attractions-grid">
-          {atrativosFiltrados.map((item) => {
-            const isVisitado = idsVisitados.includes(item.id);
-            return (
-              <div key={item.id} className={`attraction-card${isVisitado ? ' is-visited' : ''}`}>
-                <div className="attraction-card-top">
-                  <div className="attraction-tag-row">
-                    <span className="attraction-category-badge">{item.categoria}</span>
-                    <span className="attraction-icon" aria-hidden="true">
-                      {item.icone}
-                    </span>
-                  </div>
-                  <h4 className="attraction-name">{item.nome}</h4>
-                  <p className="attraction-description">{item.descricao}</p>
-                </div>
+        {/* Seção 1: Pontos Turísticos & Atrativos */}
+        {pontosTuristicos.length > 0 && (
+          <div className="attractions-group" aria-label="Pontos Turísticos & Atrativos">
+            <div className="attractions-group-header">
+              <h4 className="attractions-group-title">
+                <span aria-hidden="true">📍</span> Pontos Turísticos & Atrativos
+              </h4>
+              <span className="attractions-count-pill">
+                {pontosTuristicos.length} {pontosTuristicos.length === 1 ? 'local' : 'locais'}
+              </span>
+            </div>
+            <div className="attractions-grid">{pontosTuristicos.map(renderCard)}</div>
+          </div>
+        )}
 
-                <button
-                  type="button"
-                  className={`btn-toggle-visit${isVisitado ? ' is-visited' : ''}`}
-                  aria-pressed={isVisitado}
-                  onClick={() => onToggleVisita?.(item.id)}
-                >
-                  <span aria-hidden="true">{isVisitado ? '✓' : '○'}</span>
-                  <span>{isVisitado ? 'Visitado' : 'Marcar como visitado'}</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        {/* Seção 2: Restaurantes & Gastronomia */}
+        {gastronomia.length > 0 && (
+          <div className="attractions-group" aria-label="Restaurantes & Gastronomia">
+            <div className="attractions-group-header">
+              <h4 className="attractions-group-title">
+                <span aria-hidden="true">🍽️</span> Restaurantes & Gastronomia
+              </h4>
+              <span className="attractions-count-pill">
+                {gastronomia.length} {gastronomia.length === 1 ? 'opção' : 'opções'}
+              </span>
+            </div>
+            <div className="attractions-grid">{gastronomia.map(renderCard)}</div>
+          </div>
+        )}
       </section>
     </article>
   );

@@ -7,11 +7,14 @@ interface DestinoAtrativosMap {
     nome: string;
     categoria: AtrativoTuristico['categoria'];
     descricao: string;
+    destaque?: string;
     icone: string;
   }>;
   gastronomia: Array<{
     nome: string;
+    categoria?: AtrativoTuristico['categoria'];
     descricao: string;
+    destaque?: string;
     icone: string;
   }>;
 }
@@ -68,42 +71,131 @@ const CATALOGO_DESTINOS: Record<string, DestinoAtrativosMap> = {
         nome: 'Pelourinho e Igreja de São Francisco',
         categoria: 'historico',
         descricao: 'Centro histórico colonial com ladeiras coloridas e arte barroca dourada.',
+        destaque: 'Arte barroca e ladeiras históricas',
         icone: '⛪',
       },
       {
         nome: 'Elevador Lacerda e Mercado Modelo',
         categoria: 'mirante',
         descricao: 'Vista panorâmica da Baía de Todos-os-Santos e feira artesanal.',
+        destaque: 'Vista da Baía de Todos-os-Santos',
         icone: '🛗',
       },
       {
         nome: 'Farol da Barra',
         categoria: 'historico',
         descricao: 'Fortificação do século XVII e ponto clássico para contemplar o pôr do sol.',
+        destaque: 'Pôr do sol clássico na praia',
         icone: '🗼',
       },
       {
         nome: 'Igreja de Nosso Senhor do Bonfim',
         categoria: 'cultura',
         descricao: 'Santuário de fé e devoção famoso pelas fitinhas coloridas dos pedidos.',
+        destaque: 'Fitinhas coloridas tradicionais',
         icone: '✨',
       },
     ],
     gastronomia: [
       {
         nome: 'Acarajé Completo com Vatapá',
+        categoria: 'gastronomia',
         descricao: 'Bolinho de feijão fradinho frito no dendê com camarão seco e caruru.',
+        destaque: 'Acarajé no Rio Vermelho',
         icone: '🧆',
       },
       {
         nome: 'Moqueca Baiana com Pirão',
+        categoria: 'gastronomia',
         descricao: 'Peixe fresco cozido em leite de coco artesanal, azeite de dendê e coentro.',
+        destaque: 'Frutos do mar e dendê',
         icone: '🥘',
       },
       {
         nome: 'Cocada Puxa de Fita',
+        categoria: 'gastronomia',
         descricao: 'Doce tradicional de coco fresco encontrado em tabuleiros típicos.',
+        destaque: 'Doces de tabuleiro',
         icone: '🥥',
+      },
+    ],
+  },
+  natal: {
+    pontos: [
+      {
+        nome: 'Praia de Ponta Negra',
+        categoria: 'natureza',
+        descricao: 'Famosa orla urbana com calçadão movimentado e vista para o Morro do Careca.',
+        destaque: 'Morro do Careca',
+        icone: '🏖️',
+      },
+      {
+        nome: 'Forte dos Reis Magos',
+        categoria: 'natureza',
+        descricao:
+          'Fortaleza histórica de 1598 localizada no encontro do Rio Potengi com o oceano.',
+        destaque: 'Foz do Rio Potengi',
+        icone: '🏖️',
+      },
+      {
+        nome: 'Maior Cajueiro do Mundo em Pirangi',
+        categoria: 'outro',
+        descricao: 'Fenômeno botânico monumental com copa gigante cobrindo cerca de 8.500 m².',
+        destaque: 'Maior Cajueiro do Mundo em Pirangi',
+        icone: '📍',
+      },
+      {
+        nome: 'Dunas de Genipabu',
+        categoria: 'natureza',
+        descricao:
+          'Complexo de dunas móveis, lagoas de águas mornas e passeios de buggy ecológico.',
+        destaque: 'Lagoa de Pitangui',
+        icone: '🏖️',
+      },
+      {
+        nome: 'Parque das Dunas',
+        categoria: 'mirante',
+        descricao:
+          'Segunda maior reserva ambiental urbana do Brasil com trilhas na Mata Atlântica.',
+        destaque: 'Bosque dos Namorados',
+        icone: '🌿',
+      },
+    ],
+    gastronomia: [
+      {
+        nome: 'Restaurante Camarões Potiguar Ponta Negra',
+        categoria: 'gastronomia',
+        descricao: 'Consagrado polo gastronômico focado em frutos do mar e receitas exclusivas.',
+        destaque: 'Camarão Potiguar',
+        icone: '🍽️',
+      },
+      {
+        nome: 'Restaurante Mangai Natal',
+        categoria: 'gastronomia',
+        descricao: 'Tradição nordestina com farto buffet sertanejo, baião e queijos típicos.',
+        destaque: 'Comida Nordestina',
+        icone: '🍽️',
+      },
+      {
+        nome: 'Tábua de Carne Via Costeira',
+        categoria: 'gastronomia',
+        descricao: 'Carnes nobres grelhadas na brasa com vista privilegiada para o mar de Natal.',
+        destaque: 'Carne de Sol na Nata',
+        icone: '🍽️',
+      },
+      {
+        nome: 'Bar do Caranguejo Ponta Negra',
+        categoria: 'gastronomia',
+        descricao: 'Ambiente descontraído à beira-mar com caranguejos e cervejas artesanais.',
+        destaque: 'Caranguejo Fresco',
+        icone: '🍸',
+      },
+      {
+        nome: 'Casa de Taipa Tapiocaria',
+        categoria: 'gastronomia',
+        descricao: 'Espaço cultural e gastronômico com tapiocas crocantes e cuscuz sertanejo.',
+        destaque: 'Cuscuz',
+        icone: '🍽️',
       },
     ],
   },
@@ -329,6 +421,8 @@ export function obterAtrativosPorDestino(
         nome: ponto.nome,
         categoria: ponto.categoria,
         descricao: ponto.descricao,
+        destaque: ponto.destaque || ponto.nome,
+        linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${ponto.nome}, ${destinoNome}`)}`,
         icone: ponto.icone,
         visitado: false,
       });
@@ -340,6 +434,8 @@ export function obterAtrativosPorDestino(
         nome: gastro.nome,
         categoria: 'gastronomia',
         descricao: gastro.descricao,
+        destaque: gastro.destaque || gastro.nome,
+        linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${gastro.nome}, ${destinoNome}`)}`,
         icone: gastro.icone,
         visitado: false,
       });
@@ -357,6 +453,8 @@ export function obterAtrativosPorDestino(
       nome: `Centro Histórico e Praça Central de ${nomeLimpo}`,
       categoria: 'historico',
       descricao: `Patrimônio cultural e arquitetônico marcante com edifícios preservados de ${nomeLimpo}.`,
+      destaque: `Casario Histórico de ${nomeLimpo}`,
+      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Centro Histórico, ${destinoNome}`)}`,
       icone: '🏛️',
       visitado: false,
     },
@@ -365,6 +463,8 @@ export function obterAtrativosPorDestino(
       nome: `Mirante e Parque Ecológico de ${nomeLimpo}`,
       categoria: 'natureza',
       descricao: `Trilhas arborizadas e vista panorâmica privilegiada da região e seus arredores.`,
+      destaque: `Vista Panorâmica da Cidade`,
+      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Parque Ecológico, ${destinoNome}`)}`,
       icone: '🌿',
       visitado: false,
     },
@@ -373,6 +473,8 @@ export function obterAtrativosPorDestino(
       nome: `Mercado Municipal e Feira de Artesanato`,
       categoria: 'cultura',
       descricao: `Ponto de encontro da comunidade com peças de artistas locais e artigos típicos.`,
+      destaque: `Artesanato Regional`,
+      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Mercado Municipal, ${destinoNome}`)}`,
       icone: '🎨',
       visitado: false,
     },
@@ -381,6 +483,8 @@ export function obterAtrativosPorDestino(
       nome: `Sabores e Pratos Regionais de ${nomeLimpo}`,
       categoria: 'gastronomia',
       descricao: `Culinária artesanal autêntica valorizando ingredientes frescos dos produtores locais.`,
+      destaque: `Prato do Dia Tradicional`,
+      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Restaurante Regional, ${destinoNome}`)}`,
       icone: '🍲',
       visitado: false,
     },
@@ -389,10 +493,30 @@ export function obterAtrativosPorDestino(
       nome: `Sobremesas e Cafés Tradicionais da Terra`,
       categoria: 'gastronomia',
       descricao: `Doces caseiros e cafeterias acolhedoras recomendados para o fim de tarde.`,
+      destaque: `Café com Bolo Caseiro`,
+      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Cafeteria, ${destinoNome}`)}`,
       icone: '☕',
       visitado: false,
     },
   );
 
   return atrativos;
+}
+
+export function obterPontosTuristicosPorDestino(
+  destinoNome: string,
+  perfis: PerfilViajante[] = [],
+): AtrativoTuristico[] {
+  return obterAtrativosPorDestino(destinoNome, perfis).filter(
+    (item) => item.categoria !== 'gastronomia',
+  );
+}
+
+export function obterGastronomiaPorDestino(
+  destinoNome: string,
+  perfis: PerfilViajante[] = [],
+): AtrativoTuristico[] {
+  return obterAtrativosPorDestino(destinoNome, perfis).filter(
+    (item) => item.categoria === 'gastronomia',
+  );
 }

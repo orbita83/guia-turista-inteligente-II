@@ -1,5 +1,6 @@
 /* ==========================================================================
    Tópico 3.5: Guia do Viajante, Banner Meteorológico e Atrativos Visitados
+   Conforme Wireframe Oficial Seção 3.3 (automacao_guia_turista_guia_atrativos_clima.png)
    ========================================================================== */
 
 .roteiro-result-card {
@@ -13,22 +14,72 @@
 }
 
 /* --------------------------------------------------------------------------
-   1. Banner Meteorológico (Open-Meteo)
+   0. Card de Identificação da Viagem (Wireframe Seção 3.3)
+   -------------------------------------------------------------------------- */
+.trip-summary-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 0.75rem 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+[data-theme='dark'] .trip-summary-header-card {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.trip-profile-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #ffffff;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: #15803d;
+}
+
+[data-theme='dark'] .trip-profile-pill {
+  background: #1e293b;
+  border-color: #059669;
+  color: #34d399;
+}
+
+.trip-route-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* --------------------------------------------------------------------------
+   1. Banner Meteorológico (Open-Meteo) - Wireframe Seção 3.3
    -------------------------------------------------------------------------- */
 .weather-banner {
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(224, 242, 254, 0.3) 100%);
-  border: 1px solid rgba(2, 132, 199, 0.2);
-  border-radius: 10px;
-  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 [data-theme='dark'] .weather-banner {
-  background: linear-gradient(135deg, rgba(14, 116, 144, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%);
-  border-color: rgba(14, 116, 144, 0.3);
+  background: var(--bg-card);
+  border-color: rgba(56, 189, 248, 0.25);
 }
 
 .weather-banner-header {
@@ -39,23 +90,32 @@
   gap: 0.5rem;
 }
 
-.weather-destination-title {
+.weather-destination-group {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.05rem;
-  font-weight: 750;
-  color: var(--text-main);
+}
+
+.weather-icon {
+  font-size: 1.35rem;
+}
+
+.weather-destination-title {
   margin: 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .weather-provider-badge {
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.25rem 0.55rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: rgba(2, 132, 199, 0.12);
-  color: #0369a1;
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -65,39 +125,67 @@
   color: #38bdf8;
 }
 
-.weather-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.75rem;
-}
-
-.weather-metric-item {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.65rem 0.85rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-[data-theme='dark'] .weather-metric-item {
-  background: rgba(30, 41, 59, 0.8);
-}
-
-.weather-metric-label {
-  font-size: 0.74rem;
-  font-weight: 650;
-  color: var(--text-muted);
+.weather-banner-details {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.weather-metric-value {
-  font-size: 1.15rem;
-  font-weight: 800;
+.weather-highlight {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.weather-temp-val {
+  font-size: 1.75rem;
+  font-weight: 850;
   color: var(--text-main);
+  line-height: 1;
+}
+
+.weather-dot-sep {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+}
+
+.weather-cond-label {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.weather-sub-metrics {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.weather-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+}
+
+[data-theme='dark'] .weather-sub-item {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.weather-sub-label {
+  color: var(--text-muted);
+}
+
+.weather-sub-val {
+  color: var(--text-main);
+  font-weight: 750;
 }
 
 /* --------------------------------------------------------------------------
@@ -295,7 +383,7 @@
 .attractions-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .attractions-header {
@@ -392,22 +480,62 @@
   color: #ffffff;
 }
 
-/* Grid de Cards */
+/* --------------------------------------------------------------------------
+   4. Grupos de Atrativos e Gastronomia (Wireframe Seção 3.3)
+   -------------------------------------------------------------------------- */
+.attractions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.attractions-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.attractions-group-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.attractions-count-pill {
+  font-size: 0.74rem;
+  font-weight: 750;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+[data-theme='dark'] .attractions-count-pill {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
 .attractions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
 }
 
 .attraction-card {
   background: #ffffff;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.9rem;
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.85rem;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease,
@@ -436,7 +564,7 @@
 .attraction-card-top {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .attraction-tag-row {
@@ -446,44 +574,69 @@
 }
 
 .attraction-category-badge {
-  font-size: 0.7rem;
-  font-weight: 750;
-  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
   border-radius: 4px;
-  background: #f1f5f9;
-  color: #475569;
-  text-transform: uppercase;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #0284c7;
+  letter-spacing: 0.03em;
 }
 
 [data-theme='dark'] .attraction-category-badge {
-  background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
+  background: rgba(2, 132, 199, 0.15);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
 }
 
-.attraction-icon {
-  font-size: 1.25rem;
+.attraction-maps-link {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #0284c7;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  transition: color 0.15s ease;
+}
+
+.attraction-maps-link:hover {
+  color: #0369a1;
+  text-decoration: underline;
 }
 
 .attraction-name {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 750;
+  font-size: 0.98rem;
+  font-weight: 800;
   color: var(--text-main);
-  line-height: 1.3;
+  line-height: 1.35;
+}
+
+.attraction-highlight {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.attraction-highlight strong {
+  color: var(--text-main);
 }
 
 .attraction-description {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.83rem;
   color: var(--text-secondary);
   line-height: 1.45;
 }
 
 .btn-toggle-visit {
   width: 100%;
-  padding: 0.45rem 0.75rem;
+  padding: 0.48rem 0.75rem;
   border-radius: 6px;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 750;
   cursor: pointer;
   display: inline-flex;
@@ -514,8 +667,14 @@
 
 /* Responsividade Mobile (< 639px) */
 @media (max-width: 639px) {
-  .weather-metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .trip-summary-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .weather-banner-details {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .attractions-grid {
