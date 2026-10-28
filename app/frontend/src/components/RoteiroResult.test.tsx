@@ -49,6 +49,11 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(await screen.findByText(/✓ Conteúdo existente exibido/i)).toBeInTheDocument();
   });
 
+  it('não inventa perfil e duração para viagem histórica sem parâmetros', () => {
+    render(<RoteiroResult viagem={mockViagem} formParams={null} />);
+    expect(screen.getByText(/Perfil não informado · Duração não informada/)).toBeInTheDocument();
+  });
+
   it('não inventa temperaturas nem condição para clima parcial', () => {
     render(
       <RoteiroResult

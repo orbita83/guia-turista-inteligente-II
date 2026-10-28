@@ -106,6 +106,7 @@ export function useApp() {
   const [pendingRoute, setPendingRoute] = useState<PendingRoute | null>(null);
   const [activeTrip, setActiveTrip] = useState<Viagem | null>(null);
   const [activeTripForm, setActiveTripForm] = useState<RoteiroFormData | null>(null);
+  const formByTripId = useRef<Record<string, RoteiroFormData>>({});
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>('loading');
   const [historyError, setHistoryError] = useState<string | undefined>();
   const [persistenceById, setPersistenceById] = useState<Record<string, PersistenceStatus>>({});
@@ -257,6 +258,7 @@ export function useApp() {
       setPendingRoute(null);
       setActiveTrip(null);
       setActiveTripForm(null);
+      formByTripId.current = {};
       setHistoryStatus('loading');
       setSugestoes([]);
       setSuggestionStatus('idle');
@@ -419,6 +421,7 @@ export function useApp() {
         setTelemetryState({ kind: 'settled', snapshot });
         setActiveTrip(result.viagem);
         setActiveTripForm(form);
+        formByTripId.current[result.viagem.id] = form;
         setData((current) =>
           current.usuario?.id === usuario.id
             ? { ...current, viagens: mergeTripFirst(current.viagens, result.viagem) }
@@ -474,6 +477,7 @@ export function useApp() {
             : current,
         );
         setActiveTrip((current) => (current?.id === tripId ? null : current));
+        delete formByTripId.current[tripId];
         updatePersistence((current) => {
           const { [tripId]: _removed, ...remaining } = current;
           return remaining;
@@ -514,6 +518,7 @@ export function useApp() {
 
   const selectTrip = useCallback((trip: Viagem) => {
     setActiveTrip(trip);
+    setActiveTripForm(formByTripId.current[trip.id] ?? null);
   }, []);
 
   const toggleVisitaAtrativo = useCallback(

@@ -112,5 +112,11 @@
   geometria. `routeCalculator.test.ts` cobre GPX com pontos recebidos, escape XML e
   rejeição de trajeto inválido.
 
+### Evidência frontend de F10 para CA-HIS-001
+
+- `useApp.test.tsx` verifica que a troca de viagem descarta parâmetros de outra e
+  restaura os da viagem criada na sessão quando disponíveis. `RoteiroResult.test.tsx`
+  confirma que perfil e duração ausentes são apresentados como não informados.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

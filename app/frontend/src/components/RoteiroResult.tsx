@@ -171,8 +171,8 @@ export function RoteiroResult({
 
     const payload = {
       destino: viagem.destino,
-      dias_estadia: formParams?.duracao_dias || 1,
-      estilo_viagem: formParams?.perfis?.[0] || 'cultural',
+      ...(formParams?.duracao_dias ? { dias_estadia: formParams.duracao_dias } : {}),
+      ...(formParams?.perfis?.[0] ? { estilo_viagem: formParams.perfis[0] } : {}),
       clima_info: viagem.clima,
     };
 
@@ -226,9 +226,13 @@ export function RoteiroResult({
 
   const secoesParsed = useMemo(() => extrairSecoesGuia(streamText), [streamText]);
 
-  const duracao = formParams?.duracao_dias || 1;
-  const duracaoLabel = `${duracao} Dia${duracao > 1 ? 's' : ''}`;
-  const perfilLabel = formatarPerfilViagem(formParams?.perfis);
+  const duracao = formParams?.duracao_dias;
+  const duracaoLabel = duracao
+    ? `${duracao} Dia${duracao > 1 ? 's' : ''}`
+    : 'Duração não informada';
+  const perfilLabel = formParams?.perfis?.length
+    ? formatarPerfilViagem(formParams.perfis)
+    : 'Perfil não informado';
 
   const renderCard = (item: AtrativoTuristico) => {
     const isVisitado = idsVisitados.includes(item.id);

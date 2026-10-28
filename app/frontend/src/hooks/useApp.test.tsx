@@ -77,6 +77,21 @@ describe('useApp telemetry lifecycle', () => {
     api.verificarSaudeApi.mockResolvedValue(true);
   });
 
+  it('não reutiliza parâmetros de outra viagem ao selecionar histórico', async () => {
+    api.criarViagem.mockResolvedValue(response(100));
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    await act(async () => {
+      await result.current.submitTrip(form);
+    });
+    expect(result.current.activeTripForm).toEqual(form);
+    const historica = { ...viagem, id: 'trip-antiga' };
+    act(() => result.current.selectTrip(historica));
+    expect(result.current.activeTripForm).toBeNull();
+    act(() => result.current.selectTrip(viagem));
+    expect(result.current.activeTripForm).toEqual(form);
+  });
+
   it('preserva o perfil Google, isola o histórico visitante e restaura com a credencial em memória', async () => {
     const google = { ...usuario, id: 'google-1', nome: 'Maykol Sampaio', tipo: 'google' as const };
     const guest = { ...usuario, id: 'visitor-1' };

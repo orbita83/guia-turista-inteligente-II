@@ -116,6 +116,7 @@ export function App() {
                         {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
                         <RoteiroResult
                           viagem={activeTrip}
+                          formParams={activeTripForm}
                           visitPersistenceStatus={visitPersistenceByTrip[activeTrip.id]}
                           visitasIds={
                             visitasPorViagem[activeTrip.id] ??
