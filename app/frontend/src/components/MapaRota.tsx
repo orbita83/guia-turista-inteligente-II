@@ -21,6 +21,21 @@ export function MapaRota({ viagem, onRotaChange }: MapaRotaProps) {
   const rotaAtiva = rotas.find((rota) => rota.id === rotaAtivaId) ?? rotas[0];
   const geometria: CoordenadaGPS[] | undefined =
     rotaAtiva?.coordenadas ?? viagem.percurso.geometria;
+  const elevation = rotaAtiva ? rotaAtiva.perfilElevacao : viagem.percurso.perfilElevacao;
+  const elevations = elevation?.map((point) => point.altitudeM) ?? [];
+  const minAltitude = elevations.reduce((min, altitude) => Math.min(min, altitude), Infinity);
+  const maxAltitude = elevations.reduce((max, altitude) => Math.max(max, altitude), -Infinity);
+  const distanceEnd = elevation?.[elevation.length - 1]?.distanciaKm ?? 0;
+  const chartPoints = elevation
+    ?.map((point) => {
+      const x = distanceEnd > 0 ? (point.distanciaKm / distanceEnd) * 480 + 10 : 10;
+      const y =
+        maxAltitude > minAltitude
+          ? 90 - ((point.altitudeM - minAltitude) / (maxAltitude - minAltitude)) * 80
+          : 50;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
 
   useEffect(() => {
     if (rotaAtiva) onRotaChange?.(rotaAtiva);
@@ -95,7 +110,22 @@ export function MapaRota({ viagem, onRotaChange }: MapaRotaProps) {
 
       <div className="topografia-card" aria-label="Topografia e relevo">
         <h3>Topografia e relevo</h3>
-        <p role="status">Perfil de elevação indisponível para esta viagem.</p>
+        {elevation && elevation.length >= 2 ? (
+          <>
+            <p>
+              Elevação recebida: {minAltitude} m a {maxAltitude} m ao longo de {distanceEnd} km.
+            </p>
+            <svg
+              viewBox="0 0 500 100"
+              role="img"
+              aria-label={`Perfil de elevação de ${minAltitude} a ${maxAltitude} metros`}
+            >
+              <polyline points={chartPoints} fill="none" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </>
+        ) : (
+          <p role="status">Perfil de elevação indisponível para esta viagem.</p>
+        )}
       </div>
     </section>
   );

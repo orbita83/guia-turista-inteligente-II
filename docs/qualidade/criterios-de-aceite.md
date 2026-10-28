@@ -71,5 +71,11 @@
   a seleção apenas de alternativas recebidas. `routeCalculator.test.ts` confirma que
   o cliente não inventa alternativas quando a API não as fornece.
 
+### Evidência frontend de F03 para CA-MAP-003
+
+- `api.test.ts` rejeita série altimétrica fora de ordem; `MapaRota.test.tsx` verifica
+  que o gráfico usa amostras recebidas e mostra indisponibilidade na ausência delas.
+  Indicadores de relevo sem dados de origem deixam de ser exibidos.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

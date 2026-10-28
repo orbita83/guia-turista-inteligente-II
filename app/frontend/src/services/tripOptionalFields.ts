@@ -3,6 +3,7 @@ import type {
   CategoriaAtrativo,
   CoordenadaGPS,
   ParadaEstrategica,
+  PontoElevacao,
   PerfilTopografico,
   RotaAlternativa,
   Viagem,
@@ -47,6 +48,25 @@ function coordinates(value: unknown): CoordenadaGPS[] | null {
   if (!Array.isArray(value) || value.length < 2) return null;
   const parsed = value.map(coordinate);
   return parsed.every((point): point is CoordenadaGPS => point !== null) ? parsed : null;
+}
+
+function elevationProfile(value: unknown, maxDistanceKm?: number): PontoElevacao[] | null {
+  if (!Array.isArray(value) || value.length < 2) return null;
+  const points: PontoElevacao[] = [];
+  for (const entry of value) {
+    const point = record(entry);
+    const distanciaKm = number(point?.distanciaKm);
+    const altitudeM = number(point?.altitudeM, true);
+    if (
+      distanciaKm === null ||
+      altitudeM === null ||
+      (points.length > 0 && distanciaKm <= points[points.length - 1].distanciaKm) ||
+      (maxDistanceKm !== undefined && distanciaKm > maxDistanceKm)
+    )
+      return null;
+    points.push({ distanciaKm, altitudeM });
+  }
+  return points;
 }
 
 const categories: readonly CategoriaAtrativo[] = [
@@ -205,6 +225,7 @@ function route(value: unknown): RotaAlternativa | null {
     return null;
   const optionalNumber = (key: 'percentualBrs' | 'distanciaBrsKm' | 'diferencaTempoMinutos') =>
     number(item[key]) !== null ? { [key]: number(item[key]) } : {};
+  const perfilElevacao = elevationProfile(item.perfilElevacao, distanciaKm);
   return {
     id: item.id,
     titulo,
@@ -228,6 +249,7 @@ function route(value: unknown): RotaAlternativa | null {
     ...optionalNumber('percentualBrs'),
     ...optionalNumber('distanciaBrsKm'),
     ...optionalNumber('diferencaTempoMinutos'),
+    ...(perfilElevacao ? { perfilElevacao } : {}),
   };
 }
 
@@ -244,6 +266,10 @@ export function parseTripOptionalFields(value: RecordValue): Pick<
   const optionalWeather = (key: 'sensacao' | 'condicao' | 'icone') =>
     text(clima?.[key]) ? { [key]: text(clima?.[key]) } : {};
   const geometria = coordinates(percurso?.geometria);
+  const distanceText = typeof percurso?.distancia === 'string' ? percurso.distancia : '';
+  const distanceMatch = /^\s*(\d+(?:[.,]\d+)?)\s*km\s*$/i.exec(distanceText);
+  const distanceKm = distanceMatch ? Number(distanceMatch[1].replace(',', '.')) : undefined;
+  const perfilElevacao = elevationProfile(percurso?.perfilElevacao, distanceKm);
   const rotas = Array.isArray(value.rotas)
     ? value.rotas.map(route).filter((item): item is RotaAlternativa => item !== null)
     : null;
@@ -261,7 +287,10 @@ export function parseTripOptionalFields(value: RecordValue): Pick<
       ...optionalWeather('condicao'),
       ...optionalWeather('icone'),
     },
-    percurso: geometria ? { geometria } : {},
+    percurso: {
+      ...(geometria ? { geometria } : {}),
+      ...(perfilElevacao ? { perfilElevacao } : {}),
+    },
     ...(rotas ? { rotas } : {}),
     ...(atrativos ? { atrativos } : {}),
     ...(ids ? { atrativosVisitadosIds: ids } : {}),

@@ -84,4 +84,25 @@ describe('F02 — geometria confirmada', () => {
       '9 km',
     );
   });
+
+  it('desenha somente séries altimétricas recebidas e mantém estado vazio sem dados', () => {
+    const withElevation: Viagem = {
+      ...trip,
+      percurso: {
+        ...trip.percurso,
+        perfilElevacao: [
+          { distanciaKm: 0, altitudeM: 2 },
+          { distanciaKm: 8, altitudeM: 20 },
+        ],
+      },
+    };
+    const { rerender } = render(<MapaRota viagem={withElevation} />);
+    expect(
+      screen.getByRole('img', { name: /Perfil de elevação de 2 a 20 metros/ }),
+    ).toBeInTheDocument();
+    rerender(<MapaRota viagem={trip} />);
+    expect(
+      screen.getByText('Perfil de elevação indisponível para esta viagem.'),
+    ).toBeInTheDocument();
+  });
 });

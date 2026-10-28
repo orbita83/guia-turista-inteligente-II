@@ -130,6 +130,32 @@ describe('F01 — campos opcionais da viagem', () => {
     expect(parsed?.atrativosVisitadosIds).toBeUndefined();
     expect(parseTrip(trip)?.rotas).toBeUndefined();
   });
+
+  it('valida a ordem e os limites da série de elevação', () => {
+    const valid = parseTrip({
+      ...trip,
+      percurso: {
+        ...trip.percurso,
+        perfilElevacao: [
+          { distanciaKm: 0, altitudeM: 2 },
+          { distanciaKm: 8, altitudeM: 20 },
+        ],
+      },
+    });
+    expect(valid?.percurso.perfilElevacao).toHaveLength(2);
+
+    const invalid = parseTrip({
+      ...trip,
+      percurso: {
+        ...trip.percurso,
+        perfilElevacao: [
+          { distanciaKm: 4, altitudeM: 2 },
+          { distanciaKm: 3, altitudeM: 20 },
+        ],
+      },
+    });
+    expect(invalid?.percurso.perfilElevacao).toBeUndefined();
+  });
 });
 
 describe('criarViagem telemetry metadata', () => {

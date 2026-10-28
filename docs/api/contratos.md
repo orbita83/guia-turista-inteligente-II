@@ -28,6 +28,8 @@ são higienizadas e limitadas a 80 caracteres; origem e destino vazios retornam 
 O frontend aceita, quando presentes, `clima.sensacao`, `clima.condicao`,
 `clima.icone`, `percurso.geometria` (lista de pelo menos duas coordenadas
 `[latitude, longitude]`), `rotas`, `atrativos` e `atrativosVisitadosIds`.
+Também admite `percurso.perfilElevacao` e `rotas[].perfilElevacao` como listas de
+amostras `{ distanciaKm, altitudeM }` com distâncias crescentes dentro da rota.
 Esses campos são opcionais e ainda não são garantidos pelos endpoints executáveis.
 O cliente valida seus formatos em runtime e ignora itens opcionais inválidos sem
 perder a viagem identificada. O formato estruturado de `rotas` e `atrativos` segue
