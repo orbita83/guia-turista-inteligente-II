@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { PlanTripResponse } from '../services/api';
+import { SAVED_GOOGLE_USER_KEY } from '../services/savedGoogleUser';
 import { available, unavailable } from '../test/telemetryFixtures';
 import { useApp } from './useApp';
 
@@ -69,9 +70,76 @@ function response(totalTimeMs: number): PlanTripResponse {
 describe('useApp telemetry lifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     api.carregarSessao.mockResolvedValue({ usuario, google_client_id: '', ufs: ['PE'] });
     api.listarViagens.mockResolvedValue({ viagens: [] });
     api.verificarSaudeApi.mockResolvedValue(true);
+  });
+
+  it('preserva o perfil Google, isola o histórico visitante e restaura com a credencial em memória', async () => {
+    const google = { ...usuario, id: 'google-1', nome: 'Maykol Sampaio', tipo: 'google' as const };
+    const guest = { ...usuario, id: 'visitor-1' };
+    let active: typeof google | typeof guest = google;
+    api.carregarSessao.mockImplementation(async () => ({
+      usuario: active,
+      google_client_id: 'client',
+      ufs: ['PE'],
+    }));
+    api.listarViagens.mockImplementation(async () => ({
+      viagens: active.tipo === 'google' ? [viagem] : [],
+    }));
+    api.autenticarComGoogle.mockImplementation(async () => {
+      active = google;
+      return { usuario: google };
+    });
+    api.entrarComoVisitante.mockImplementation(async () => {
+      active = guest;
+      return { usuario: guest };
+    });
+
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.data.viagens).toEqual([viagem]));
+    await act(async () => result.current.loginWithGoogle('temporary-credential'));
+    await act(async () => result.current.loginAsVisitor());
+
+    expect(result.current.data.usuario?.tipo).toBe('visitante');
+    expect(result.current.data.viagens).toEqual([]);
+    expect(JSON.parse(localStorage.getItem(SAVED_GOOGLE_USER_KEY) ?? 'null')).toEqual(google);
+    expect(result.current.savedGoogleUser).toEqual(google);
+
+    await act(async () => result.current.restoreGoogleUser());
+    expect(api.autenticarComGoogle).toHaveBeenLastCalledWith('temporary-credential');
+    expect(result.current.data.usuario).toEqual(google);
+    expect(result.current.data.viagens).toEqual([viagem]);
+    expect(localStorage.getItem(SAVED_GOOGLE_USER_KEY)).toBeNull();
+  });
+
+  it('não trata o perfil salvo como autenticação após recarregar a página', async () => {
+    const google = { ...usuario, id: 'google-1', tipo: 'google' as const };
+    localStorage.setItem(SAVED_GOOGLE_USER_KEY, JSON.stringify(google));
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+
+    await act(async () => result.current.restoreGoogleUser());
+    expect(api.autenticarComGoogle).not.toHaveBeenCalled();
+    expect(result.current.savedGoogleUser).toEqual(google);
+  });
+
+  it('mantém a conta Google ativa quando a troca para visitante falha', async () => {
+    const google = { ...usuario, id: 'google-1', tipo: 'google' as const };
+    api.carregarSessao.mockResolvedValue({
+      usuario: google,
+      google_client_id: 'client',
+      ufs: ['PE'],
+    });
+    api.entrarComoVisitante.mockRejectedValue(new Error('offline'));
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+
+    await act(async () => result.current.loginAsVisitor());
+    expect(result.current.data.usuario).toEqual(google);
+    expect(result.current.savedGoogleUser).toBeNull();
+    expect(localStorage.getItem(SAVED_GOOGLE_USER_KEY)).toBeNull();
   });
 
   it('moves from hidden to loading and settled', async () => {

@@ -47,6 +47,26 @@ escopo. Persistência não confirmada não é apresentada como sucesso.
 
 ## Ordem de implementacao
 
+### Incremento em andamento: cabeçalho da sessão híbrida
+
+O cabeçalho segue `tela-sessao-hibrida.png` e sua posição segue
+`tela-referencial-dos-componentes.png`. O menu mostra a identidade ativa,
+permite alternar da conta Google para visitante e preserva somente o perfil
+Google em `guia_turista_saved_google_user`. As viagens continuam carregadas
+pela sessão assinada ativa e são limpas ao trocar de identidade.
+
+`RF-AUT-003` e a parte visual de `RF-AUT-004` estão cobertos. A restauração em
+um clique funciona enquanto a credencial Google mantida em memória pela SPA
+continuar válida. Após recarregar a página ou expirar a credencial, o perfil
+salvo não autentica: `CA-AUT-002` depende de um contrato de restauração segura
+no backend. O `TODO(backend)` está no fluxo de restauração do frontend.
+Nenhum endpoint ou arquivo do backend é alterado neste incremento.
+
+O tema claro/escuro agora usa tokens semânticos para superfícies, texto,
+controles e estados de sucesso, aviso e erro. A preferência é guardada no
+`localStorage`. O teste de contraste verifica os pares essenciais de texto
+em 4,5:1 e a borda dos controles em 3:1 nos dois temas (`CA-PLN-004`).
+
 | Etapa | Entrega frontend | Dependências | Rastreabilidade principal |
 | --- | --- | --- | --- |
 | 0 | Tipos de fronteira, configuração, cliente HTTP e fixtures contratuais | schemas/OpenAPI estabilizados | `RNF-OPS-001`, `004`, `007`–`009`; `API-*` |

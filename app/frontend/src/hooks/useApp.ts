@@ -21,6 +21,11 @@ import {
   serviceCondition,
   sessionSummary,
 } from '../services/telemetry';
+import {
+  clearSavedGoogleUser,
+  readSavedGoogleUser,
+  saveGoogleUser,
+} from '../services/savedGoogleUser';
 import type {
   HistoryStatus,
   PersistenceStatus,
@@ -76,6 +81,7 @@ export function useApp() {
   const [historyError, setHistoryError] = useState<string | undefined>();
   const [persistenceById, setPersistenceById] = useState<Record<string, PersistenceStatus>>({});
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [savedGoogleUser, setSavedGoogleUser] = useState(readSavedGoogleUser);
   const [telemetryState, setTelemetryState] = useState<TelemetryPanelState>({ kind: 'hidden' });
   const [apiHealthStatus, setApiHealthStatus] = useState<'checking' | 'online' | 'unavailable'>(
     'checking',
@@ -86,6 +92,7 @@ export function useApp() {
   const deletingRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
   const persistenceRef = useRef<Record<string, PersistenceStatus>>({});
+  const googleCredentialRef = useRef<string | null>(null);
 
   const updatePersistence = useCallback(
     (update: (current: Record<string, PersistenceStatus>) => Record<string, PersistenceStatus>) => {
@@ -195,7 +202,7 @@ export function useApp() {
   }, [data.usuario?.id, networkStatus]);
 
   const runSessionAction = useCallback(
-    async (action: () => Promise<unknown>) => {
+    async (action: () => Promise<unknown>): Promise<boolean> => {
       attemptSequence.current += 1;
       sessionGeneration.current += 1;
       setTelemetryState({ kind: 'hidden' });
@@ -215,14 +222,74 @@ export function useApp() {
       try {
         await action();
         await reload();
+        return true;
       } catch {
         addToast('Não foi possível atualizar a sessão. Tente novamente.');
+        try {
+          await reload();
+        } catch {
+          // A mensagem acima já orienta a repetir a operação.
+        }
+        return false;
       } finally {
         setSessionLoading(false);
       }
     },
     [addToast, reload, updatePersistence],
   );
+
+  const loginWithGoogle = useCallback(
+    async (credential: string) => {
+      await runSessionAction(async () => {
+        await autenticarComGoogle(credential);
+        googleCredentialRef.current = credential;
+        clearSavedGoogleUser();
+        setSavedGoogleUser(null);
+      });
+    },
+    [runSessionAction],
+  );
+
+  const loginAsVisitor = useCallback(async () => {
+    const previousGoogleUser = data.usuario?.tipo === 'google' ? data.usuario : null;
+    await runSessionAction(async () => {
+      await entrarComoVisitante();
+      if (previousGoogleUser) {
+        saveGoogleUser(previousGoogleUser);
+        setSavedGoogleUser(previousGoogleUser);
+      }
+    });
+  }, [data.usuario, runSessionAction]);
+
+  const restoreGoogleUser = useCallback(async () => {
+    if (!savedGoogleUser || data.usuario?.tipo !== 'visitante') return;
+    // TODO(backend): criar restauração da sessão Google preservada, vinculada à sessão
+    // assinada no servidor. O perfil no localStorage não autentica; a credencial
+    // mantida apenas em memória permite um clique somente enquanto ainda é válida.
+    const credential = googleCredentialRef.current;
+    if (!credential) {
+      addToast('Saia do modo visitante e entre novamente com Google.');
+      return;
+    }
+    const succeeded = await runSessionAction(() => autenticarComGoogle(credential));
+    if (succeeded) {
+      clearSavedGoogleUser();
+      setSavedGoogleUser(null);
+      googleCredentialRef.current = null;
+    } else {
+      googleCredentialRef.current = null;
+      addToast('Saia do modo visitante e entre novamente com Google.');
+    }
+  }, [addToast, data.usuario?.tipo, runSessionAction, savedGoogleUser]);
+
+  const logout = useCallback(async () => {
+    await runSessionAction(async () => {
+      await encerrarSessao();
+      googleCredentialRef.current = null;
+      clearSavedGoogleUser();
+      setSavedGoogleUser(null);
+    });
+  }, [runSessionAction]);
 
   const reconcilePersistence = useCallback(
     async (tripId: string, expectedUserId: string, generation: number) => {
@@ -382,6 +449,7 @@ export function useApp() {
     toasts,
     initialLoading,
     sessionLoading,
+    savedGoogleUser,
     isSubmitting,
     deletingIds,
     pendingRoute,
@@ -396,10 +464,10 @@ export function useApp() {
     copyTelemetryRequestId: copyRequestId,
     dismissToast: (id: string) =>
       setToasts((current) => current.filter((toast) => toast.id !== id)),
-    loginWithGoogle: (credential: string) =>
-      runSessionAction(() => autenticarComGoogle(credential)),
-    loginAsVisitor: () => runSessionAction(entrarComoVisitante),
-    logout: () => runSessionAction(encerrarSessao),
+    loginWithGoogle,
+    loginAsVisitor,
+    restoreGoogleUser,
+    logout,
     submitTrip,
     deleteTrip,
     selectTrip,

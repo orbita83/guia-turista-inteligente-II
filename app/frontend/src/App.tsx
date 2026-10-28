@@ -1,13 +1,12 @@
 import {
-  AppHeader,
   HistoricoViagens,
   LoginCard,
   MapaRota,
   RoteiroForm,
   TelemetriaCard,
   ToastContainer,
-  UserBar,
 } from './components';
+import { SessionHeader } from './components/SessionHeader';
 import { useApp } from './hooks/useApp';
 
 export function App() {
@@ -16,6 +15,7 @@ export function App() {
     toasts,
     initialLoading,
     sessionLoading,
+    savedGoogleUser,
     isSubmitting,
     deletingIds,
     pendingRoute,
@@ -31,6 +31,7 @@ export function App() {
     dismissToast,
     loginWithGoogle,
     loginAsVisitor,
+    restoreGoogleUser,
     logout,
     submitTrip,
     deleteTrip,
@@ -39,7 +40,14 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <AppHeader />
+      <SessionHeader
+        usuario={data.usuario}
+        savedGoogleUser={savedGoogleUser}
+        isBusy={sessionLoading}
+        onVisitorLogin={loginAsVisitor}
+        onRestoreGoogle={restoreGoogleUser}
+        onLogout={logout}
+      />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <main aria-busy={initialLoading || sessionLoading}>
@@ -50,7 +58,6 @@ export function App() {
           </section>
         ) : data.usuario ? (
           <>
-            <UserBar usuario={data.usuario} isBusy={sessionLoading} onLogout={logout} />
             <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
                 {/* TODO(backend): ligar o catálogo de municípios e as sugestões por GPS

@@ -77,9 +77,9 @@ select {
   width: 100%;
   min-height: 46px;
   padding: 0.75rem 0.85rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--control-border);
   border-radius: var(--radius-btn);
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--text-main);
   font-size: 16px;
   transition:
@@ -88,7 +88,7 @@ select {
 }
 
 input::placeholder {
-  color: #94a3b8;
+  color: var(--placeholder);
   font-size: 0.9rem;
 }
 
@@ -187,7 +187,7 @@ input[aria-invalid='true'] {
   min-height: 36px;
   flex: 0 0 auto;
   padding: 0.55rem 0.75rem;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--control-border);
   background: var(--accent-light);
   color: var(--primary-strong);
   font-size: 0.76rem;
@@ -211,7 +211,7 @@ input[aria-invalid='true'] {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.55rem 0.7rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--control-border);
   border-radius: 999px;
   background: var(--bg-subtle);
   color: var(--text-secondary);
@@ -229,8 +229,8 @@ input[aria-invalid='true'] {
   flex: 0 0 auto;
   padding: 0.25rem 0.45rem;
   border-radius: 7px;
-  background: #d1fae5;
-  color: #047857;
+  background: var(--success-surface);
+  color: var(--success);
 }
 
 .suggestion-chip.is-selected {
@@ -261,8 +261,8 @@ input[aria-invalid='true'] {
   justify-content: flex-start;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--border-color);
-  background: #ffffff;
+  border: 1px solid var(--control-border);
+  background: var(--bg-card);
   color: var(--text-main);
   text-align: left;
 }
@@ -368,8 +368,8 @@ input[aria-invalid='true'] {
 .duration-options button,
 .profile-options button {
   min-height: 40px;
-  border: 1px solid var(--border-color);
-  background: #ffffff;
+  border: 1px solid var(--control-border);
+  background: var(--bg-card);
   color: var(--text-main);
   font-size: 0.8rem;
 }
@@ -381,8 +381,8 @@ input[aria-invalid='true'] {
 .duration-options button.is-selected,
 .profile-options button.is-selected {
   border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  background: var(--action-bg);
+  color: var(--on-action);
   box-shadow: 0 3px 10px rgba(2, 132, 199, 0.2);
 }
 
@@ -421,14 +421,14 @@ button,
 
 .btn-primary {
   width: 100%;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--action-bg) 0%, var(--action-hover) 100%);
+  color: var(--on-action);
   box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
   font-size: 0.98rem;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary-strong) 100%);
+  background: var(--action-hover);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -442,7 +442,7 @@ button,
 
 .btn-toggle {
   width: 100%;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--control-border);
   background: var(--accent-light);
   color: var(--primary-hover);
 }
@@ -458,13 +458,13 @@ button,
   flex-shrink: 0;
   gap: 6px;
   padding: 0 12px;
-  border: 1px solid #b91c1c;
-  background: #c73636;
-  color: #ffffff;
+  border: 1px solid var(--danger-action-bg);
+  background: var(--danger-action-bg);
+  color: var(--on-action);
   font-size: 0.82rem;
 }
 
 .btn-logout:hover {
-  border-color: var(--danger);
-  background: #ef4444;
+  border-color: var(--danger-action-hover);
+  background: var(--danger-action-hover);
 }
