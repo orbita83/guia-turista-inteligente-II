@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   HistoricoViagens,
   LoginCard,
@@ -10,11 +10,12 @@ import {
   TripNavigationTabs,
 } from './components';
 import { SessionHeader } from './components/SessionHeader';
-import type { AbaViagem } from './types/domain';
+import type { AbaViagem, RotaAlternativa } from './types/domain';
 import { useApp } from './hooks/useApp';
 
 export function App() {
   const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
+  const [rotaAtivaId, setRotaAtivaId] = useState<RotaAlternativa['id']>('principal');
 
   const {
     data,
@@ -50,6 +51,12 @@ export function App() {
     toggleVisitaAtrativo,
     retryLocalVisits,
   } = useApp();
+
+  useEffect(() => {
+    setRotaAtivaId('principal');
+  }, [activeTrip?.id]);
+  const rotaAtiva =
+    activeTrip?.rotas?.find((rota) => rota.id === rotaAtivaId) ?? activeTrip?.rotas?.[0];
 
   return (
     <div className="app-shell">
@@ -90,11 +97,17 @@ export function App() {
                       abaAtiva={abaViagemAtiva}
                       onAbaChange={setAbaViagemAtiva}
                       onExcluir={() => deleteTrip(activeTrip.id)}
+                      rotaAtiva={rotaAtiva}
                     />
 
                     {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'mapa') && (
                       <div id="panel-mapa" role="tabpanel" aria-labelledby="tab-mapa">
-                        <MapaRota viagem={activeTrip} formParams={activeTripForm} />
+                        <MapaRota
+                          viagem={activeTrip}
+                          formParams={activeTripForm}
+                          rotaAtivaId={rotaAtivaId}
+                          onRotaChange={(rota) => setRotaAtivaId(rota.id)}
+                        />
                       </div>
                     )}
 

@@ -133,6 +133,20 @@ describe('routeCalculator', () => {
     expect(gpx).toContain('<trk>');
   });
 
+  it('escapa caracteres especiais e recusa geometria inválida no GPX', () => {
+    const gpx = gerarConteudoGpx('Recife & Olinda', 'Praia <Norte>', {
+      ...route,
+      titulo: 'Rota "principal"',
+    });
+    expect(gpx).toContain('Recife &amp; Olinda');
+    expect(gpx).toContain('Praia &lt;Norte&gt;');
+    expect(gpx).toContain('Rota &quot;principal&quot;');
+    expect(gpx).not.toContain('<ele>0</ele>');
+    expect(() => gerarConteudoGpx('A', 'B', { ...route, coordenadas: [[-8, -34]] })).toThrow(
+      /Geometria indisponível/,
+    );
+  });
+
   it('gera links válidos para Google Maps e WhatsApp', () => {
     const maps = gerarLinkGoogleMaps('Recife - PE', 'Olinda - PE');
     expect(maps).toContain('https://www.google.com/maps/dir/?api=1');

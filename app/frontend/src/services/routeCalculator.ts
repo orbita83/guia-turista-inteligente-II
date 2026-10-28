@@ -284,21 +284,52 @@ export function gerarLinkWhatsApp(
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
 }
 
-export function gerarConteudoGpx(origem: string, destino: string, rota: RotaAlternativa): string {
-  const coordOrigem = rota.coordenadas[0] || [-8.0476, -34.877];
-  const coordDestino = rota.coordenadas[rota.coordenadas.length - 1] || [-7.9986, -34.8459];
+export type GpxRoute = Pick<RotaAlternativa, 'titulo' | 'coordenadas' | 'paradas'> &
+  Partial<Pick<RotaAlternativa, 'distanciaKm' | 'tempoFormatado'>>;
+
+export function geometriaValida(geometria?: CoordenadaGPS[]): boolean {
+  return Boolean(
+    geometria &&
+    geometria.length >= 2 &&
+    geometria.every(
+      ([lat, lon]) =>
+        Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180,
+    ),
+  );
+}
+
+function escapeXml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&apos;',
+      })[character] ?? character,
+  );
+}
+
+export function gerarConteudoGpx(origem: string, destino: string, rota: GpxRoute): string {
+  if (!geometriaValida(rota.coordenadas)) {
+    throw new Error('Geometria indisponível para exportação GPX.');
+  }
+  const coordOrigem = rota.coordenadas[0];
+  const coordDestino = rota.coordenadas[rota.coordenadas.length - 1];
 
   const waypointsOrigemDestino = `  <wpt lat="${coordOrigem[0]}" lon="${coordOrigem[1]}">
-    <name>Origem: ${origem}</name>
+    <name>Origem: ${escapeXml(origem)}</name>
   </wpt>
   <wpt lat="${coordDestino[0]}" lon="${coordDestino[1]}">
-    <name>Destino: ${destino}</name>
+    <name>Destino: ${escapeXml(destino)}</name>
   </wpt>`;
 
   const paradasXml = rota.paradas
     .map(
       (parada) =>
-        `  <wpt lat="${parada.coordenadas[0]}" lon="${parada.coordenadas[1]}">\n    <name>${parada.nome}</name>\n    <desc>${parada.descricao || ''}</desc>\n  </wpt>`,
+        `  <wpt lat="${parada.coordenadas[0]}" lon="${parada.coordenadas[1]}">\n    <name>${escapeXml(parada.nome)}</name>\n    <desc>${escapeXml(parada.descricao || '')}</desc>\n  </wpt>`,
     )
     .join('\n');
 
@@ -307,18 +338,18 @@ export function gerarConteudoGpx(origem: string, destino: string, rota: RotaAlte
     : waypointsOrigemDestino;
 
   const pontosXml = rota.coordenadas
-    .map(([lat, lon]) => `    <trkpt lat="${lat}" lon="${lon}"><ele>0</ele></trkpt>`)
+    .map(([lat, lon]) => `    <trkpt lat="${lat}" lon="${lon}" />`)
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Guia do Turista Inteligente" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <name>Rota: ${origem} para ${destino}</name>
-    <desc>${rota.titulo} - ${rota.distanciaKm} km (${rota.tempoFormatado})</desc>
+    <name>Rota: ${escapeXml(origem)} para ${escapeXml(destino)}</name>
+    <desc>${escapeXml(rota.titulo)}${rota.distanciaKm === undefined ? '' : ` - ${rota.distanciaKm} km`}${rota.tempoFormatado ? ` (${escapeXml(rota.tempoFormatado)})` : ''}</desc>
   </metadata>
 ${todosWpts}
   <trk>
-    <name>${rota.titulo}</name>
+    <name>${escapeXml(rota.titulo)}</name>
     <trkseg>
 ${pontosXml}
     </trkseg>
@@ -326,7 +357,7 @@ ${pontosXml}
 </gpx>`;
 }
 
-export function baixarArquivoGpx(origem: string, destino: string, rota: RotaAlternativa): void {
+export function baixarArquivoGpx(origem: string, destino: string, rota: GpxRoute): void {
   const gpxContent = gerarConteudoGpx(origem, destino, rota);
   const blob = new Blob([gpxContent], { type: 'application/gpx+xml;charset=utf-8;' });
   const url = URL.createObjectURL(blob);

@@ -10,6 +10,9 @@ A marcação de visitas diferencia confirmação no servidor e salvamento local;
 falhas revertem a marcação e alterações locais pendentes podem ser sincronizadas.
 O guia identifica transmissão SSE e reprodução do conteúdo já recebido; somente
 o evento `done` confirma a conclusão de uma transmissão SSE.
+Mapa e exportação GPX usam a rota ativa da aplicação. Sem geometria válida, o
+download fica indisponível; o XML preserva caracteres especiais e não inventa
+elevação.
 
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão

@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import {
   baixarArquivoGpx,
   gerarLinkGoogleMaps,
   gerarLinkWhatsApp,
-  gerarRotasAlternativas,
+  geometriaValida,
 } from '../services/routeCalculator';
-import type { AbaViagem, Viagem } from '../types/domain';
+import type { AbaViagem, RotaAlternativa, Viagem } from '../types/domain';
 
 export interface TripNavigationTabsProps {
   viagem: Viagem;
@@ -12,6 +13,7 @@ export interface TripNavigationTabsProps {
   onAbaChange: (aba: AbaViagem) => void;
   onExcluir?: () => void;
   onGpxDownload?: () => void;
+  rotaAtiva?: RotaAlternativa;
 }
 
 export function TripNavigationTabs({
@@ -20,13 +22,17 @@ export function TripNavigationTabs({
   onAbaChange,
   onExcluir,
   onGpxDownload,
+  rotaAtiva,
 }: TripNavigationTabsProps) {
+  const [gpxFeedback, setGpxFeedback] = useState('');
+  const geometria = rotaAtiva?.coordenadas ?? viagem.percurso.geometria;
+  const podeExportar = geometriaValida(geometria);
   const linkMaps = gerarLinkGoogleMaps(viagem.origem, viagem.destino);
   const linkWhatsapp = gerarLinkWhatsApp(
     viagem.origem,
     viagem.destino,
-    viagem.percurso?.distancia || '',
-    viagem.percurso?.tempo || '',
+    rotaAtiva ?? viagem.percurso.distancia,
+    rotaAtiva ? undefined : viagem.percurso.tempo,
   );
 
   const handlePrint = () => {
@@ -36,13 +42,22 @@ export function TripNavigationTabs({
   };
 
   const handleGpx = () => {
-    if (onGpxDownload) {
-      onGpxDownload();
-      return;
-    }
-    const [rotaPrincipal] = gerarRotasAlternativas(viagem);
-    if (rotaPrincipal) {
-      baixarArquivoGpx(viagem.origem, viagem.destino, rotaPrincipal);
+    if (!geometriaValida(geometria) || !geometria) return;
+    try {
+      if (onGpxDownload) onGpxDownload();
+      else
+        baixarArquivoGpx(
+          viagem.origem,
+          viagem.destino,
+          rotaAtiva ?? {
+            titulo: 'Traçado principal',
+            coordenadas: geometria,
+            paradas: [],
+          },
+        );
+      setGpxFeedback('Arquivo GPX preparado para download.');
+    } catch {
+      setGpxFeedback('Não foi possível exportar o GPX. Tente novamente.');
     }
   };
 
@@ -144,12 +159,14 @@ export function TripNavigationTabs({
           type="button"
           className="btn-trip-action btn-action-gpx"
           onClick={handleGpx}
+          disabled={!podeExportar}
           title="Baixar arquivo GPX 1.1 da rota para GPS ou Garmin"
         >
           <span aria-hidden="true">📥</span>
           <span>Baixar GPX</span>
         </button>
       </div>
+      {gpxFeedback && <p role="status">{gpxFeedback}</p>}
     </nav>
   );
 }

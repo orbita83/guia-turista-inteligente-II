@@ -105,5 +105,12 @@
   cancelamento e encerramento sem `done`; `RoteiroResult.test.tsx` verifica que a
   contingência concluída não é apresentada como transmissão ao vivo.
 
+### Evidência frontend de F05 e F16 para CA-MAP-001 e CA-EXP-001
+
+- `MapaRota.test.tsx` verifica que a seleção da alternativa é controlada pela
+  aplicação; `TripNavigationTabs.test.tsx` cobre a indisponibilidade do GPX sem
+  geometria. `routeCalculator.test.ts` cobre GPX com pontos recebidos, escape XML e
+  rejeição de trajeto inválido.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

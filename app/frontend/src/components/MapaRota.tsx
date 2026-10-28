@@ -1,5 +1,6 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef } from 'react';
 import L from 'leaflet';
+import { geometriaValida } from '../services/routeCalculator';
 
 import type { CoordenadaGPS, RotaAlternativa, RoteiroFormData, Viagem } from '../types/domain';
 
@@ -7,15 +8,15 @@ export interface MapaRotaProps {
   viagem: Viagem;
   formParams?: RoteiroFormData | null;
   passageirosIniciais?: number;
+  rotaAtivaId?: RotaAlternativa['id'];
   onRotaChange?: (rota: RotaAlternativa) => void;
 }
 
-export function MapaRota({ viagem, onRotaChange }: MapaRotaProps) {
+export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: MapaRotaProps) {
   const titleId = useId();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const [rotaAtivaId, setRotaAtivaId] = useState<RotaAlternativa['id']>('principal');
   const rotas = useMemo(
-    () => (viagem.rotas ?? []).filter((rota) => rota.coordenadas.length >= 2),
+    () => (viagem.rotas ?? []).filter((rota) => geometriaValida(rota.coordenadas)),
     [viagem.rotas],
   );
   const rotaAtiva = rotas.find((rota) => rota.id === rotaAtivaId) ?? rotas[0];
@@ -38,11 +39,7 @@ export function MapaRota({ viagem, onRotaChange }: MapaRotaProps) {
     .join(' ');
 
   useEffect(() => {
-    if (rotaAtiva) onRotaChange?.(rotaAtiva);
-  }, [rotaAtiva, onRotaChange]);
-
-  useEffect(() => {
-    if (!mapContainerRef.current || !geometria || geometria.length < 2) return;
+    if (!mapContainerRef.current || !geometriaValida(geometria) || !geometria) return;
     const map = L.map(mapContainerRef.current, { scrollWheelZoom: false });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
@@ -67,7 +64,7 @@ export function MapaRota({ viagem, onRotaChange }: MapaRotaProps) {
         </div>
       </header>
 
-      {geometria && geometria.length >= 2 ? (
+      {geometriaValida(geometria) && geometria ? (
         <>
           {rotas.length > 1 && (
             <div className="control-button-group" role="group" aria-label="Rotas disponíveis">
@@ -77,7 +74,7 @@ export function MapaRota({ viagem, onRotaChange }: MapaRotaProps) {
                   type="button"
                   className={`btn-pill-control${rotaAtiva?.id === rota.id ? ' is-active' : ''}`}
                   aria-pressed={rotaAtiva?.id === rota.id}
-                  onClick={() => setRotaAtivaId(rota.id)}
+                  onClick={() => onRotaChange?.(rota)}
                 >
                   {rota.titulo}
                 </button>
@@ -99,6 +96,19 @@ export function MapaRota({ viagem, onRotaChange }: MapaRotaProps) {
               Duração: {rotaAtiva?.tempoFormatado ?? viagem.percurso.tempo}.
             </p>
           </div>
+          {rotaAtiva && (
+            <div className="metrics-grid" aria-label="Métricas da rota ativa">
+              <p>Autonomia: {rotaAtiva.autonomiaKm} km</p>
+              <p>Pedágios: R$ {rotaAtiva.pedagios.toFixed(2)}</p>
+              <p>Custo total: R$ {rotaAtiva.custos.total.toFixed(2)}</p>
+              <p>Paradas: {rotaAtiva.paradas.length}</p>
+              {rotaAtiva.paradas.map((parada) => (
+                <p key={parada.id}>
+                  {parada.nome}: km {parada.km}
+                </p>
+              ))}
+            </div>
+          )}
         </>
       ) : (
         <div className="map-unavailable" role="status">

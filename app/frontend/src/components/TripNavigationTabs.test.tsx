@@ -17,6 +17,10 @@ const MOCK_VIAGEM: Viagem = {
   percurso: {
     distancia: '800 km',
     tempo: '11h 20min',
+    geometria: [
+      [-8.05, -34.88],
+      [-12.97, -38.5],
+    ],
   },
   dicas_destino: 'Dicas sobre Salvador',
 };
@@ -104,5 +108,33 @@ describe('TripNavigationTabs (Issue #11: Abas e Ações da Viagem)', () => {
     const btnGpx = screen.getByRole('button', { name: /Baixar GPX/i });
     await user.click(btnGpx);
     expect(onGpxDownload).toHaveBeenCalled();
+    expect(screen.getByRole('status')).toHaveTextContent('Arquivo GPX preparado');
+  });
+
+  it('informa falha quando o download GPX não conclui', async () => {
+    const user = userEvent.setup();
+    render(
+      <TripNavigationTabs
+        viagem={MOCK_VIAGEM}
+        abaAtiva="mapa"
+        onAbaChange={vi.fn()}
+        onGpxDownload={() => {
+          throw new Error('falha');
+        }}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /Baixar GPX/i }));
+    expect(screen.getByRole('status')).toHaveTextContent('Não foi possível exportar');
+  });
+
+  it('impede exportar GPX quando a viagem não tem geometria', () => {
+    render(
+      <TripNavigationTabs
+        viagem={{ ...MOCK_VIAGEM, percurso: { distancia: '800 km', tempo: '11h 20min' } }}
+        abaAtiva="mapa"
+        onAbaChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Baixar GPX/i })).toBeDisabled();
   });
 });

@@ -69,20 +69,29 @@ describe('F02 — geometria confirmada', () => {
       titulo: 'Rota econômica',
       distanciaKm: 9,
       tempoFormatado: '25 min',
+      custos: { ...principal.custos, total: 7 },
       coordenadas: [
         [-8.05, -34.88],
         [-8.01, -34.85],
       ],
     };
     const onRotaChange = vi.fn();
-    render(
+    const { rerender } = render(
       <MapaRota viagem={{ ...trip, rotas: [principal, economica] }} onRotaChange={onRotaChange} />,
     );
     await user.click(screen.getByRole('button', { name: 'Rota econômica' }));
     expect(onRotaChange).toHaveBeenLastCalledWith(economica);
+    rerender(
+      <MapaRota
+        viagem={{ ...trip, rotas: [principal, economica] }}
+        rotaAtivaId="economica"
+        onRotaChange={onRotaChange}
+      />,
+    );
     expect(screen.getByRole('region', { name: 'Descrição textual da rota' })).toHaveTextContent(
       '9 km',
     );
+    expect(screen.getByText('Custo total: R$ 7.00')).toBeInTheDocument();
   });
 
   it('desenha somente séries altimétricas recebidas e mantém estado vazio sem dados', () => {
