@@ -18,7 +18,7 @@ interface UseAuthOptions {
 export function useAuth({ usuario, runSessionAction, addToast }: UseAuthOptions) {
   const [savedGoogleUser, setSavedGoogleUser] = useState(readSavedGoogleUser);
   const googleCredential = useRef<string | null>(null);
-  // A API ainda não fornece visitor_expires_at; não estimar prazo no cliente.
+  // TODO(backend): incluir visitor_expires_at no contrato de sessão para ativar a contagem sem estimar prazo no cliente.
   const sessionTimer = useSessionTimer(null);
 
   const loginWithGoogle = useCallback(
