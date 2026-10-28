@@ -124,5 +124,10 @@
   verifica que a distância aparece como aproximação em linha reta e o preenchimento
   manual continua disponível.
 
+### Evidência frontend de F14 para CA-PLN-004
+
+- `ErrorBoundary.test.tsx` provoca erro de renderização, verifica a mensagem
+  acessível e a recuperação pelo botão de nova tentativa.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

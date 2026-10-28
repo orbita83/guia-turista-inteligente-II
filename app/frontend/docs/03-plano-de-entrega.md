@@ -13,6 +13,8 @@ o evento `done` confirma a conclusão de uma transmissão SSE.
 Mapa e exportação GPX usam a rota ativa da aplicação. Sem geometria válida, o
 download fica indisponível; o XML preserva caracteres especiais e não inventa
 elevação.
+A árvore principal possui uma barreira de erros com mensagem acessível e ação de
+nova tentativa para falhas inesperadas de renderização.
 
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão
