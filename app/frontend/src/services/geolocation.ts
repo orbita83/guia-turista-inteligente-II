@@ -10,10 +10,22 @@ export interface CoordenadasGps {
   longitude: number;
 }
 
+export interface SugestoesDestinoOptions {
+  /** Quantidade máxima de sugestões a retornar (padrão: 4) */
+  limite?: number;
+  /**
+   * Distância mínima opcional em km para viagens rodoviárias de longa distância.
+   * Conforme docs/produto-experiencia/jornadas.md e RN-PLN-007, a interpretação exata
+   * do limiar de 400 km permanece em aberto. Quando não fornecido, prioriza proximidade pura.
+   * Quando fornecido, filtra destinos respeitando o limiar, com fallback não excludente.
+   */
+  distanciaMinimaKm?: number;
+}
+
 /** Raio médio da Terra em quilômetros */
 const RAIO_TERRA_KM = 6371;
 
-/** Distância mínima rodoviária conforme regra de negócio da apostila (>400 km) */
+/** Distância mínima rodoviária de referência da apostila (>400 km) */
 export const DISTANCIA_MINIMA_RODOVIARIA_KM = 400;
 
 /**
@@ -145,7 +157,9 @@ export async function obterCoordenadasNavegador(): Promise<CoordenadasGps> {
             break;
           case error.POSITION_UNAVAILABLE:
             reject(
-              new Error('Sinal de GPS indisponível. O preenchimento manual continua disponível.'),
+              new Error(
+                'Sinal de GPS indisponível. O preenchimento manual continua disponível.',
+              ),
             );
             break;
           case error.TIMEOUT:
@@ -174,21 +188,37 @@ export async function obterCoordenadasNavegador(): Promise<CoordenadasGps> {
 }
 
 /**
- * Filtra e seleciona os destinos turísticos mais próximos da localização do usuário
- * que atendem ao critério rodoviário de distância (> 400 km).
+ * Filtra e seleciona os polos turísticos a partir da localização do usuário.
+ *
+ * Conforme docs/produto-experiencia/jornadas.md e RN-PLN-007, a interpretação exata
+ * de '>400 km' permanece em aberto na especificação de produto. Por padrão, a função
+ * prioriza a proximidade geodésica (Haversine) sem descartar silenciosamente destinos.
+ * Caso options.distanciaMinimaKm seja informado, filtra aplicando o limiar com fallback
+ * seguro para garantir que a interface sempre disponha de sugestões elegíveis.
  *
  * @param latitude Latitude da localização do usuário
  * @param longitude Longitude da localização do usuário
- * @param limite Quantidade máxima de sugestões a retornar (padrão: 4)
- * @param distanciaMinimaKm Distância mínima em km (padrão: 400 km)
+ * @param optionsOrLimite Opções de configuração ou limite numérico
+ * @param distanciaMinimaKmParam Distância mínima opcional para chamadas posicionais
  */
 export function obterSugestoesDestino(
   latitude: number,
   longitude: number,
-  limite = 4,
-  distanciaMinimaKm = DISTANCIA_MINIMA_RODOVIARIA_KM,
+  optionsOrLimite?: SugestoesDestinoOptions | number,
+  distanciaMinimaKmParam?: number,
 ): SugestaoDestino[] {
-  const destinosComDistancia = DESTINOS_TURISTICOS.map((destino) => {
+  let limite = 4;
+  let distanciaMinimaKm: number | undefined;
+
+  if (typeof optionsOrLimite === 'number') {
+    limite = optionsOrLimite;
+    distanciaMinimaKm = distanciaMinimaKmParam;
+  } else if (optionsOrLimite && typeof optionsOrLimite === 'object') {
+    limite = optionsOrLimite.limite ?? 4;
+    distanciaMinimaKm = optionsOrLimite.distanciaMinimaKm;
+  }
+
+  const destinosOrdenados = DESTINOS_TURISTICOS.map((destino) => {
     const distanciaKm = calcularHaversineKm(
       latitude,
       longitude,
@@ -200,19 +230,33 @@ export function obterSugestoesDestino(
       uf: destino.uf,
       distanciaKm,
     };
-  });
+  })
+    .filter((d) => d.distanciaKm > 10)
+    .sort((a, b) => a.distanciaKm - b.distanciaKm);
 
-  return destinosComDistancia
-    .filter((d) => d.distanciaKm >= distanciaMinimaKm)
-    .sort((a, b) => a.distanciaKm - b.distanciaKm)
-    .slice(0, limite);
+  if (typeof distanciaMinimaKm === 'number') {
+    const filtrados = destinosOrdenados.filter((d) => d.distanciaKm >= distanciaMinimaKm);
+    if (filtrados.length >= limite) {
+      return filtrados.slice(0, limite);
+    }
+    // Fallback: se houver menos polos que o limite acima da distância mínima,
+    // preserva os elegíveis e complementa com os mais próximos para não excluir opções.
+    const restantes = destinosOrdenados.filter((d) => !filtrados.includes(d));
+    return [...filtrados, ...restantes].slice(0, limite);
+  }
+
+  // Sem corte rígido: retorna os polos turísticos mais próximos elegíveis (conforme jornadas.md)
+  return destinosOrdenados.slice(0, limite);
 }
 
 /**
  * Identifica o município/polo mais próximo da coordenada do usuário
  * (sem restrição de distância mínima), útil para detecção de ponto de partida/origem.
  */
-export function identificarCidadeMaisProxima(latitude: number, longitude: number): SugestaoDestino {
+export function identificarCidadeMaisProxima(
+  latitude: number,
+  longitude: number,
+): SugestaoDestino {
   let maisProximo: SugestaoDestino | null = null;
 
   for (const destino of DESTINOS_TURISTICOS) {

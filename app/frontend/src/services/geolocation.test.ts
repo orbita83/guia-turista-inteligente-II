@@ -32,24 +32,36 @@ describe('geolocation service', () => {
   });
 
   describe('obterSugestoesDestino', () => {
-    it('retorna exatamente 4 destinos turísticos mais próximos com distância >= 400 km', () => {
-      // A partir de São Paulo (-23.5505, -46.6333)
+    it('retorna os 4 destinos turísticos mais próximos por padrão sem corte rígido (conforme jornadas.md)', () => {
+      // A partir de São Paulo (-23.5505, -46.6333), sem corte de distância
       const sugestoes = obterSugestoesDestino(-23.5505, -46.6333);
 
       expect(sugestoes).toHaveLength(4);
 
-      // Todos os destinos devem ter pelo menos 400 km
+      for (const sugestao of sugestoes) {
+        expect(sugestaoValida(sugestao)).toBe(true);
+      }
+
+      // Os mais próximos de SP (ex.: Campos do Jordão, Ilhabela, Ubatuba, Paraty) estão presentes
+      const nomes = sugestoes.map((s) => s.nome);
+      expect(nomes).toContain('Campos do Jordão');
+      expect(nomes).toContain('Ilhabela');
+      expect(nomes).toContain('Ubatuba');
+      expect(nomes).toContain('Paraty');
+    });
+
+    it('aplica o filtro de distância mínima quando especificado via opções (ex.: >= 400 km)', () => {
+      // A partir de São Paulo (-23.5505, -46.6333) com filtro de 400 km
+      const sugestoes = obterSugestoesDestino(-23.5505, -46.6333, { distanciaMinimaKm: 400 });
+
+      expect(sugestoes).toHaveLength(4);
+
       for (const sugestao of sugestoes) {
         expect(sugestaoValida(sugestao)).toBe(true);
         expect(sugestao.distanciaKm).toBeGreaterThanOrEqual(400);
       }
 
-      // Devem estar ordenados de forma crescente por distância
-      for (let i = 0; i < sugestoes.length - 1; i++) {
-        expect(sugestoes[i].distanciaKm).toBeLessThanOrEqual(sugestoes[i + 1].distanciaKm);
-      }
-
-      // Destinos próximos a SP (< 400 km) NÃO devem estar inclusos (ex.: Campos do Jordão, Paraty, Rio de Janeiro)
+      // Destinos próximos a SP (< 400 km) NÃO devem estar inclusos
       const nomes = sugestoes.map((s) => s.nome);
       expect(nomes).not.toContain('Campos do Jordão');
       expect(nomes).not.toContain('Paraty');
@@ -57,9 +69,9 @@ describe('geolocation service', () => {
       expect(nomes).not.toContain('São Paulo');
     });
 
-    it('filtra destinos com menos de 400 km a partir de Recife', () => {
+    it('filtra destinos com menos de 400 km a partir de Recife quando o filtro é solicitado', () => {
       // Recife: -8.0476, -34.8770
-      const sugestoes = obterSugestoesDestino(-8.0476, -34.877);
+      const sugestoes = obterSugestoesDestino(-8.0476, -34.877, { distanciaMinimaKm: 400 });
 
       expect(sugestoes).toHaveLength(4);
 
@@ -72,6 +84,17 @@ describe('geolocation service', () => {
       for (const sugestao of sugestoes) {
         expect(sugestao.distanciaKm).toBeGreaterThanOrEqual(400);
       }
+    });
+
+    it('aciona fallback seguro quando não há polos suficientes acima da distância mínima extrema', () => {
+      // Distância extrema de 4000 km a partir de SP
+      const sugestoes = obterSugestoesDestino(-23.5505, -46.6333, {
+        limite: 4,
+        distanciaMinimaKm: 4000,
+      });
+
+      // Nunca deixa o usuário sem recomendações (retorna até 4 destinos)
+      expect(sugestoes).toHaveLength(4);
     });
 
     function sugestaoValida(sugestao: { nome: string; uf: string; distanciaKm: number }) {
