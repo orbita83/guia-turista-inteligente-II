@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
@@ -32,7 +32,7 @@ const FORM_COMBUSTAO_MOCK: RoteiroFormData = {
   preco_combustivel_l: 6.0,
 };
 
-describe('MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12 e #14)', () => {
+describe('MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12, #14, #15 e #16)', () => {
   it('renderiza o cabeçalho e os 6 cards métricos da rota conforme wireframe da seção 3.3', () => {
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
@@ -121,7 +121,7 @@ describe('MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12 e #14)', () => 
     expect(screen.getByText(/Sugestão 02 selecionada:/i)).toBeInTheDocument();
   });
 
-  it('exibe paradas estratégicas antes do limite crítico de 18% para rotas longas', () => {
+  it('exibe paradas estratégicas antes do limite crítico de 18% para rotas longas (Issue #15)', () => {
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
     // Com 800 km e autonomia de 500 km (10 km/l * 50l), deve haver paradas estratégicas
@@ -129,7 +129,7 @@ describe('MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12 e #14)', () => 
     expect(screen.getByText(/Parada 1/i)).toBeInTheDocument();
   });
 
-  it('renderiza o perfil de topografia e relevo com cota e acréscimo de consumo', async () => {
+  it('renderiza o perfil de topografia e relevo com cota e acréscimo de consumo (Issue #16)', async () => {
     const user = userEvent.setup();
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
@@ -143,7 +143,7 @@ describe('MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12 e #14)', () => 
     expect(screen.getByRole('button', { name: /Ver perfil ▾/i })).toBeInTheDocument();
   });
 
-  it('recalcula a cota individual na calculadora de rateio entre passageiros (1 a 8)', async () => {
+  it('recalcula a cota individual na calculadora de rateio entre passageiros (1 a 8) (Issue #16)', async () => {
     const user = userEvent.setup();
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
@@ -162,26 +162,15 @@ describe('MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12 e #14)', () => 
     expect(screen.getByText(/Cota individual \(4 pessoas\)/i)).toBeInTheDocument();
   });
 
-  it('oferece ações rápidas com links externos e gatilho de download GPX', () => {
+  it('não duplica ações no rodapé do mapa após centralização nas abas superiores (Issue #11)', () => {
     render(<MapaRota viagem={VIAGEM_MOCK} formParams={FORM_COMBUSTAO_MOCK} />);
 
-    const linkGmaps = screen.getByRole('link', { name: /Abrir no Google Maps/i });
-    expect(linkGmaps).toHaveAttribute(
-      'href',
-      expect.stringContaining('https://www.google.com/maps/dir/'),
-    );
-
-    const linkWhatsapp = screen.getByRole('link', { name: /Compartilhar no WhatsApp/i });
-    expect(linkWhatsapp).toHaveAttribute(
-      'href',
-      expect.stringContaining('https://api.whatsapp.com/send?text='),
-    );
-
-    const btnGpx = screen.getByRole('button', { name: /Baixar GPX 1.1/i });
-    expect(btnGpx).toBeInTheDocument();
-
-    // Disparo do download sem erro
-    fireEvent.click(btnGpx);
+    // As ações foram migradas para o TripNavigationTabs logo abaixo de "Planejar Viagem"
+    expect(screen.queryByRole('link', { name: /Abrir no Google Maps/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Compartilhar no WhatsApp/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Baixar GPX 1.1/i })).not.toBeInTheDocument();
   });
 
   it('fornece alternativa textual acessível para leitores de tela', () => {

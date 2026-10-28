@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   HistoricoViagens,
   LoginCard,
@@ -6,11 +7,15 @@ import {
   RoteiroResult,
   TelemetriaCard,
   ToastContainer,
+  TripNavigationTabs,
 } from './components';
 import { SessionHeader } from './components/SessionHeader';
+import type { AbaViagem } from './types/domain';
 import { useApp } from './hooks/useApp';
 
 export function App() {
+  const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
+
   const {
     data,
     toasts,
@@ -78,17 +83,35 @@ export function App() {
 
                 {activeTrip ? (
                   <>
-                    <MapaRota viagem={activeTrip} formParams={activeTripForm} />
-                    {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
-                    <RoteiroResult
+                    <TripNavigationTabs
                       viagem={activeTrip}
-                      visitasIds={
-                        visitasPorViagem[activeTrip.id] ?? activeTrip.atrativosVisitadosIds ?? []
-                      }
-                      onToggleVisita={(atrativoId) =>
-                        toggleVisitaAtrativo(activeTrip.id, atrativoId)
-                      }
+                      abaAtiva={abaViagemAtiva}
+                      onAbaChange={setAbaViagemAtiva}
+                      onExcluir={() => deleteTrip(activeTrip.id)}
                     />
+
+                    {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'mapa') && (
+                      <div id="panel-mapa" role="tabpanel" aria-labelledby="tab-mapa">
+                        <MapaRota viagem={activeTrip} formParams={activeTripForm} />
+                      </div>
+                    )}
+
+                    {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'guia') && (
+                      <div id="panel-guia" role="tabpanel" aria-labelledby="tab-guia">
+                        {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
+                        <RoteiroResult
+                          viagem={activeTrip}
+                          visitasIds={
+                            visitasPorViagem[activeTrip.id] ??
+                            activeTrip.atrativosVisitadosIds ??
+                            []
+                          }
+                          onToggleVisita={(atrativoId) =>
+                            toggleVisitaAtrativo(activeTrip.id, atrativoId)
+                          }
+                        />
+                      </div>
+                    )}
                   </>
                 ) : null}
               </section>

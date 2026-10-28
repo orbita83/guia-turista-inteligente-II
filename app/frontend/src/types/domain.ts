@@ -1,3 +1,5 @@
+export type AbaViagem = 'visao-geral' | 'mapa' | 'guia';
+
 export type TipoUsuario = 'google' | 'visitante';
 
 export interface Usuario {
@@ -20,6 +22,7 @@ export interface ClimaViagem {
 export interface PercursoViagem {
   distancia: string;
   tempo: string;
+  geometria?: CoordenadaGPS[];
 }
 
 export interface Viagem {
