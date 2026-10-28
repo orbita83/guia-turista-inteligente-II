@@ -118,7 +118,12 @@ export function useApp() {
   const [sugestoes, setSugestoes] = useState<SugestaoDestino[]>([]);
   const [suggestionStatus, setSuggestionStatus] = useState<SuggestionStatus>('idle');
   const [visitasPorViagem, setVisitasPorViagem] = useState<Record<string, string[]>>({});
+  const [visitPersistenceByTrip, setVisitPersistenceByTrip] = useState<
+    Record<string, 'pending' | 'local' | 'confirmed' | 'error'>
+  >({});
   const visitasRef = useRef<Record<string, string[]>>({});
+  const pendingVisitRequests = useRef(new Set<string>());
+  const pendingVisitChanges = useRef<Record<string, Record<string, boolean>>>({});
   const toastSequence = useRef(0);
   const attemptSequence = useRef(0);
   const sessionGeneration = useRef(0);
@@ -238,6 +243,9 @@ export function useApp() {
     const saved = readSavedVisitas(data.usuario?.id);
     visitasRef.current = saved;
     setVisitasPorViagem(saved);
+    setVisitPersistenceByTrip({});
+    pendingVisitRequests.current.clear();
+    pendingVisitChanges.current = {};
   }, [data.usuario?.id]);
 
   const runSessionAction = useCallback(
@@ -510,6 +518,10 @@ export function useApp() {
 
   const toggleVisitaAtrativo = useCallback(
     async (viagemId: string, atrativoId: string) => {
+      const requestKey = `${viagemId}:${atrativoId}`;
+      if (pendingVisitRequests.current.has(requestKey)) return;
+      pendingVisitRequests.current.add(requestKey);
+      const generation = sessionGeneration.current;
       const atuais = visitasRef.current[viagemId] ?? [];
       const jaVisitado = atuais.includes(atrativoId);
       const novoStatus = !jaVisitado;
@@ -518,15 +530,64 @@ export function useApp() {
       visitasRef.current = proximo;
       setVisitasPorViagem(proximo);
       saveVisitas(data.usuario?.id, proximo);
+      setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
 
-      // TODO(backend): sincronizar marcação de visita via PATCH /api/v1/roteiros/{id}/visitas quando disponível.
       try {
-        await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
+        const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
+        if (generation !== sessionGeneration.current) return;
+        setVisitPersistenceByTrip((current) => ({
+          ...current,
+          [viagemId]: confirmed ? 'confirmed' : 'local',
+        }));
+        if (!confirmed) {
+          pendingVisitChanges.current[viagemId] = {
+            ...pendingVisitChanges.current[viagemId],
+            [atrativoId]: novoStatus,
+          };
+          addToast('Visita salva apenas neste dispositivo; servidor indisponível.', 'info');
+        } else if (pendingVisitChanges.current[viagemId]) {
+          delete pendingVisitChanges.current[viagemId][atrativoId];
+        }
       } catch {
-        // Estado local otimista já preservado.
+        if (generation !== sessionGeneration.current) return;
+        const reverted = { ...visitasRef.current, [viagemId]: atuais };
+        visitasRef.current = reverted;
+        setVisitasPorViagem(reverted);
+        saveVisitas(data.usuario?.id, reverted);
+        setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'error' }));
+        addToast('Não foi possível salvar a visita. Tente novamente.');
+      } finally {
+        pendingVisitRequests.current.delete(requestKey);
       }
     },
-    [data.usuario?.id],
+    [addToast, data.usuario?.id],
+  );
+
+  const retryLocalVisits = useCallback(
+    async (viagemId: string) => {
+      const generation = sessionGeneration.current;
+      const pending = pendingVisitChanges.current[viagemId];
+      if (!pending) return;
+      setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
+      try {
+        for (const [atrativoId, visitado] of Object.entries(pending)) {
+          const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, visitado);
+          if (generation !== sessionGeneration.current) return;
+          if (!confirmed) {
+            setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'local' }));
+            return;
+          }
+          delete pending[atrativoId];
+        }
+        setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'confirmed' }));
+        addToast('Visitas sincronizadas com o servidor.', 'sucesso');
+      } catch {
+        if (generation !== sessionGeneration.current) return;
+        setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'local' }));
+        addToast('Ainda não foi possível sincronizar as visitas.');
+      }
+    },
+    [addToast],
   );
 
   return {
@@ -548,6 +609,7 @@ export function useApp() {
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
+    visitPersistenceByTrip,
     connectivity: connectivityCondition(networkStatus),
     copyTelemetryRequestId: copyRequestId,
     dismissToast: (id: string) =>
@@ -561,5 +623,6 @@ export function useApp() {
     deleteTrip,
     selectTrip,
     toggleVisitaAtrativo,
+    retryLocalVisits,
   };
 }

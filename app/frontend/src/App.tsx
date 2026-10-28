@@ -35,6 +35,7 @@ export function App() {
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
+    visitPersistenceByTrip,
     connectivity,
     copyTelemetryRequestId,
     dismissToast,
@@ -47,6 +48,7 @@ export function App() {
     deleteTrip,
     selectTrip,
     toggleVisitaAtrativo,
+    retryLocalVisits,
   } = useApp();
 
   return (
@@ -101,6 +103,7 @@ export function App() {
                         {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
                         <RoteiroResult
                           viagem={activeTrip}
+                          visitPersistenceStatus={visitPersistenceByTrip[activeTrip.id]}
                           visitasIds={
                             visitasPorViagem[activeTrip.id] ??
                             activeTrip.atrativosVisitadosIds ??
@@ -109,6 +112,7 @@ export function App() {
                           onToggleVisita={(atrativoId) =>
                             toggleVisitaAtrativo(activeTrip.id, atrativoId)
                           }
+                          onRetryVisitas={() => retryLocalVisits(activeTrip.id)}
                         />
                       </div>
                     )}

@@ -13,7 +13,9 @@ export interface RoteiroResultProps {
   formParams?: RoteiroFormData | null;
   visitasIds?: readonly string[];
   visitadosIds?: readonly string[];
+  visitPersistenceStatus?: 'pending' | 'local' | 'confirmed' | 'error';
   onToggleVisita?: (atrativoId: string) => void | Promise<void>;
+  onRetryVisitas?: () => void | Promise<void>;
 }
 
 type FiltroAtrativo = 'todos' | 'pendentes' | 'visitados' | 'gastronomia';
@@ -98,7 +100,9 @@ export function RoteiroResult({
   formParams,
   visitasIds,
   visitadosIds,
+  visitPersistenceStatus,
   onToggleVisita,
+  onRetryVisitas,
 }: RoteiroResultProps) {
   const idsVisitados = useMemo(
     () => visitasIds ?? visitadosIds ?? viagem.atrativosVisitadosIds ?? [],
@@ -455,6 +459,20 @@ export function RoteiroResult({
             <p>Descubra e marque os locais e pratos que você já conheceu.</p>
           </div>
         </div>
+
+        {visitPersistenceStatus && (
+          <p role="status" className="visits-persistence-status">
+            {visitPersistenceStatus === 'pending' && 'Salvando visita…'}
+            {visitPersistenceStatus === 'local' && 'Visitas salvas apenas neste dispositivo.'}
+            {visitPersistenceStatus === 'confirmed' && 'Visitas confirmadas no servidor.'}
+            {visitPersistenceStatus === 'error' && 'Falha ao salvar visita. Tente novamente.'}
+          </p>
+        )}
+        {visitPersistenceStatus === 'local' && onRetryVisitas && (
+          <button type="button" className="btn-guide-action" onClick={onRetryVisitas}>
+            Tentar sincronizar visitas
+          </button>
+        )}
 
         {/* Barra de Progresso de Visitas */}
         <div className="visits-progress-container">

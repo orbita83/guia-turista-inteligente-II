@@ -93,5 +93,11 @@
   cobre associação aos campos, entradas numéricas vazias, preço zero e exigências
   condicionais para veículo elétrico. O formulário não envia números não finitos.
 
+### Evidência frontend de F08 para CA-PLN-003
+
+- `useApp.test.tsx` cobre confirmação, salvamento apenas local quando o endpoint não
+  existe, reversão após falha e sincronização posterior. A tela distingue esses
+  estados e oferece nova tentativa quando há alterações locais pendentes.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

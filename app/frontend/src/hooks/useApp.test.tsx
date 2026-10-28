@@ -289,6 +289,7 @@ describe('useApp telemetry lifecycle', () => {
 describe('useApp GPS suggestions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     api.carregarSessao.mockResolvedValue({ usuario, google_client_id: '', ufs: ['PE'] });
     api.listarViagens.mockResolvedValue({ viagens: [] });
     api.verificarSaudeApi.mockResolvedValue(true);
@@ -365,12 +366,7 @@ describe('useApp GPS suggestions', () => {
   });
 
   it('permite alternar visita a atrativo com persistência local otimista e chamada à API', async () => {
-    api.atualizarVisitaAtrativo.mockResolvedValue({
-      ok: true,
-      viagem_id: 'trip-1',
-      atrativo_id: 'atrativo-marco-zero',
-      visitado: true,
-    });
+    api.atualizarVisitaAtrativo.mockResolvedValue(true);
 
     const { result } = renderHook(() => useApp());
     await waitFor(() => expect(result.current.initialLoading).toBe(false));
@@ -380,6 +376,7 @@ describe('useApp GPS suggestions', () => {
     });
 
     expect(result.current.visitasPorViagem['trip-1']).toEqual(['atrativo-marco-zero']);
+    expect(result.current.visitPersistenceByTrip['trip-1']).toBe('confirmed');
     expect(api.atualizarVisitaAtrativo).toHaveBeenCalledWith('trip-1', 'atrativo-marco-zero', true);
     expect(localStorage.getItem('guia_turista_visitas_user-1')).toContain('atrativo-marco-zero');
 
@@ -394,5 +391,44 @@ describe('useApp GPS suggestions', () => {
       'atrativo-marco-zero',
       false,
     );
+  });
+
+  it('identifica persistência apenas local quando o endpoint está indisponível', async () => {
+    api.atualizarVisitaAtrativo.mockResolvedValue(false);
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    await act(async () => {
+      await result.current.toggleVisitaAtrativo('trip-1', 'atrativo-marco-zero');
+    });
+    expect(result.current.visitasPorViagem['trip-1']).toEqual(['atrativo-marco-zero']);
+    expect(result.current.visitPersistenceByTrip['trip-1']).toBe('local');
+    expect(result.current.toasts.at(-1)?.mensagem).toMatch(/apenas neste dispositivo/);
+  });
+
+  it('sincroniza alterações locais pendentes quando a API se recupera', async () => {
+    api.atualizarVisitaAtrativo.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    await act(async () => {
+      await result.current.toggleVisitaAtrativo('trip-1', 'atrativo-marco-zero');
+    });
+    expect(result.current.visitPersistenceByTrip['trip-1']).toBe('local');
+    await act(async () => {
+      await result.current.retryLocalVisits('trip-1');
+    });
+    expect(api.atualizarVisitaAtrativo).toHaveBeenCalledTimes(2);
+    expect(result.current.visitPersistenceByTrip['trip-1']).toBe('confirmed');
+  });
+
+  it('reverte a marcação se a gravação falhar', async () => {
+    api.atualizarVisitaAtrativo.mockRejectedValue(new Error('network'));
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    await act(async () => {
+      await result.current.toggleVisitaAtrativo('trip-1', 'atrativo-marco-zero');
+    });
+    expect(result.current.visitasPorViagem['trip-1']).toEqual([]);
+    expect(result.current.visitPersistenceByTrip['trip-1']).toBe('error');
+    expect(result.current.toasts.at(-1)?.mensagem).toMatch(/Não foi possível salvar/);
   });
 });

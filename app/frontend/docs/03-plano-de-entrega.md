@@ -6,6 +6,8 @@ Sem geometria validada, o mapa apresenta indisponibilidade e mantém o resumo te
 da viagem. Alternativas só aparecem quando foram recebidas na resposta.
 O formulário mostra erros HTTP 422 por campo e valida os números do veículo ativo
 antes de enviar o planejamento.
+A marcação de visitas diferencia confirmação no servidor e salvamento local;
+falhas revertem a marcação e alterações locais pendentes podem ser sincronizadas.
 
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão
