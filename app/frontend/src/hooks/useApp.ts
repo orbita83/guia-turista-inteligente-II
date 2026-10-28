@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { UFS_BRASIL } from '../constants/ufs';
 import {
   ApiError,
+  atualizarVisitaAtrativo,
   autenticarComGoogle,
   carregarSessao,
   criarViagem,
@@ -70,6 +71,31 @@ function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+function getVisitasStorageKey(userId?: string | null): string {
+  return `guia_turista_visitas_${userId || 'anonimo'}`;
+}
+
+function readSavedVisitas(userId?: string | null): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(getVisitasStorageKey(userId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, string[]>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveVisitas(userId: string | null | undefined, visitas: Record<string, string[]>): void {
+  try {
+    localStorage.setItem(getVisitasStorageKey(userId), JSON.stringify(visitas));
+  } catch {
+    // Continua utilizável em memória caso o armazenamento local esteja bloqueado.
+  }
+}
+
 export function useApp() {
   const networkStatus = useNetworkStatus();
   const [data, setData] = useState<AppData>(EMPTY_DATA);
@@ -91,6 +117,8 @@ export function useApp() {
   );
   const [sugestoes, setSugestoes] = useState<SugestaoDestino[]>([]);
   const [suggestionStatus, setSuggestionStatus] = useState<SuggestionStatus>('idle');
+  const [visitasPorViagem, setVisitasPorViagem] = useState<Record<string, string[]>>({});
+  const visitasRef = useRef<Record<string, string[]>>({});
   const toastSequence = useRef(0);
   const attemptSequence = useRef(0);
   const sessionGeneration = useRef(0);
@@ -205,6 +233,12 @@ export function useApp() {
       });
     return () => controller.abort();
   }, [data.usuario?.id, networkStatus]);
+
+  useEffect(() => {
+    const saved = readSavedVisitas(data.usuario?.id);
+    visitasRef.current = saved;
+    setVisitasPorViagem(saved);
+  }, [data.usuario?.id]);
 
   const runSessionAction = useCallback(
     async (action: () => Promise<unknown>): Promise<boolean> => {
@@ -472,6 +506,27 @@ export function useApp() {
     setActiveTrip(trip);
   }, []);
 
+  const toggleVisitaAtrativo = useCallback(
+    async (viagemId: string, atrativoId: string) => {
+      const atuais = visitasRef.current[viagemId] ?? [];
+      const jaVisitado = atuais.includes(atrativoId);
+      const novoStatus = !jaVisitado;
+      const novos = jaVisitado ? atuais.filter((id) => id !== atrativoId) : [...atuais, atrativoId];
+      const proximo = { ...visitasRef.current, [viagemId]: novos };
+      visitasRef.current = proximo;
+      setVisitasPorViagem(proximo);
+      saveVisitas(data.usuario?.id, proximo);
+
+      // TODO(backend): sincronizar marcação de visita via PATCH /api/v1/roteiros/{id}/visitas quando disponível.
+      try {
+        await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
+      } catch {
+        // Estado local otimista já preservado.
+      }
+    },
+    [data.usuario?.id],
+  );
+
   return {
     data,
     toasts,
@@ -490,6 +545,7 @@ export function useApp() {
     apiHealthStatus,
     sugestoes,
     suggestionStatus,
+    visitasPorViagem,
     connectivity: connectivityCondition(networkStatus),
     copyTelemetryRequestId: copyRequestId,
     dismissToast: (id: string) =>
@@ -502,5 +558,6 @@ export function useApp() {
     submitTrip,
     deleteTrip,
     selectTrip,
+    toggleVisitaAtrativo,
   };
 }
