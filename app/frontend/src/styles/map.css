@@ -1,0 +1,444 @@
+/* Estilos do Componente MapaRota (Tópico 3.3 - Mapa e Autonomia) */
+
+.mapa-card {
+  margin-top: 1.5rem;
+  overflow: hidden;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+}
+
+.mapa-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  margin-bottom: 1.25rem;
+}
+
+.mapa-heading-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--primary-light);
+  font-size: 1.35rem;
+}
+
+.mapa-heading h2 {
+  color: var(--text-main);
+  font-size: clamp(1.25rem, 3vw, 1.6rem);
+  line-height: 1.2;
+}
+
+.mapa-heading p {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* Abas de Rotas Alternativas */
+.route-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.route-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.route-tab:hover {
+  border-color: var(--primary);
+  background: #ffffff;
+}
+
+.route-tab.is-active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-strong);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.route-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.route-tab-header strong {
+  font-size: 0.94rem;
+}
+
+.route-tab-badge {
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.route-tab.is-active .route-tab-badge {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.route-tab-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Badges Métricos */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+}
+
+.metric-card {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  text-align: center;
+}
+
+.metric-card-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.metric-card-value {
+  display: block;
+  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.metric-card-sub {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+/* Container do Mapa Leaflet */
+.map-container-wrapper {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.leaflet-map-root {
+  height: 380px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Marcadores Customizados */
+.custom-map-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+  cursor: pointer;
+}
+
+/* Alternativa Textual Acessível */
+.text-route-summary {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.text-route-summary strong {
+  color: var(--text-main);
+}
+
+.stops-list {
+  margin-top: 0.4rem;
+  padding-left: 1.2rem;
+}
+
+.stops-list li {
+  margin-top: 0.2rem;
+}
+
+/* Sanfona de Topografia & Relevo */
+.relief-details {
+  margin-block: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+
+.relief-summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 750;
+  user-select: none;
+}
+
+.relief-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.relief-item {
+  padding: 0.6rem;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.relief-item-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.relief-item-value {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.relief-warning {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Calculadora e Rateio entre Passageiros */
+.cost-sharing-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.cost-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.cost-header h4 {
+  color: var(--text-secondary);
+  font-size: 0.94rem;
+  font-weight: 750;
+}
+
+.cost-total-badge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.cost-breakdown {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.85rem;
+}
+
+.cost-breakdown strong {
+  color: var(--text-secondary);
+}
+
+.passenger-selector-wrapper {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.passenger-selector-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.passenger-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.passenger-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.passenger-btn:hover {
+  border-color: var(--primary);
+}
+
+.passenger-btn.is-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+.passenger-quota-result {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  background: var(--primary-light);
+  color: var(--primary-strong);
+  font-size: 0.86rem;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Ações Rápidas de Navegação */
+.map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.map-action-btn {
+  flex: 1 1 180px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-gmaps {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.btn-gmaps:hover {
+  background: #dbeafe;
+}
+
+.btn-whatsapp {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.btn-whatsapp:hover {
+  background: #dcfce7;
+}
+
+.btn-gpx {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.btn-gpx:hover {
+  background: #f1f5f9;
+}
+
+/* Responsividade Mobile (< 639px) */
+@media (max-width: 639px) {
+  .route-tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metrics-grid .metric-card:last-child {
+    grid-column: span 2;
+  }
+
+  .relief-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-actions {
+    flex-direction: column;
+  }
+
+  .map-action-btn {
+    width: 100%;
+  }
+}
