@@ -140,5 +140,11 @@
 - A compatibilidade com leitores de tela específicos depende da homologação em
   dispositivos assistivos, ainda fora da suíte automatizada.
 
+### Avaliação frontend F17 para CA-OPS-003
+
+- `index.html` referencia o favicon SVG do diretório `public/`; o build o distribui.
+  Sprite de ícones não utilizado e manifesto PWA sem escopo offline definido seguem
+  fora da implementação, conforme arquitetura de referência.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

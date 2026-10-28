@@ -15,6 +15,10 @@ Fonte: [Estrutura do Frontend React 19](../modulo-guia-turista-inteligente.md#22
 
 ## Estrutura de referência
 
+Na implementação atual, `public/favicon.svg` está ligado ao HTML. O sprite
+`icons.svg` não é consumido pela interface; `manifest.webmanifest` depende de uma
+decisão sobre PWA/offline e permanece apenas na estrutura de referência.
+
 A fonte apresenta o frontend em `guia-turista-inteligente/completo/frontend/`. No monorepositório adotado pelo projeto, essa raiz corresponde a `app/frontend/`. A estrutura abaixo preserva os módulos e responsabilidades da fonte, adaptando os arquivos JavaScript/JSX para TypeScript/TSX conforme a [ADR-001](./decisoes/ADR-001-typescript-e-vite-plus.md).
 
 ```text
