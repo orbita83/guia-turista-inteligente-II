@@ -6,7 +6,7 @@
   padding: clamp(1rem, 3vw, 1.75rem);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-card);
-  background: #ffffff;
+  background: var(--bg-card);
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
 }
 
@@ -56,7 +56,7 @@
   align-items: flex-start;
   gap: 0.35rem;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--control-border);
   border-radius: 10px;
   background: var(--bg-subtle);
   color: var(--text-secondary);
@@ -67,7 +67,7 @@
 
 .route-tab:hover {
   border-color: var(--primary);
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 .route-tab.is-active {
@@ -93,13 +93,13 @@
   border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 700;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--bg-main);
+  color: var(--text-secondary);
 }
 
 .route-tab.is-active .route-tab-badge {
-  background: var(--primary);
-  color: #ffffff;
+  background: var(--action-bg);
+  color: var(--on-action);
 }
 
 .route-tab-meta {
@@ -178,7 +178,7 @@
   padding: 0.75rem 1rem;
   border: 1px dashed var(--border-color);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--bg-subtle);
   color: var(--text-secondary);
   font-size: 0.8rem;
   line-height: 1.4;
@@ -224,7 +224,7 @@
 .relief-item {
   padding: 0.6rem;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   text-align: center;
 }
@@ -248,9 +248,9 @@
   margin-top: 0.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #b45309;
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -261,7 +261,7 @@
   padding: 1rem;
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 .cost-header {
@@ -282,8 +282,8 @@
 .cost-total-badge {
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--success-surface);
+  color: var(--success);
   font-size: 1rem;
   font-weight: 800;
 }
@@ -326,9 +326,9 @@
   padding: 0;
   display: grid;
   place-items: center;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--text-main);
   font-size: 0.85rem;
   font-weight: 700;
@@ -342,8 +342,8 @@
 
 .passenger-btn.is-active {
   border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  background: var(--action-bg);
+  color: var(--on-action);
   box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
 }
 
@@ -387,33 +387,33 @@
 }
 
 .btn-gmaps {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
+  background: var(--info-surface);
+  border: 1px solid var(--control-border);
+  color: var(--info-ink);
 }
 
 .btn-gmaps:hover {
-  background: #dbeafe;
+  background: var(--primary-light);
 }
 
 .btn-whatsapp {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
+  background: var(--success-surface);
+  border: 1px solid var(--control-border);
+  color: var(--success);
 }
 
 .btn-whatsapp:hover {
-  background: #dcfce7;
+  border-color: var(--success);
 }
 
 .btn-gpx {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background: var(--bg-subtle);
+  border: 1px solid var(--control-border);
+  color: var(--text-secondary);
 }
 
 .btn-gpx:hover {
-  background: #f1f5f9;
+  background: var(--primary-light);
 }
 
 /* Responsividade Mobile (< 639px) */
