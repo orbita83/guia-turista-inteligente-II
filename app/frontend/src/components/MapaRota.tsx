@@ -1,12 +1,20 @@
+// TODO(backend): o endpoint /api/v1/roteiros/planejar
+// precisa retornar a geometria rodoviária real (coordenadas da rota)
+// e coordenadas geocodificadas de origem/destino.
+// O contrato atual retorna apenas distância, tempo e modal.
+// Não usar interpolação entre cidades como trajeto rodoviário real.
+// Relacionado à Issue #15 (geometria rodoviária).
+
+// TODO(backend): obter geometria rodoviária real e amostras de
+// elevação ao longo do trajeto para renderizar o perfil topográfico.
+// A resposta atual de planejamento não fornece série de altitudes.
+// Não exibir valores simulados como medições reais.
+// Relacionado à Issue #15 (geometria rodoviária) e Issue #16 (altimetria e relevo).
+
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 
-import {
-  baixarArquivoGpx,
-  gerarLinkGoogleMaps,
-  gerarLinkWhatsApp,
-  gerarRotasAlternativas,
-} from '../services/routeCalculator';
+import { gerarRotasAlternativas } from '../services/routeCalculator';
 import type { RotaAlternativa, RoteiroFormData, TipoPropulsao, Viagem } from '../types/domain';
 
 export interface MapaRotaProps {
@@ -620,35 +628,6 @@ export function MapaRota({
             </div>
           </div>
         )}
-      </div>
-
-      {/* ------------------------------------------------------------------
-          9. Ações Rápidas de Navegação e Exportação
-          ------------------------------------------------------------------ */}
-      <div className="map-actions" aria-label="Ações de navegação e compartilhamento">
-        <a
-          href={gerarLinkGoogleMaps(viagem.origem, viagem.destino)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="map-action-btn btn-gmaps"
-        >
-          <span aria-hidden="true">🗺️</span> Abrir no Google Maps
-        </a>
-        <a
-          href={gerarLinkWhatsApp(viagem.origem, viagem.destino, rotaAtiva)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="map-action-btn btn-whatsapp"
-        >
-          <span aria-hidden="true">💬</span> Compartilhar no WhatsApp
-        </a>
-        <button
-          type="button"
-          className="map-action-btn btn-gpx"
-          onClick={() => baixarArquivoGpx(viagem.origem, viagem.destino, rotaAtiva)}
-        >
-          <span aria-hidden="true">📥</span> Baixar GPX 1.1
-        </button>
       </div>
     </section>
   );

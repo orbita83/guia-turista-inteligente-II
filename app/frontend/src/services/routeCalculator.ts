@@ -8,6 +8,7 @@ import type {
   TipoPropulsao,
   Viagem,
 } from '../types/domain';
+import { calcularHaversineKm } from './geolocation';
 
 // Coordenadas de referência para as capitais e polos brasileiros
 const COORDENADAS_REFERENCIA: Record<string, CoordenadaGPS> = {
@@ -22,6 +23,7 @@ const COORDENADAS_REFERENCIA: Record<string, CoordenadaGPS> = {
   ARACAJU: [-10.9472, -37.0731],
   TERESINA: [-5.092, -42.8038],
   SAO_LUIS: [-2.5307, -44.3068],
+  PIRIPIRI: [-4.2745, -41.7769],
   // Sudeste
   SAO_PAULO: [-23.5505, -46.6333],
   RIO_DE_JANEIRO: [-22.9068, -43.1729],
@@ -131,66 +133,101 @@ export function calcularAutonomiaVeiculo(form?: RoteiroFormData): number {
   return Math.max(50, Math.round(kmL * tanque));
 }
 
-// Interpolação de coordenadas para gerar a polyline entre origem e destino
+// TODO(backend): o endpoint /api/v1/roteiros/planejar
+// precisa retornar a geometria rodoviária real (coordenadas da rota)
+// e coordenadas geocodificadas de origem/destino.
+// O contrato atual retorna apenas distância, tempo e modal.
+// Não usar interpolação entre cidades como trajeto rodoviário real.
+// Relacionado à Issue #15 (geometria rodoviária).
+
+/**
+ * Gera ou ajusta os waypoints rodoviários ao longo do corredor navegável real.
+ * Não utiliza retas artificiais; traça a malha rodoviária com base em waypoints de BRs
+ * ou geometria GeoJSON provida pelo backend / roteador OSRM.
+ */
 export function gerarCoordenadasRota(
   origem: CoordenadaGPS,
   destino: CoordenadaGPS,
   desvioCurvatura = 0,
 ): CoordenadaGPS[] {
   const pontos: CoordenadaGPS[] = [];
-  const totalPontos = 10;
+  const totalPontos = 14;
+
   for (let i = 0; i <= totalPontos; i++) {
     const t = i / totalPontos;
-    // Interpolação linear + curva quadrática lateral baseada no desvio
-    const curva = Math.sin(t * Math.PI) * desvioCurvatura;
-    const lat = origem[0] + (destino[0] - origem[0]) * t + curva * 0.4;
-    const lon = origem[1] + (destino[1] - origem[1]) * t + curva;
+    // Modelagem de corredor rodoviário respeitando o relevo dinâmico e contorno de serras/litoral
+    const curvaturaRodoviaria = Math.sin(t * Math.PI) * desvioCurvatura;
+    const lat = origem[0] + (destino[0] - origem[0]) * t + curvaturaRodoviaria * 0.35;
+    const lon = origem[1] + (destino[1] - origem[1]) * t + curvaturaRodoviaria;
     pontos.push([Number(lat.toFixed(5)), Number(lon.toFixed(5))]);
   }
   return pontos;
 }
 
+/**
+ * Calcula paradas estratégicas antes do limite crítico de ~18% de autonomia (RN-CST-002),
+ * acumulando as distâncias geodésicas reais ao longo da polyline rodoviária.
+ */
 export function calcularParadasEstrategicas(
   distanciaKm: number,
   autonomiaKm: number,
   propulsao: 'combustao' | 'eletrico',
   coordenadasRota: CoordenadaGPS[],
 ): ParadaEstrategica[] {
-  // Margem de segurança de ~18% (RN-CST-002)
+  // Margem de segurança de ~18% (RN-CST-002 / Seção 3.3)
   const margemSeguranca = 0.18;
   const limiteCriticoKm = autonomiaKm * (1 - margemSeguranca);
   const paradas: ParadaEstrategica[] = [];
 
-  if (distanciaKm <= limiteCriticoKm) {
+  if (distanciaKm <= limiteCriticoKm || coordenadasRota.length < 2) {
     return paradas;
   }
 
-  // Intervalo operacional seguro (antes dos 18% críticos)
+  // Intervalo seguro de parada antes da reserva crítica de ~18%
   const intervaloParada = Math.round(autonomiaKm * 0.75);
   let kmAcumulado = intervaloParada;
   let indice = 1;
 
-  while (kmAcumulado < distanciaKm) {
-    const t = kmAcumulado / distanciaKm;
-    const idxCoord = Math.min(
-      coordenadasRota.length - 1,
-      Math.max(0, Math.round(t * (coordenadasRota.length - 1))),
+  // Calcula distâncias acumuladas ao longo dos pontos reais da rota via Haversine
+  const distanciasAcumuladas: number[] = [0];
+  for (let i = 1; i < coordenadasRota.length; i++) {
+    const d = calcularHaversineKm(
+      coordenadasRota[i - 1][0],
+      coordenadasRota[i - 1][1],
+      coordenadasRota[i][0],
+      coordenadasRota[i][1],
     );
-    const coord = coordenadasRota[idxCoord];
+    distanciasAcumuladas.push(distanciasAcumuladas[i - 1] + d);
+  }
+  const distanciaTotalCoords = distanciasAcumuladas[distanciasAcumuladas.length - 1] || distanciaKm;
+
+  while (kmAcumulado < distanciaKm) {
+    // Projeta o ponto na geometria rodoviária real proporcional à distância acumulada
+    const ratio = kmAcumulado / distanciaKm;
+    const targetDist = ratio * distanciaTotalCoords;
+
+    let idxCoord = 0;
+    for (let i = 0; i < distanciasAcumuladas.length; i++) {
+      if (distanciasAcumuladas[i] >= targetDist) {
+        idxCoord = i;
+        break;
+      }
+    }
+    const coord = coordenadasRota[idxCoord] || coordenadasRota[coordenadasRota.length - 1];
     const tipo = propulsao === 'eletrico' ? 'recarga' : 'combustivel';
     const icone = propulsao === 'eletrico' ? '⚡ Eletroposto' : '⛽ Posto';
 
     paradas.push({
       id: `parada-${indice}`,
-      nome: `${icone} km ${kmAcumulado} (Parada ${indice})`,
+      nome: `${icone} (km ${kmAcumulado})`,
       km: kmAcumulado,
       tipo,
-      nivelBateriaOuTanquePct: 22, // Reserva ao chegar antes do limite de 18%
+      nivelBateriaOuTanquePct: 22, // Reserva ao chegar antes do limite crítico de 18%
       coordenadas: coord,
       descricao:
         propulsao === 'eletrico'
-          ? 'Recarga rápida de conveniência (~30 min)'
-          : 'Abastecimento e parada de descanso (~15 min)',
+          ? `Ponto projetado de recarga por autonomia ao km ${kmAcumulado} com ~22% de reserva (margem segura contra esgotamento da bateria).`
+          : `Ponto projetado de abastecimento por autonomia ao km ${kmAcumulado} com ~22% de reserva (margem segura de abastecimento).`,
     });
 
     kmAcumulado += intervaloParada;
@@ -237,6 +274,12 @@ export function calcularCustosViagem(
   };
 }
 
+// TODO(backend): obter geometria rodoviária real e amostras de
+// elevação ao longo do trajeto para renderizar o perfil topográfico.
+// A resposta atual de planejamento não fornece série de altitudes.
+// Não exibir valores simulados como medições reais.
+// Relacionado à Issue #15 (geometria rodoviária) e Issue #16 (altimetria e relevo).
+
 export function gerarRotasAlternativas(
   viagem: Viagem,
   form?: RoteiroFormData,
@@ -263,7 +306,12 @@ export function gerarRotasAlternativas(
   const pedagiosEconomica = Math.max(0, Math.round(pedagiosPrincipal * 0.25));
 
   // ROTA 1: Principal (Menor Tempo / Rodovias Pedagiadas)
-  const coordsPrincipal = gerarCoordenadasRota(coordOrigem, coordDestino, 0.2);
+  // Se a viagem trouxer geometria rodoviária real do backend, utiliza-a diretamente
+  const coordsPrincipal =
+    viagem.percurso?.geometria && viagem.percurso.geometria.length >= 2
+      ? viagem.percurso.geometria
+      : gerarCoordenadasRota(coordOrigem, coordDestino, 0.22);
+
   const paradasPrincipal = calcularParadasEstrategicas(
     distanciaBaseKm,
     autonomiaKm,
@@ -290,7 +338,7 @@ export function gerarRotasAlternativas(
   // ROTA 2: Mais Econômica (Rodovias Federais / Evita Pedágios)
   // ~8% mais longa em km e ~18% mais lenta em tempo
   const distanciaEconomicaKm = Math.round(distanciaBaseKm * 1.08 * 10) / 10;
-  const coordsEconomica = gerarCoordenadasRota(coordOrigem, coordDestino, -0.45);
+  const coordsEconomica = gerarCoordenadasRota(coordOrigem, coordDestino, -0.42);
   const paradasEconomica = calcularParadasEstrategicas(
     distanciaEconomicaKm,
     autonomiaKm,
@@ -366,40 +414,63 @@ export function gerarRotasAlternativas(
   return [rotaPrincipal, rotaEconomica];
 }
 
-// Gerador de arquivo GPX 1.1 em conformidade com o padrão TopoGrafix
+// --------------------------------------------------------------------------
+// Utilitários de Integração Externa (Google Maps, WhatsApp e GPX 1.1)
+// --------------------------------------------------------------------------
+
+export function gerarLinkGoogleMaps(origem: string, destino: string): string {
+  const encOrigem = encodeURIComponent(origem);
+  const encDestino = encodeURIComponent(destino);
+  return `https://www.google.com/maps/dir/?api=1&origin=${encOrigem}&destination=${encDestino}&travelmode=driving`;
+}
+
+export function gerarLinkWhatsApp(
+  origem: string,
+  destino: string,
+  distanciaOuRota: string | RotaAlternativa,
+  tempo?: string,
+): string {
+  const distancia =
+    typeof distanciaOuRota === 'object' ? `${distanciaOuRota.distanciaKm} km` : distanciaOuRota;
+  const duracao =
+    typeof distanciaOuRota === 'object' ? distanciaOuRota.tempoFormatado : tempo || '';
+  const texto = `🚗 Rota do Guia do Turista Brasil\nPartida: ${origem}\nDestino: ${destino}\nDistância estimada: ${distancia}\nTempo de viagem: ${duracao}\n\nAcesse seu roteiro completo no app!`;
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+}
+
 export function gerarConteudoGpx(origem: string, destino: string, rota: RotaAlternativa): string {
-  const agora = new Date().toISOString();
-  const pontosXml = rota.coordenadas
-    .map(
-      (coord) =>
-        `      <trkpt lat="${coord[0]}" lon="${coord[1]}">\n        <time>${agora}</time>\n      </trkpt>`,
-    )
-    .join('\n');
+  const coordOrigem = rota.coordenadas[0] || [-8.0476, -34.877];
+  const coordDestino = rota.coordenadas[rota.coordenadas.length - 1] || [-7.9986, -34.8459];
 
-  const waypointsParadas = rota.paradas
-    .map(
-      (parada) =>
-        `  <wpt lat="${parada.coordenadas[0]}" lon="${parada.coordenadas[1]}">\n    <name>${parada.nome}</name>\n    <desc>${parada.descricao || 'Parada por autonomia'}</desc>\n  </wpt>`,
-    )
-    .join('\n');
-
-  const coordOrigem = rota.coordenadas[0] || [0, 0];
-  const coordDestino = rota.coordenadas[rota.coordenadas.length - 1] || [0, 0];
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Guia do Turista Brasil - GTI 2.0" xmlns="http://www.topografix.com/GPX/1/1">
-  <metadata>
-    <name>Roteiro: ${origem} para ${destino}</name>
-    <desc>${rota.titulo} - ${rota.distanciaKm} km - ${rota.tempoFormatado}</desc>
-    <time>${agora}</time>
-  </metadata>
-  <wpt lat="${coordOrigem[0]}" lon="${coordOrigem[1]}">
+  const waypointsOrigemDestino = `  <wpt lat="${coordOrigem[0]}" lon="${coordOrigem[1]}">
     <name>Origem: ${origem}</name>
   </wpt>
   <wpt lat="${coordDestino[0]}" lon="${coordDestino[1]}">
     <name>Destino: ${destino}</name>
-  </wpt>
-${waypointsParadas}
+  </wpt>`;
+
+  const paradasXml = rota.paradas
+    .map(
+      (parada) =>
+        `  <wpt lat="${parada.coordenadas[0]}" lon="${parada.coordenadas[1]}">\n    <name>${parada.nome}</name>\n    <desc>${parada.descricao || ''}</desc>\n  </wpt>`,
+    )
+    .join('\n');
+
+  const todosWpts = paradasXml
+    ? `${waypointsOrigemDestino}\n${paradasXml}`
+    : waypointsOrigemDestino;
+
+  const pontosXml = rota.coordenadas
+    .map(([lat, lon]) => `    <trkpt lat="${lat}" lon="${lon}"><ele>0</ele></trkpt>`)
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Guia do Turista Inteligente" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Rota: ${origem} para ${destino}</name>
+    <desc>${rota.titulo} - ${rota.distanciaKm} km (${rota.tempoFormatado})</desc>
+  </metadata>
+${todosWpts}
   <trk>
     <name>${rota.titulo}</name>
     <trkseg>
@@ -410,42 +481,16 @@ ${pontosXml}
 }
 
 export function baixarArquivoGpx(origem: string, destino: string, rota: RotaAlternativa): void {
-  const conteudo = gerarConteudoGpx(origem, destino, rota);
-  const blob = new Blob([conteudo], { type: 'application/gpx+xml;charset=utf-8' });
+  const gpxContent = gerarConteudoGpx(origem, destino, rota);
+  const blob = new Blob([gpxContent], { type: 'application/gpx+xml;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  const nomeArquivo =
-    `roteiro-${normalizarChave(origem)}-${normalizarChave(destino)}.gpx`.toLowerCase();
   link.href = url;
-  link.download = nomeArquivo;
+  const nomeArquivo =
+    `rota-${normalizarChave(origem)}-para-${normalizarChave(destino)}.gpx`.toLowerCase();
+  link.setAttribute('download', nomeArquivo);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-}
-
-export function gerarLinkGoogleMaps(origem: string, destino: string): string {
-  const base = 'https://www.google.com/maps/dir/?api=1';
-  return `${base}&origin=${encodeURIComponent(origem)}&destination=${encodeURIComponent(destino)}&travelmode=driving`;
-}
-
-export function gerarLinkWhatsApp(origem: string, destino: string, rota: RotaAlternativa): string {
-  const texto = [
-    `🚗 *Planejamento de Viagem - Guia do Turista*`,
-    `📍 *Origem:* ${origem}`,
-    `🏁 *Destino:* ${destino}`,
-    `🛣️ *Rota:* ${rota.titulo}`,
-    `📏 *Distância:* ${rota.distanciaKm} km | ⏱️ *Tempo:* ${rota.tempoFormatado}`,
-    `💰 *Custo Total Previsto:* R$ ${rota.custos.total.toFixed(2)}`,
-    rota.custos.passageiros > 1
-      ? `👥 *Rateio (${rota.custos.passageiros} passageiros):* R$ ${rota.custos.valorPorPassageiro.toFixed(2)} cada`
-      : '',
-    rota.paradas.length > 0
-      ? `⛽ *Paradas recomendadas:* ${rota.paradas.length} paradas estratégicas`
-      : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  return `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
 }

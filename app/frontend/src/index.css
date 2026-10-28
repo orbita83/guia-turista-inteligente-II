@@ -3,6 +3,7 @@
 @import './styles/shell-auth.css';
 @import './styles/forms-buttons.css';
 @import './styles/trips.css';
+@import './styles/trip-nav.css';
 @import './styles/map.css';
 @import './styles/toasts.css';
 @import './styles/loading-motion.css';
