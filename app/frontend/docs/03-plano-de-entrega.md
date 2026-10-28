@@ -4,6 +4,8 @@ As correções incrementais do frontend começam pela validação de campos opci
 da API. O fornecimento desses campos continua dependente dos contratos do backend.
 Sem geometria validada, o mapa apresenta indisponibilidade e mantém o resumo textual
 da viagem. Alternativas só aparecem quando foram recebidas na resposta.
+O formulário mostra erros HTTP 422 por campo e valida os números do veículo ativo
+antes de enviar o planejamento.
 
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão

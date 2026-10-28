@@ -59,6 +59,9 @@ o backend valida e copia o arquivo legado da raiz sem removê-lo.
 - `X-Request-ID`: ecoa o ID enviado ou gera um ID para a requisição.
 
 Em chamadas cross-origin, os dois cabeçalhos de resposta são expostos por CORS.
+No frontend, uma resposta `422` no formato FastAPI `detail: [{loc, msg}]` associa
+mensagens aos campos conhecidos do formulário. Formatos desconhecidos mantêm uma
+mensagem geral segura; essa leitura não altera o contrato do servidor.
 
 ### Operação
 

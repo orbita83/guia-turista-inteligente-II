@@ -1,13 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import {
-  ApiContractError,
-  ApiError,
-  criarViagem,
-  listarViagens,
-  parseTrip,
-  verificarSaudeApi,
-} from './api';
+import { ApiContractError, criarViagem, listarViagens, parseTrip, verificarSaudeApi } from './api';
 
 describe('saúde da API', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -216,10 +209,32 @@ describe('criarViagem telemetry metadata', () => {
       ),
     );
 
-    await expect(criarViagem(form)).rejects.toMatchObject<ApiError>({
+    await expect(criarViagem(form)).rejects.toMatchObject({
       name: 'ApiError',
       message: 'Roteiro em processamento.',
       status: 409,
+    });
+  });
+
+  it('preserva erros 422 estruturados por campo', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json(
+          {
+            detail: [
+              { loc: ['body', 'origem_cidade'], msg: 'Cidade inválida', type: 'value_error' },
+              { loc: ['body', 'preco_combustivel_l'], msg: 'Preço inválido', type: 'value_error' },
+              { loc: ['body', 'segredo'], msg: 'Não expor', type: 'value_error' },
+            ],
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    await expect(criarViagem(form)).rejects.toMatchObject({
+      status: 422,
+      fieldErrors: { origem_cidade: 'Cidade inválida', preco_combustivel_l: 'Preço inválido' },
     });
   });
 });

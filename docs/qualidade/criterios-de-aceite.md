@@ -87,5 +87,11 @@
 - `atrativosService.test.ts` garante que destinos não catalogados não recebem locais
   inventados; `RoteiroResult.test.tsx` verifica o estado vazio correspondente.
 
+### Evidência frontend de F06 e F07 para CA-PLN-001
+
+- `api.test.ts` verifica extração segura dos detalhes HTTP 422; `RoteiroForm.test.tsx`
+  cobre associação aos campos, entradas numéricas vazias, preço zero e exigências
+  condicionais para veículo elétrico. O formulário não envia números não finitos.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

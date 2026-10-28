@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ApiError } from '../services/api';
 
 import type {
   MunicipioOption,
@@ -35,7 +36,16 @@ const PERFIS: readonly { valor: PerfilViajante; rotulo: string; icone: string }[
   { valor: 'economico', rotulo: 'Econômico', icone: '🎒' },
 ];
 
-type ErrosFormulario = Partial<Record<'origem' | 'destino' | 'perfis', string>>;
+type NumericFieldName =
+  | 'consumo_km_l'
+  | 'capacidade_tanque_l'
+  | 'preco_combustivel_l'
+  | 'eficiencia_km_kwh'
+  | 'capacidade_bateria_kwh'
+  | 'preco_energia_kwh';
+type ErrosFormulario = Partial<
+  Record<'origem' | 'destino' | 'perfis' | 'form' | NumericFieldName, string>
+>;
 
 export interface RoteiroFormProps {
   ufs: readonly string[];
@@ -77,11 +87,26 @@ export function RoteiroForm({
   const [formData, setFormData] = useState<Required<RoteiroFormData>>(FORMULARIO_INICIAL);
   const [erros, setErros] = useState<ErrosFormulario>({});
   const bloqueioSubmissao = useRef(false);
+  const advancedParametersRef = useRef<HTMLDetailsElement | null>(null);
   const catalogoDisponivel = municipios.length > 0;
 
   useEffect(() => {
     if (!isSubmitting) bloqueioSubmissao.current = false;
   }, [isSubmitting]);
+
+  useEffect(() => {
+    const numericFields: NumericFieldName[] = [
+      'consumo_km_l',
+      'capacidade_tanque_l',
+      'preco_combustivel_l',
+      'eficiencia_km_kwh',
+      'capacidade_bateria_kwh',
+      'preco_energia_kwh',
+    ];
+    if (numericFields.some((field) => erros[field]) && advancedParametersRef.current) {
+      advancedParametersRef.current.open = true;
+    }
+  }, [erros]);
 
   const municipiosOrigem = useMemo(
     () =>
@@ -107,16 +132,10 @@ export function RoteiroForm({
     }));
   };
 
-  const atualizarNumero = (
-    campo:
-      | 'consumo_km_l'
-      | 'capacidade_tanque_l'
-      | 'preco_combustivel_l'
-      | 'eficiencia_km_kwh'
-      | 'capacidade_bateria_kwh'
-      | 'preco_energia_kwh',
-    valor: string,
-  ) => setFormData((atual) => ({ ...atual, [campo]: Number(valor) }));
+  const atualizarNumero = (campo: NumericFieldName, valor: string) => {
+    setFormData((atual) => ({ ...atual, [campo]: valor.trim() ? Number(valor) : Number.NaN }));
+    setErros((atuais) => ({ ...atuais, [campo]: undefined }));
+  };
 
   const alternarPerfil = (perfil: PerfilViajante) => {
     setFormData((atual) => ({
@@ -157,6 +176,15 @@ export function RoteiroForm({
       novosErros.destino = 'Selecione um município brasileiro correspondente à UF informada.';
     }
     if (formData.perfis.length === 0) novosErros.perfis = 'Selecione ao menos um perfil.';
+    const activeFields: NumericFieldName[] =
+      formData.propulsao === 'eletrico'
+        ? ['eficiencia_km_kwh', 'capacidade_bateria_kwh', 'preco_energia_kwh']
+        : ['consumo_km_l', 'capacidade_tanque_l', 'preco_combustivel_l'];
+    for (const field of activeFields) {
+      if (!Number.isFinite(formData[field]) || formData[field] <= 0) {
+        novosErros[field] = 'Informe um número maior que zero.';
+      }
+    }
     return novosErros;
   };
 
@@ -169,13 +197,54 @@ export function RoteiroForm({
 
     bloqueioSubmissao.current = true;
     try {
+      const inactiveFields =
+        formData.propulsao === 'eletrico'
+          ? {
+              consumo_km_l: undefined,
+              capacidade_tanque_l: undefined,
+              preco_combustivel_l: undefined,
+            }
+          : {
+              eficiencia_km_kwh: undefined,
+              capacidade_bateria_kwh: undefined,
+              preco_energia_kwh: undefined,
+            };
       await onSubmit({
         ...formData,
+        ...inactiveFields,
         origem_cidade: formData.origem_cidade.trim(),
         destino_cidade: formData.destino_cidade.trim(),
       });
-    } catch {
-      // O hook de aplicação mantém a mensagem e o estado da operação.
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 422) {
+        const fields = error.fieldErrors;
+        setErros({
+          ...(fields.origem_cidade || fields.origem_uf
+            ? { origem: fields.origem_cidade ?? fields.origem_uf }
+            : {}),
+          ...(fields.destino_cidade || fields.destino_uf
+            ? { destino: fields.destino_cidade ?? fields.destino_uf }
+            : {}),
+          ...(fields.perfis ? { perfis: fields.perfis } : {}),
+          ...Object.fromEntries(
+            (
+              [
+                'consumo_km_l',
+                'capacidade_tanque_l',
+                'preco_combustivel_l',
+                'eficiencia_km_kwh',
+                'capacidade_bateria_kwh',
+                'preco_energia_kwh',
+              ] as const
+            )
+              .filter((field) => fields[field])
+              .map((field) => [field, fields[field]]),
+          ),
+          ...(!Object.keys(fields).length
+            ? { form: 'Verifique os dados informados e tente novamente.' }
+            : {}),
+        });
+      }
     } finally {
       bloqueioSubmissao.current = false;
     }
@@ -197,6 +266,11 @@ export function RoteiroForm({
       </header>
 
       <form id="formCriarViagem" onSubmit={submeter} aria-busy={isSubmitting} noValidate>
+        {erros.form && (
+          <p role="alert" className="field-error">
+            {erros.form}
+          </p>
+        )}
         <fieldset className="form-fieldset" disabled={isSubmitting}>
           <legend className="sr-only">Dados para planejar a viagem</legend>
 
@@ -233,6 +307,8 @@ export function RoteiroForm({
                 id="origem_uf"
                 name="origem_uf"
                 aria-label="UF de origem"
+                aria-invalid={Boolean(erros.origem)}
+                aria-describedby={erros.origem ? 'erro-origem' : undefined}
                 value={formData.origem_uf}
                 onChange={(event) => atualizarTexto('origem_uf', event.currentTarget.value)}
                 required
@@ -285,6 +361,8 @@ export function RoteiroForm({
                 id="destino_uf"
                 name="destino_uf"
                 aria-label="UF de destino"
+                aria-invalid={Boolean(erros.destino)}
+                aria-describedby={erros.destino ? 'erro-destino' : undefined}
                 value={formData.destino_uf}
                 onChange={(event) => atualizarTexto('destino_uf', event.currentTarget.value)}
                 required
@@ -397,13 +475,14 @@ export function RoteiroForm({
             </div>
           </fieldset>
 
-          <details className="advanced-parameters">
+          <details className="advanced-parameters" ref={advancedParametersRef}>
             <summary>⚙️ Personalizar parâmetros de consumo e preço</summary>
             <div className="parameter-grid">
               {formData.propulsao === 'combustao' ? (
                 <>
                   <NumericField
                     id="consumo_km_l"
+                    error={erros.consumo_km_l}
                     label="Consumo médio"
                     unit="km/l"
                     value={formData.consumo_km_l}
@@ -411,6 +490,7 @@ export function RoteiroForm({
                   />
                   <NumericField
                     id="capacidade_tanque_l"
+                    error={erros.capacidade_tanque_l}
                     label="Reservatório"
                     unit="litros"
                     value={formData.capacidade_tanque_l}
@@ -418,6 +498,7 @@ export function RoteiroForm({
                   />
                   <NumericField
                     id="preco_combustivel_l"
+                    error={erros.preco_combustivel_l}
                     label="Preço por litro"
                     unit="R$/l"
                     value={formData.preco_combustivel_l}
@@ -429,6 +510,7 @@ export function RoteiroForm({
                 <>
                   <NumericField
                     id="eficiencia_km_kwh"
+                    error={erros.eficiencia_km_kwh}
                     label="Eficiência energética"
                     unit="km/kWh"
                     value={formData.eficiencia_km_kwh}
@@ -437,6 +519,7 @@ export function RoteiroForm({
                   />
                   <NumericField
                     id="capacidade_bateria_kwh"
+                    error={erros.capacidade_bateria_kwh}
                     label="Capacidade da bateria"
                     unit="kWh"
                     value={formData.capacidade_bateria_kwh}
@@ -444,6 +527,7 @@ export function RoteiroForm({
                   />
                   <NumericField
                     id="preco_energia_kwh"
+                    error={erros.preco_energia_kwh}
                     label="Preço da energia"
                     unit="R$/kWh"
                     value={formData.preco_energia_kwh}
@@ -527,6 +611,7 @@ export function RoteiroForm({
 
 interface NumericFieldProps {
   id: string;
+  error?: string;
   label: string;
   unit: string;
   value: number;
@@ -534,7 +619,7 @@ interface NumericFieldProps {
   onChange: (value: string) => void;
 }
 
-function NumericField({ id, label, unit, value, step = '1', onChange }: NumericFieldProps) {
+function NumericField({ id, error, label, unit, value, step = '1', onChange }: NumericFieldProps) {
   return (
     <label className="numeric-field" htmlFor={id}>
       <span>{label}</span>
@@ -543,15 +628,22 @@ function NumericField({ id, label, unit, value, step = '1', onChange }: NumericF
           id={id}
           name={id}
           aria-label={label}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `erro-${id}` : undefined}
           type="number"
           min="0.01"
           step={step}
-          value={value}
+          value={Number.isFinite(value) ? value : ''}
           onChange={(event) => onChange(event.currentTarget.value)}
           required
         />
         <small>{unit}</small>
       </span>
+      {error && (
+        <span className="field-error" id={`erro-${id}`}>
+          {error}
+        </span>
+      )}
     </label>
   );
 }

@@ -424,7 +424,9 @@ export function useApp() {
         if (attemptId !== attemptSequence.current || generation !== sessionGeneration.current)
           return;
         setTelemetryState({ kind: 'error', attemptId, route, previous });
-        if (error instanceof ApiError && error.status === 409) {
+        if (error instanceof ApiError && error.status === 422) {
+          throw error;
+        } else if (error instanceof ApiError && error.status === 409) {
           addToast(error.message, 'info');
         } else {
           addToast('Falha de conexão ao gerar o roteiro. Tente novamente.');
