@@ -1,9 +1,9 @@
 import math
 import time
-from typing import Any
+from typing import Annotated, Any
 
 import httpx
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 
 from app.core.circuit_breaker import CircuitBreaker
 
@@ -37,10 +37,19 @@ def get_circuit_breakers(request: Request) -> dict[str, CircuitBreaker]:
     return breakers
 
 
-def get_current_user(request: Request) -> dict[str, Any]:
+def get_current_user(
+    request: Request, storage: Annotated[Any, Depends(get_storage)]
+) -> dict[str, Any]:
     user = request.session.get("usuario")
     if not isinstance(user, dict) or not user.get("id"):
         raise HTTPException(status_code=401, detail="Autenticação necessária.")
+
+    session_id = request.session.get("session_id")
+    if not isinstance(session_id, str) or not storage.valid_session(
+        session_id, str(user["id"]), str(user.get("tipo", ""))
+    ):
+        request.session.clear()
+        raise HTTPException(status_code=401, detail="Sessão inválida ou encerrada.")
 
     if user.get("tipo") == "visitante":
         expiration = request.session.get("visitor_expires_at")
@@ -54,9 +63,8 @@ def get_current_user(request: Request) -> dict[str, Any]:
             except (TypeError, ValueError, OverflowError):
                 expires_at = 0
         if not math.isfinite(expires_at) or time.time() >= expires_at:
-            storage = getattr(request.app.state, "trip_storage", None)
-            if storage is not None and hasattr(storage, "forget_visitor"):
-                storage.forget_visitor(str(user["id"]))
+            storage.revoke_session(session_id)
+            storage.forget_visitor(str(user["id"]))
             request.session.clear()
             raise HTTPException(
                 status_code=401, detail="A sessão de visitante expirou."

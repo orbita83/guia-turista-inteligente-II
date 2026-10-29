@@ -33,6 +33,26 @@ class TripStorage:
         self.path = Path(path)
         self._lock = threading.RLock()
         self._visitor_trips: dict[str, list[dict[str, Any]]] = {}
+        self._active_sessions: dict[str, tuple[str, str]] = {}
+
+    def register_session(self, session_id: str, user_id: str, kind: str) -> None:
+        with self._lock:
+            self._active_sessions[session_id] = (user_id, kind)
+
+    def valid_session(self, session_id: str, user_id: str, kind: str) -> bool:
+        with self._lock:
+            return self._active_sessions.get(session_id) == (user_id, kind)
+
+    def revoke_session(self, session_id: str) -> None:
+        with self._lock:
+            self._active_sessions.pop(session_id, None)
+
+    def consume_session(self, session_id: str, user_id: str, kind: str) -> bool:
+        with self._lock:
+            if self._active_sessions.get(session_id) != (user_id, kind):
+                return False
+            del self._active_sessions[session_id]
+            return True
 
     @staticmethod
     def _is_visitor(user_id: str) -> bool:
@@ -89,9 +109,7 @@ class TripStorage:
                     "roteiros": self.list_for_user(user_id),
                 }
             scoped_data = {
-                key: deepcopy(value)
-                for key, value in data.items()
-                if key != "usuarios"
+                key: deepcopy(value) for key, value in data.items() if key != "usuarios"
             }
             scoped_data["usuarios"] = {user_id: user_data}
             scoped_data["total_usuarios"] = 1
@@ -202,9 +220,7 @@ class TripStorage:
                 if attraction_id not in visited_ids:
                     visited_ids.append(attraction_id)
             else:
-                visited_ids = [
-                    item for item in visited_ids if item != attraction_id
-                ]
+                visited_ids = [item for item in visited_ids if item != attraction_id]
             trip["atrativos_visitados_ids"] = visited_ids
 
             if not is_visitor and data is not None:

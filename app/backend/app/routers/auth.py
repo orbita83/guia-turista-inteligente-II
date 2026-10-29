@@ -2,7 +2,7 @@ import logging
 import math
 import time
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -35,6 +35,31 @@ def _forget_active_visitor(request: Request, storage: Any) -> None:
         storage.forget_visitor(str(user.get("id", "")))
 
 
+def _session_is_active(request: Request, storage: Any) -> bool:
+    user = request.session.get("usuario")
+    session_id = request.session.get("session_id")
+    return (
+        isinstance(user, dict)
+        and isinstance(session_id, str)
+        and storage.valid_session(
+            session_id, str(user.get("id", "")), str(user.get("tipo", ""))
+        )
+    )
+
+
+def _revoke_session(request: Request, storage: Any) -> None:
+    session_id = request.session.get("session_id")
+    if isinstance(session_id, str):
+        storage.revoke_session(session_id)
+
+
+def _start_session(request: Request, storage: Any, user: dict[str, Any]) -> None:
+    session_id = uuid.uuid4().hex
+    storage.register_session(session_id, str(user["id"]), str(user["tipo"]))
+    request.session["session_id"] = session_id
+    request.session["usuario"] = user
+
+
 def _user_response(data: dict[str, Any]) -> User:
     return User(
         id=str(data["id"]),
@@ -46,12 +71,18 @@ def _user_response(data: dict[str, Any]) -> User:
 
 
 @router.get("/session", response_model=SessionResponse)
-def get_session(request: Request) -> SessionResponse:
+def get_session(
+    request: Request, storage: Annotated[Any, Depends(get_storage)]
+) -> SessionResponse:
     user = request.session.get("usuario")
+    if isinstance(user, dict) and not _session_is_active(request, storage):
+        request.session.clear()
+        user = None
     if isinstance(user, dict) and user.get("tipo") == "visitante":
         expires_at = _session_expiration(request.session.get("visitor_expires_at"))
         if expires_at is None or time.time() >= expires_at:
-            request.app.state.trip_storage.forget_visitor(str(user.get("id", "")))
+            _revoke_session(request, storage)
+            storage.forget_visitor(str(user.get("id", "")))
             request.session.clear()
             user = None
     settings = get_settings()
@@ -98,8 +129,9 @@ async def login_google(
         "tipo": "google",
     }
     _forget_active_visitor(request, storage)
+    _revoke_session(request, storage)
     request.session.clear()
-    request.session["usuario"] = user
+    _start_session(request, storage, user)
     return UserResponse(usuario=_user_response(user))
 
 
@@ -110,6 +142,12 @@ def login_visitor(
 ) -> UserResponse:
     visitor_id = f"visitante_{uuid.uuid4().hex[:8]}"
     current_user = request.session.get("usuario")
+    if not _session_is_active(request, storage) or not storage.consume_session(
+        request.session.get("session_id", ""),
+        str(current_user.get("id", "")) if isinstance(current_user, dict) else "",
+        str(current_user.get("tipo", "")) if isinstance(current_user, dict) else "",
+    ):
+        current_user = None
     preserved_user = None
     preserved_expiration = None
     now = time.time()
@@ -137,8 +175,9 @@ def login_visitor(
         "tipo": "visitante",
     }
     storage.ensure_visitor(visitor_id)
+    _revoke_session(request, storage)
     request.session.clear()
-    request.session["usuario"] = user
+    _start_session(request, storage, user)
     request.session["visitor_expires_at"] = now + VISITOR_TTL_SECONDS
     if preserved_user is not None and preserved_expiration is not None:
         request.session[PRESERVED_GOOGLE_USER] = preserved_user
@@ -152,16 +191,16 @@ def restore_google_user(
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> UserResponse:
     visitor = request.session.get("usuario")
-    visitor_expiration = _session_expiration(
-        request.session.get("visitor_expires_at")
-    )
+    visitor_expiration = _session_expiration(request.session.get("visitor_expires_at"))
     if (
         not isinstance(visitor, dict)
         or visitor.get("tipo") != "visitante"
+        or not _session_is_active(request, storage)
         or visitor_expiration is None
         or time.time() >= visitor_expiration
     ):
         if isinstance(visitor, dict) and visitor.get("tipo") == "visitante":
+            _revoke_session(request, storage)
             storage.forget_visitor(str(visitor.get("id", "")))
             request.session.clear()
         raise HTTPException(status_code=401, detail="Sessão de visitante inválida.")
@@ -189,14 +228,20 @@ def restore_google_user(
         "id": str(preserved_user["id"]),
         "tipo": "google",
     }
+    session_id = request.session.get("session_id")
+    if not isinstance(session_id, str) or not storage.consume_session(
+        session_id, str(visitor["id"]), "visitante"
+    ):
+        raise HTTPException(status_code=401, detail="Sessão de visitante encerrada.")
     storage.forget_visitor(str(visitor.get("id", "")))
     request.session.clear()
-    request.session["usuario"] = google_user
+    _start_session(request, storage, google_user)
     return UserResponse(usuario=_user_response(google_user))
 
 
 @router.post("/logout", status_code=204)
 def logout(request: Request, storage: Any = Depends(get_storage)) -> Response:  # noqa: B008
     _forget_active_visitor(request, storage)
+    _revoke_session(request, storage)
     request.session.clear()
     return Response(status_code=204)

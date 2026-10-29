@@ -543,9 +543,10 @@ def test_google_session_can_be_restored_after_visitor_mode(
         google_trip,
         {"id": "google-user-restore", "nome": "Ana", "tipo": "google"},
     )
-    assert client.post(
-        "/api/v1/auth/google", json={"credential": "verified"}
-    ).status_code == 200
+    assert (
+        client.post("/api/v1/auth/google", json={"credential": "verified"}).status_code
+        == 200
+    )
 
     visitor = client.post("/api/v1/auth/visitor").json()["usuario"]
     visitor_trip = {"id": "visitor-trip", "origem": "Natal"}
@@ -606,6 +607,40 @@ def test_google_restore_is_revoked_by_account_switch_and_logout(
     assert client.post("/api/v1/auth/restore-google").status_code == 401
 
 
+@pytest.mark.parametrize("transition", ["logout", "troca", "restauracao"])
+def test_cookies_anteriores_nao_restauram_sessao(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, transition: str
+) -> None:
+    import app.routers.auth as auth_router
+
+    async def fake_verify(client, credential, *, google_client_id):
+        return {"sub": f"google-{credential}", "name": "Usuário"}
+
+    monkeypatch.setattr(auth_router, "verify_google_token", fake_verify)
+    assert (
+        client.post("/api/v1/auth/google", json={"credential": "one"}).status_code
+        == 200
+    )
+    google_cookie = client.cookies.get("guia_turista_session")
+    assert client.post("/api/v1/auth/visitor").status_code == 200
+    visitor_cookie = client.cookies.get("guia_turista_session")
+    if transition == "logout":
+        assert client.post("/api/v1/auth/logout").status_code == 204
+    elif transition == "troca":
+        assert (
+            client.post("/api/v1/auth/google", json={"credential": "two"}).status_code
+            == 200
+        )
+    else:
+        assert client.post("/api/v1/auth/restore-google").status_code == 200
+    client.cookies.clear()
+    client.cookies.set("guia_turista_session", visitor_cookie)
+    assert client.post("/api/v1/auth/restore-google").status_code == 401
+    client.cookies.clear()
+    client.cookies.set("guia_turista_session", google_cookie)
+    assert client.get("/api/v1/roteiros/minhas-viagens").status_code == 401
+
+
 def test_attraction_visit_patch_persists_only_for_active_users(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -645,14 +680,20 @@ def test_attraction_visit_patch_persists_only_for_active_users(
         "poi-1"
     ]
     assert storage.list_for_user("google-other") == [{"id": "other-trip"}]
-    assert client.patch(
-        "/api/v1/roteiros/other-trip/visitas",
-        json={"atrativo_id": "poi-1", "visitado": True},
-    ).status_code == 404
-    assert client.patch(
-        "/api/v1/roteiros/owner-trip/visitas",
-        json={"atrativo_id": "  ", "visitado": True},
-    ).status_code == 422
+    assert (
+        client.patch(
+            "/api/v1/roteiros/other-trip/visitas",
+            json={"atrativo_id": "poi-1", "visitado": True},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.patch(
+            "/api/v1/roteiros/owner-trip/visitas",
+            json={"atrativo_id": "  ", "visitado": True},
+        ).status_code
+        == 422
+    )
 
 
 def test_expired_visitor_session_is_cleared(
