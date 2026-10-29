@@ -227,7 +227,21 @@ async def test_plan_trip_keeps_trip_fields_and_persists_result(monkeypatch) -> N
     assert trip["destino"] == "Salvador - BA"
     assert trip["dicas_destino"] == "guia legado"
     assert trip["diagnostico_ia"]["motivo"] == "chave_ausente"
-    assert storage.trips == [trip]
+    assert storage.trips == [
+        {key: value for key, value in trip.items() if key != "telemetria"}
+    ]
+    telemetry = trip["telemetria"]
+    assert telemetry["pipeline_ms"] >= 0
+    assert telemetry["geocodificacao"]["duracao_ms"] >= 0
+    assert telemetry["provedores"]["gemini"] == {
+        "estado": "nao_executado",
+        "duracao_ms": None,
+    }
+    assert telemetry["provedores"]["open-elevation"] == {
+        "estado": "nao_executado",
+        "duracao_ms": None,
+    }
+    assert telemetry["provedores"]["open-meteo"]["estado"] == "fallback"
 
 
 @pytest.mark.asyncio
@@ -243,3 +257,59 @@ async def test_plan_trip_rejects_empty_city_before_network_call() -> None:
                 gemini_api_key="",
                 gemini_timeout_seconds=1,
             )
+
+
+@pytest.mark.asyncio
+async def test_telemetria_preserva_etapas_concorrentes(monkeypatch) -> None:
+    import asyncio
+
+    from app.services import trips
+
+    geocodes: list[str] = []
+    geo_ready = asyncio.Event()
+    providers: list[str] = []
+    providers_ready = asyncio.Event()
+
+    async def fake_geocode(client, city, state, states):
+        geocodes.append(city)
+        if len(geocodes) == 2:
+            geo_ready.set()
+        await asyncio.wait_for(geo_ready.wait(), 1)
+        return (-8.0, -34.0, city)
+
+    async def fake_weather(client, lat, lon):
+        providers.append("weather")
+        if len(providers) == 2:
+            providers_ready.set()
+        await asyncio.wait_for(providers_ready.wait(), 1)
+        return {"temperatura": "20 °C", "umidade": "50%", "vento": "5 km/h"}
+
+    async def fake_route(client, lat_o, lon_o, lat_d, lon_d):
+        providers.append("route")
+        if len(providers) == 2:
+            providers_ready.set()
+        await asyncio.wait_for(providers_ready.wait(), 1)
+        return {"distancia": "1 km", "tempo": "2min", "modal": "carro"}
+
+    async def fake_guide(destination, *, api_key, timeout_seconds):
+        return "guia", {"status": "sucesso", "fallback_utilizado": False}
+
+    monkeypatch.setattr(trips, "geocode", fake_geocode)
+    monkeypatch.setattr(trips, "get_weather", fake_weather)
+    monkeypatch.setattr(trips, "get_route", fake_route)
+    monkeypatch.setattr(trips, "get_guide_with_diagnostics", fake_guide)
+    async with httpx.AsyncClient() as client:
+        result = await plan_trip(
+            {"origem_cidade": "Recife", "destino_cidade": "Salvador"},
+            {"id": "u"},
+            client=client,
+            storage=MemoryStorage(),
+            states=STATES,
+            gemini_api_key="test",
+            gemini_timeout_seconds=1,
+        )  # type: ignore[arg-type]
+    telemetry = result["telemetria"]
+    assert len(geocodes) == 2 and set(providers) == {"weather", "route"}
+    assert telemetry["provedores"]["osrm"]["estado"] == "sucesso"
+    assert telemetry["provedores"]["open-meteo"]["duracao_ms"] >= 0
+    assert telemetry["pipeline_ms"] >= telemetry["geocodificacao"]["duracao_ms"]

@@ -24,6 +24,65 @@ def client(storage: TripStorage) -> Iterator[TestClient]:
     app.dependency_overrides.clear()
 
 
+@pytest.mark.parametrize(
+    "coordinates,expected", [((-8.0, -34.0), "fallback"), ((0.0, 0.0), "nao_executado")]
+)
+def test_planejamento_expoe_cabecalhos_e_diagnostico(
+    client, monkeypatch, coordinates, expected
+):
+    import app.services.trips as services
+
+    async def fake_geocode(client, city, state, states):
+        return (*coordinates, city)
+
+    async def fake_weather(client, lat, lon):
+        return {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
+
+    async def fake_route(client, lat_o, lon_o, lat_d, lon_d):
+        return {
+            "distancia": "Sem rota direta",
+            "tempo": "Considere voos ou barcos",
+            "modal": "alternativo",
+        }
+
+    async def fake_guide(destination, *, api_key, timeout_seconds):
+        return "contingência", {
+            "status": "fallback",
+            "motivo": "chave_ausente",
+            "fallback_utilizado": True,
+        }
+
+    monkeypatch.setattr(services, "geocode", fake_geocode)
+    monkeypatch.setattr(services, "get_weather", fake_weather)
+    monkeypatch.setattr(services, "get_route", fake_route)
+    monkeypatch.setattr(services, "get_guide_with_diagnostics", fake_guide)
+    client.post("/api/v1/auth/visitor")
+    response = client.post(
+        "/api/v1/roteiros/planejar",
+        headers={"Origin": "http://localhost:5173", "X-Request-ID": "teste-telemetria"},
+        json={
+            "origem_cidade": "Recife",
+            "origem_uf": "PE",
+            "destino_cidade": "Salvador",
+            "destino_uf": "BA",
+        },
+    )
+    assert response.status_code == 200
+    assert float(response.headers["X-Process-Time"].removesuffix("ms")) >= 0
+    assert response.headers["X-Request-ID"] == "teste-telemetria"
+    assert "x-process-time" in response.headers["access-control-expose-headers"].lower()
+    telemetry = response.json()["viagem"]["telemetria"]
+    assert telemetry["pipeline_ms"] >= 0
+    for name in ("open-meteo", "osrm"):
+        item = telemetry["provedores"][name]
+        assert item["estado"] == expected
+        assert (item["duracao_ms"] is None) == (expected == "nao_executado")
+    assert telemetry["provedores"]["open-elevation"] == {
+        "estado": "nao_executado",
+        "duracao_ms": None,
+    }
+
+
 def test_session_bootstrap_preserves_existing_frontend_contract(
     client: TestClient,
 ) -> None:
