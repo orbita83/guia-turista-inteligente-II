@@ -73,6 +73,20 @@ describe('TelemetriaCard', () => {
     expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent('12');
   });
 
+  it('mostra falha operacional sem mascarar o problema com carregamento infinito', () => {
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture()}
+        apiHealthStatus="online"
+        operationalError="Não foi possível atualizar a telemetria operacional (HTTP 404)."
+        onCopyRequestId={vi.fn(async () => true)}
+      />,
+    );
+    expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent('Indisponível');
+    expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent('Indisponível');
+    expect(screen.getByRole('status')).toHaveTextContent('HTTP 404');
+  });
+
   it('usa fallback para medição ausente e não declara provedor desconhecido como disponível', () => {
     const snapshot = telemetrySnapshotFixture({
       apiTimeMs: unavailable('missing'),
