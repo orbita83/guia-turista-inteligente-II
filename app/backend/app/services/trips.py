@@ -96,9 +96,12 @@ async def plan_trip(
         "alternativas": [],
     }
 
-    (origin_coords, origin_geocoding_ms), (
-        destination_coords,
-        destination_geocoding_ms,
+    (
+        (origin_coords, origin_geocoding_ms),
+        (
+            destination_coords,
+            destination_geocoding_ms,
+        ),
     ) = await asyncio.gather(
         _measure(geocode(client, origin_city, origin_state, states)),
         _measure(geocode(client, destination_city, destination_state, states)),
@@ -112,12 +115,17 @@ async def plan_trip(
     if resolved_destination:
         destination_name = resolved_destination
 
+    weather_called = False
+
+    async def measured_weather() -> dict[str, str]:
+        nonlocal weather_called
+        weather_called = _coordinates_available(destination_coords)
+        return await get_weather(client, latitude_destination, longitude_destination)
+
     (weather_result, weather_ms), (route_result, route_ms) = await asyncio.gather(
         _measure(
             circuit_breakers["weather"].call(
-                lambda: get_weather(
-                    client, latitude_destination, longitude_destination
-                ),
+                measured_weather,
                 fallback=dict(WEATHER_FALLBACK),
                 is_failure=lambda result: weather_result_is_failure(
                     result, latitude_destination, longitude_destination
@@ -141,13 +149,20 @@ async def plan_trip(
 
     # TODO: adicionar ao contexto do guia os dados turísticos estruturados quando
     # a origem e o formato de atrativos e gastronomia estiverem acordados.
+    guide_called = False
+
+    async def measured_guide() -> tuple[str, dict[str, Any]]:
+        nonlocal guide_called
+        guide_called = bool(gemini_api_key.strip())
+        return await get_guide_with_diagnostics(
+            destination_name,
+            api_key=gemini_api_key,
+            timeout_seconds=gemini_timeout_seconds,
+        )
+
     (guide, diagnostics), guide_ms = await _measure(
         circuit_breakers["guide"].call(
-            lambda: get_guide_with_diagnostics(
-                destination_name,
-                api_key=gemini_api_key,
-                timeout_seconds=gemini_timeout_seconds,
-            ),
+            measured_guide,
             fallback=lambda: fallback_guide_with_diagnostics(
                 destination_name, "circuito_aberto"
             ),
@@ -166,10 +181,9 @@ async def plan_trip(
     geocoding_available = _coordinates_available(origin_coords) and (
         _coordinates_available(destination_coords)
     )
-    weather_available = _coordinates_available(destination_coords)
     weather_status = (
         "nao_consultado"
-        if not weather_available
+        if not weather_called
         else (
             "indisponivel"
             if weather_result_is_failure(
@@ -179,13 +193,16 @@ async def plan_trip(
         )
     )
     route_status = (
-        "disponivel"
-        if isinstance(route_result, dict)
-        and route_result.get("status") == "disponivel"
+        "nao_consultado"
+        if not geocoding_available
+        else "disponivel"
+        if isinstance(route_result, dict) and route_result.get("status") == "disponivel"
         else "indisponivel"
     )
     guide_status = (
-        "indisponivel"
+        "nao_consultado"
+        if not guide_called
+        else "indisponivel"
         if diagnostics.get("fallback_utilizado") is True
         else "disponivel"
     )

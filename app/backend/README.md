@@ -44,3 +44,10 @@ encerra as sessões e múltiplos workers independentes não compartilham revoga�
 Para execução distribuída, é necessário armazenamento compartilhado e atômico
 para as sessões antes de habilitar múltiplos processos.
 
+## Diagnósticos de provedores
+
+Na telemetria do planejamento, `nao_consultado` identifica operações que não
+chegaram ao provedor por ausência de coordenadas ou chave, ou por circuito aberto.
+As durações das etapas incluem esse tratamento local e não representam, por si
+sós, o tempo de uma chamada de rede; operações paralelas não devem ser somadas.
+

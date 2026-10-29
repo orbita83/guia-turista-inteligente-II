@@ -580,6 +580,11 @@ async def test_weather_breaker_opens_skips_provider_and_recovers(
         opened_fallback = await make_trip()
         assert calls == 2
         assert breakers["weather"].state == CircuitState.OPEN
+        assert first["telemetria"]["provedores"]["open_meteo_weather"] == "indisponivel"
+        assert (
+            opened_fallback["telemetria"]["provedores"]["open_meteo_weather"]
+            == "nao_consultado"
+        )
         assert first["clima"] == second["clima"] == opened_fallback["clima"]
         assert opened_fallback["clima"] == {
             "temperatura": "N/D",
@@ -640,6 +645,8 @@ async def test_invalid_weather_coordinates_do_not_open_breaker(monkeypatch) -> N
         "vento": "N/D",
         "condicao": "N/D",
     }
+    assert trip["telemetria"]["provedores"]["open_meteo_weather"] == "nao_consultado"
+    assert trip["telemetria"]["provedores"]["osrm"] == "nao_consultado"
     assert breakers["weather"].state == CircuitState.CLOSED
     assert breakers["weather"].failure_count == 0
 
@@ -694,6 +701,8 @@ async def test_guide_breaker_opens_uses_fallback_and_recovers(monkeypatch) -> No
         assert first["diagnostico_ia"]["motivo"] == "falha_rede"
         assert second["diagnostico_ia"]["motivo"] == "falha_rede"
         assert opened_fallback["diagnostico_ia"]["motivo"] == "circuito_aberto"
+        assert first["telemetria"]["provedores"]["gemini"] == "indisponivel"
+        assert opened_fallback["telemetria"]["provedores"]["gemini"] == "nao_consultado"
         assert opened_fallback["dicas_destino"].startswith("🧭 Guia de contingência")
 
         now[0] += 5
@@ -750,6 +759,7 @@ async def test_missing_guide_key_does_not_count_as_provider_failure(
             )
 
     assert trip["diagnostico_ia"]["motivo"] == "chave_ausente"
+    assert trip["telemetria"]["provedores"]["gemini"] == "nao_consultado"
     assert breakers["guide"].state == CircuitState.CLOSED
     assert breakers["guide"].failure_count == 0
 
