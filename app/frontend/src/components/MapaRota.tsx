@@ -41,6 +41,9 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
     })
     .join(' ');
 
+  // TODO(integracao): exibir marcadores de paradas da rota ativa e atualizá-los ao trocar
+  // de rota; distinguir pontos projetados de postos ou eletropostos verificados usando
+  // procedência e estado fornecidos pelo backend, sem inventar estabelecimentos.
   useEffect(() => {
     if (!mapContainerRef.current || !geometriaValida(geometria) || !geometria) return;
     const map = L.map(mapContainerRef.current, { scrollWheelZoom: false });
@@ -99,6 +102,9 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
               Duração: {rotaAtiva?.tempoFormatado ?? viagem.percurso.tempo}.
             </p>
           </div>
+          {/* TODO(integracao): apresentar custos e rateio da rota ativa conforme o contrato;
+              distinguir estimativas, valores confirmados e indisponíveis sem converter
+              ausências em zero. Exibir ESG apenas com unidades, fontes e fatores definidos. */}
           {rotaAtiva && (
             <div className="metrics-grid" aria-label="Métricas da rota ativa">
               <p>Autonomia: {rotaAtiva.autonomiaKm} km</p>

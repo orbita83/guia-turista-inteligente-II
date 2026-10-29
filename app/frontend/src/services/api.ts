@@ -241,8 +241,8 @@ export function listarViagens(signal?: AbortSignal): Promise<TripsResponse> {
 }
 
 export async function criarViagem(data: RoteiroFormData): Promise<PlanTripResponse> {
-  // TODO(integracao): alinhar duração, perfis e parâmetros de veículo com TripCreateRequest;
-  // o schema atual aceita origem/destino e não utiliza os demais campos no planejamento.
+  // TODO(integracao): alinhar duração, perfis, veículo e passageiros, se previstos,
+  // ao schema validado; preservar erros 422 por campo e compatibilidade das entradas atuais.
   const startedAt = performance.now();
   const init: RequestInit = {
     method: 'POST',

@@ -50,6 +50,9 @@ function coordinates(value: unknown): CoordenadaGPS[] | null {
   return parsed.every((point): point is CoordenadaGPS => point !== null) ? parsed : null;
 }
 
+// TODO(integracao): normalizar perfil e indicadores altimétricos reais para a rota correta
+// quando o contrato estiver integrado; preservar estados parciais, indisponíveis e viagens
+// antigas, sem inventar amostras, altitudes ou indicadores.
 function elevationProfile(value: unknown, maxDistanceKm?: number): PontoElevacao[] | null {
   if (!Array.isArray(value) || value.length < 2) return null;
   const points: PontoElevacao[] = [];

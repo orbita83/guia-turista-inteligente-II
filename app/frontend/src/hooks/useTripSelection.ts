@@ -9,8 +9,8 @@ export function useTripSelection() {
 
   const selectTrip = useCallback((trip: Viagem) => {
     setActiveTrip(trip);
-    // TODO(integracao): recuperar parâmetros persistidos do roteiro quando houver contrato;
-    // o mapa em memória perde duração e perfis após recarga e não deve inventá-los.
+    // TODO(integracao): recuperar parâmetros e resultados avançados persistidos por roteiro
+    // e rota, preservando a seleção correta após recarga e viagens antigas sem esses campos.
     setActiveTripForm(formByTripId.current[trip.id] ?? null);
   }, []);
 
