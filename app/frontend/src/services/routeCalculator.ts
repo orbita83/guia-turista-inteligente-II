@@ -8,7 +8,7 @@ import type {
   TipoPropulsao,
   Viagem,
 } from '../types/domain';
-import { calcularHaversineKm } from './geolocation';
+import { calcularHaversineExatoKm } from './geolocation';
 
 // Coordenadas de referência para as capitais e polos brasileiros
 const COORDENADAS_REFERENCIA: Record<string, CoordenadaGPS> = {
@@ -101,15 +101,27 @@ export function obterCoordenadasLocal(cidadeOuTexto: string, ufPadrao = ''): Coo
   return [-14.235, -51.9253];
 }
 
-export function extrairKmDeTexto(distanciaTexto: string): number {
-  if (!distanciaTexto) return 120;
-  const limpo = distanciaTexto.replace(/\./g, '').replace(',', '.');
-  const match = limpo.match(/(\d+(?:\.\d+)?)/);
-  if (match) {
-    const valor = parseFloat(match[1]);
-    return Number.isFinite(valor) && valor > 0 ? valor : 120;
+export function extrairKmDeTexto(distanciaTexto?: string | null, fallback = 120): number {
+  if (!distanciaTexto || typeof distanciaTexto !== 'string') return fallback;
+  const match = distanciaTexto.match(/(\d[\d.,]*)/);
+  if (!match) return fallback;
+
+  const bruto = match[1];
+  let normalizado: string;
+
+  if (bruto.includes(',')) {
+    // Formato pt-BR: ponto é milhar e vírgula é decimal (ex.: "1.250,5" ou "6,5")
+    normalizado = bruto.replace(/\./g, '').replace(',', '.');
+  } else if (/^\d{1,3}(?:\.\d{3})+$/.test(bruto)) {
+    // Inteiro com separador de milhar por ponto e sem casas decimais (ex.: "1.250")
+    normalizado = bruto.replace(/\./g, '');
+  } else {
+    // Formato decimal padrão com ponto vindo do backend Python/OSRM (ex.: "6.5", "800.0", "1250.5")
+    normalizado = bruto;
   }
-  return 120;
+
+  const valor = Number.parseFloat(normalizado);
+  return Number.isFinite(valor) && valor > 0 ? Math.round(valor * 10) / 10 : fallback;
 }
 
 export function formatarMinutosEmTempo(minutosTotais: number): string {
@@ -188,10 +200,10 @@ export function calcularParadasEstrategicas(
   let kmAcumulado = intervaloParada;
   let indice = 1;
 
-  // Calcula distâncias acumuladas ao longo dos pontos reais da rota via Haversine
+  // Calcula distâncias acumuladas ao longo dos pontos reais da rota via Haversine contínuo
   const distanciasAcumuladas: number[] = [0];
   for (let i = 1; i < coordenadasRota.length; i++) {
-    const d = calcularHaversineKm(
+    const d = calcularHaversineExatoKm(
       coordenadasRota[i - 1][0],
       coordenadasRota[i - 1][1],
       coordenadasRota[i][0],
@@ -286,9 +298,34 @@ export function gerarRotasAlternativas(
   passageiros = 1,
   propulsaoOverride?: TipoPropulsao,
 ): RotaAlternativa[] {
-  const distanciaBaseKm = extrairKmDeTexto(viagem.percurso?.distancia);
   const coordOrigem = obterCoordenadasLocal(viagem.origem, form?.origem_uf);
   const coordDestino = obterCoordenadasLocal(viagem.destino, form?.destino_uf);
+
+  let distanciaBaseKm = extrairKmDeTexto(viagem.percurso?.distancia, -1);
+  if (distanciaBaseKm <= 0) {
+    if (Array.isArray(viagem.percurso?.geometria) && viagem.percurso.geometria.length >= 2) {
+      let geoDist = 0;
+      for (let i = 1; i < viagem.percurso.geometria.length; i++) {
+        geoDist += calcularHaversineExatoKm(
+          viagem.percurso.geometria[i - 1][0],
+          viagem.percurso.geometria[i - 1][1],
+          viagem.percurso.geometria[i][0],
+          viagem.percurso.geometria[i][1],
+        );
+      }
+      distanciaBaseKm = Math.round(geoDist * 10) / 10;
+    }
+    if (distanciaBaseKm <= 0) {
+      const geodist = calcularHaversineExatoKm(
+        coordOrigem[0],
+        coordOrigem[1],
+        coordDestino[0],
+        coordDestino[1],
+      );
+      distanciaBaseKm = geodist > 0 ? Math.round(geodist * 1.2 * 10) / 10 : 120;
+    }
+  }
+
   const propulsao = propulsaoOverride || form?.propulsao || 'combustao';
   const formEfetivo: RoteiroFormData = {
     origem_cidade: form?.origem_cidade || '',
@@ -438,41 +475,84 @@ export function gerarLinkWhatsApp(
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
 }
 
-export function gerarConteudoGpx(origem: string, destino: string, rota: RotaAlternativa): string {
-  const coordOrigem = rota.coordenadas[0] || [-8.0476, -34.877];
-  const coordDestino = rota.coordenadas[rota.coordenadas.length - 1] || [-7.9986, -34.8459];
+function escaparXml(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
-  const waypointsOrigemDestino = `  <wpt lat="${coordOrigem[0]}" lon="${coordOrigem[1]}">
-    <name>Origem: ${origem}</name>
+function validarCoordenadaGpx([lat, lon]: CoordenadaGPS): void {
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon) ||
+    Math.abs(lat) > 90 ||
+    lon < -180 ||
+    lon >= 180
+  ) {
+    throw new Error('Não é possível exportar GPX com coordenadas inválidas.');
+  }
+}
+
+// xsd:decimal não aceita expoentes. A magnitude de coordenadas válidas é <= 180;
+// a notação exponencial de Number.toString() só aparece aqui para valores pequenos.
+function formatarDecimalGpx(valor: number): string {
+  const [mantissa, expoente] = String(valor).split('e-');
+  if (!expoente) return mantissa;
+  const sinal = mantissa.startsWith('-') ? '-' : '';
+  const digitos = mantissa.replace('-', '').replace('.', '');
+  return `${sinal}0.${'0'.repeat(Number(expoente) - 1)}${digitos}`;
+}
+
+export function gerarConteudoGpx(origem: string, destino: string, rota: RotaAlternativa): string {
+  if (rota.coordenadas.length < 2) {
+    throw new Error('A exportação GPX exige pelo menos dois pontos do trajeto.');
+  }
+  rota.coordenadas.forEach(validarCoordenadaGpx);
+  rota.paradas.forEach((parada) => validarCoordenadaGpx(parada.coordenadas));
+  const coordOrigem = rota.coordenadas[0];
+  const coordDestino = rota.coordenadas[rota.coordenadas.length - 1];
+
+  const waypointsOrigemDestino = `  <wpt lat="${formatarDecimalGpx(coordOrigem[0])}" lon="${formatarDecimalGpx(coordOrigem[1])}">
+    <name>Origem: ${escaparXml(origem)}</name>
   </wpt>
-  <wpt lat="${coordDestino[0]}" lon="${coordDestino[1]}">
-    <name>Destino: ${destino}</name>
+  <wpt lat="${formatarDecimalGpx(coordDestino[0])}" lon="${formatarDecimalGpx(coordDestino[1])}">
+    <name>Destino: ${escaparXml(destino)}</name>
   </wpt>`;
 
   const paradasXml = rota.paradas
     .map(
-      (parada) =>
-        `  <wpt lat="${parada.coordenadas[0]}" lon="${parada.coordenadas[1]}">\n    <name>${parada.nome}</name>\n    <desc>${parada.descricao || ''}</desc>\n  </wpt>`,
+      (
+        parada,
+      ) => `  <wpt lat="${formatarDecimalGpx(parada.coordenadas[0])}" lon="${formatarDecimalGpx(parada.coordenadas[1])}">
+    <name>${escaparXml(parada.nome)}</name>
+    <desc>${escaparXml(parada.descricao || '')}</desc>
+  </wpt>`,
     )
     .join('\n');
 
   const todosWpts = paradasXml
     ? `${waypointsOrigemDestino}\n${paradasXml}`
     : waypointsOrigemDestino;
-
+  // Elevação é opcional no GPX 1.1; os pontos atuais não contêm altitudes medidas.
   const pontosXml = rota.coordenadas
-    .map(([lat, lon]) => `    <trkpt lat="${lat}" lon="${lon}"><ele>0</ele></trkpt>`)
+    .map(
+      ([lat, lon]) =>
+        `    <trkpt lat="${formatarDecimalGpx(lat)}" lon="${formatarDecimalGpx(lon)}"/>`,
+    )
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Guia do Turista Inteligente" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <name>Rota: ${origem} para ${destino}</name>
-    <desc>${rota.titulo} - ${rota.distanciaKm} km (${rota.tempoFormatado})</desc>
+    <name>Rota: ${escaparXml(origem)} para ${escaparXml(destino)}</name>
+    <desc>${escaparXml(rota.titulo)} - ${rota.distanciaKm} km (${escaparXml(rota.tempoFormatado)})</desc>
   </metadata>
 ${todosWpts}
   <trk>
-    <name>${rota.titulo}</name>
+    <name>${escaparXml(rota.titulo)}</name>
     <trkseg>
 ${pontosXml}
     </trkseg>
@@ -485,12 +565,15 @@ export function baixarArquivoGpx(origem: string, destino: string, rota: RotaAlte
   const blob = new Blob([gpxContent], { type: 'application/gpx+xml;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = url;
-  const nomeArquivo =
-    `rota-${normalizarChave(origem)}-para-${normalizarChave(destino)}.gpx`.toLowerCase();
-  link.setAttribute('download', nomeArquivo);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  try {
+    link.href = url;
+    const nomeArquivo =
+      `rota-${normalizarChave(origem)}-para-${normalizarChave(destino)}.gpx`.toLowerCase();
+    link.setAttribute('download', nomeArquivo);
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 }

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  calcularHaversineExatoKm,
   calcularHaversineKm,
   identificarCidadeMaisProxima,
   obterCoordenadasNavegador,
@@ -7,6 +8,15 @@ import {
 } from './geolocation';
 
 describe('geolocation service', () => {
+  describe('calcularHaversineExatoKm', () => {
+    it('preserva frações de quilômetros para distâncias curtas sem zerar com round', () => {
+      // Dois pontos separados por ~111 metros
+      const distanciaExata = calcularHaversineExatoKm(-8.0541, -34.8812, -8.0531, -34.8812);
+      expect(distanciaExata).toBeGreaterThan(0.05);
+      expect(distanciaExata).toBeLessThan(0.2);
+    });
+  });
+
   describe('calcularHaversineKm', () => {
     it('retorna 0 km para a mesma coordenada', () => {
       const lat = -23.5505;
