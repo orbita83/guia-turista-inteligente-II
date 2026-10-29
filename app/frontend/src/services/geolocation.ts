@@ -13,8 +13,8 @@ export interface CoordenadasGps {
 /** Raio médio da Terra em quilômetros */
 const RAIO_TERRA_KM = 6371;
 
-/** Distância mínima rodoviária conforme regra de negócio da apostila (>400 km) */
-export const DISTANCIA_MINIMA_RODOVIARIA_KM = 400;
+/** Limiar geográfico de Haversine previsto na apostila (>400 km em linha reta). */
+export const DISTANCIA_MINIMA_GEOGRAFICA_KM = 400;
 
 /**
  * Catálogo de polos turísticos brasileiros com coordenadas geográficas aproximadas.
@@ -175,7 +175,7 @@ export async function obterCoordenadasNavegador(): Promise<CoordenadasGps> {
 
 /**
  * Filtra e seleciona os destinos turísticos mais próximos da localização do usuário
- * que atendem ao critério rodoviário de distância (> 400 km).
+ * que atendem ao limiar geográfico aproximado (> 400 km em linha reta).
  *
  * @param latitude Latitude da localização do usuário
  * @param longitude Longitude da localização do usuário
@@ -186,7 +186,7 @@ export function obterSugestoesDestino(
   latitude: number,
   longitude: number,
   limite = 4,
-  distanciaMinimaKm = DISTANCIA_MINIMA_RODOVIARIA_KM,
+  distanciaMinimaKm = DISTANCIA_MINIMA_GEOGRAFICA_KM,
 ): SugestaoDestino[] {
   const destinosComDistancia = DESTINOS_TURISTICOS.map((destino) => {
     const distanciaKm = calcularHaversineKm(

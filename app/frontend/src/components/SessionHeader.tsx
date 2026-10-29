@@ -1,10 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Usuario } from '../types/domain';
+import { useTheme } from '../hooks/useTheme';
 
 interface SessionHeaderProps {
   usuario: Usuario | null;
   savedGoogleUser: Usuario | null;
+  sessionTimerLabel?: string | null;
   isBusy: boolean;
   onVisitorLogin: () => void;
   onRestoreGoogle: () => void;
@@ -24,19 +26,14 @@ function Avatar({ user }: { user: Usuario }) {
 export function SessionHeader({
   usuario,
   savedGoogleUser,
+  sessionTimerLabel,
   isBusy,
   onVisitorLogin,
   onRestoreGoogle,
   onLogout,
 }: SessionHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dark, setDark] = useState(() => {
-    try {
-      return localStorage.getItem('guia_turista_theme') === 'dark';
-    } catch {
-      return false;
-    }
-  });
+  const { dark, toggleTheme } = useTheme();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,18 +53,6 @@ export function SessionHeader({
     };
   }, [menuOpen]);
 
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    try {
-      localStorage.setItem('guia_turista_theme', dark ? 'dark' : 'light');
-    } catch {
-      // O tema continua utilizável quando o armazenamento local está indisponível.
-    }
-    return () => {
-      delete document.documentElement.dataset.theme;
-    };
-  }, [dark]);
-
   const act = (callback: () => void) => {
     setMenuOpen(false);
     callback();
@@ -86,6 +71,9 @@ export function SessionHeader({
               Consultor inteligente de viagens com rotas, clima e guia turístico gerado com Python e
               IA
             </p>
+            {usuario?.tipo === 'visitante' && sessionTimerLabel && (
+              <p role="status">Sessão temporária: {sessionTimerLabel} restantes</p>
+            )}
           </div>
         </div>
         <div className="session-header-actions">
@@ -93,7 +81,7 @@ export function SessionHeader({
             type="button"
             className="theme-toggle"
             aria-label={dark ? 'Ativar tema claro' : 'Ativar tema escuro'}
-            onClick={() => setDark((current) => !current)}
+            onClick={toggleTheme}
           >
             {dark ? '☀️' : '🌙'}
           </button>
