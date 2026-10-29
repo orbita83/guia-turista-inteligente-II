@@ -190,8 +190,8 @@ def _route_metrics(route: dict[str, Any]) -> tuple[str, str] | None:
 
 def _route_fallback(reason: str) -> dict[str, Any]:
     return {
-        "distancia": "Sem rota direta",
-        "tempo": "Considere voos ou barcos",
+        "distancia": "Sem rota direta" if reason == "sem_rota" else "Rota indisponível",
+        "tempo": "Considere voos ou barcos" if reason == "sem_rota" else "N/D",
         "modal": "alternativo",
         "status": "indisponivel",
         "motivo": reason,

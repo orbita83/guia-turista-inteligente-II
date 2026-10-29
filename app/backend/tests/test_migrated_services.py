@@ -191,9 +191,7 @@ async def test_route_requests_full_geojson_geometry_and_real_alternatives() -> N
         assert request.url.params["overview"] == "full"
         assert request.url.params["geometries"] == "geojson"
         assert request.url.params["alternatives"] == "true"
-        assert request.url.path.endswith(
-            "driving/-34.9,-8.05;-35.2,-9.1"
-        )
+        assert request.url.path.endswith("driving/-34.9,-8.05;-35.2,-9.1")
         return httpx.Response(
             200,
             json={
@@ -271,9 +269,7 @@ async def test_route_without_osrm_alternatives_returns_empty_list() -> None:
     ("handler", "expected_reason"),
     [
         (
-            lambda request: httpx.Response(
-                200, json={"code": "NoRoute", "routes": []}
-            ),
+            lambda request: httpx.Response(200, json={"code": "NoRoute", "routes": []}),
             "sem_rota",
         ),
         (
@@ -320,8 +316,10 @@ async def test_route_failures_return_explicit_fallback(
         route = await get_route(client, -8.05, -34.9, -9.1, -35.2)
 
     assert route == {
-        "distancia": "Sem rota direta",
-        "tempo": "Considere voos ou barcos",
+        "distancia": "Sem rota direta"
+        if expected_reason == "sem_rota"
+        else "Rota indisponível",
+        "tempo": "Considere voos ou barcos" if expected_reason == "sem_rota" else "N/D",
         "modal": "alternativo",
         "status": "indisponivel",
         "motivo": expected_reason,
@@ -358,9 +356,7 @@ def test_storage_updates_visits_atomically_without_cross_user_access(tmp_path) -
     trip = {"id": "trip-1", "atrativos_visitados_ids": []}
     other_trip = {"id": "private-trip", "atrativos_visitados_ids": []}
     storage.add_for_user("google-1", trip, {"id": "google-1", "tipo": "google"})
-    storage.add_for_user(
-        "google-2", other_trip, {"id": "google-2", "tipo": "google"}
-    )
+    storage.add_for_user("google-2", other_trip, {"id": "google-2", "tipo": "google"})
 
     assert storage.update_attraction_visit("google-1", "trip-1", "poi-1", True) == [
         "poi-1"
@@ -369,9 +365,10 @@ def test_storage_updates_visits_atomically_without_cross_user_access(tmp_path) -
         "poi-1"
     ]
     assert storage.update_attraction_visit("google-1", "trip-1", "poi-1", False) == []
-    assert storage.update_attraction_visit(
-        "google-1", "private-trip", "poi-2", True
-    ) is None
+    assert (
+        storage.update_attraction_visit("google-1", "private-trip", "poi-2", True)
+        is None
+    )
     assert storage.list_for_user("google-2") == [other_trip]
     assert TripStorage(storage_path).list_for_user("google-1") == [
         {"id": "trip-1", "atrativos_visitados_ids": []}
@@ -433,7 +430,13 @@ async def fixed_geocode(client, city, state, states):
     return (-8.0, -34.0, f"{city} - {state}")
 
 
-async def fixed_route(client, latitude_origin, longitude_origin, latitude_destination, longitude_destination):
+async def fixed_route(
+    client,
+    latitude_origin,
+    longitude_origin,
+    latitude_destination,
+    longitude_destination,
+):
     return {"distancia": "N/D", "tempo": "N/D"}
 
 
@@ -500,8 +503,7 @@ async def test_plan_trip_keeps_trip_fields_and_persists_result(monkeypatch) -> N
         "total_servicos_ms",
     }
     assert all(
-        duration >= 0
-        for duration in trip["telemetria"]["duracoes_etapas_ms"].values()
+        duration >= 0 for duration in trip["telemetria"]["duracoes_etapas_ms"].values()
     )
     assert trip["telemetria"]["provedores"]["open_elevation"] == "nao_integrado"
     assert storage.trips == [trip]
@@ -560,6 +562,7 @@ async def test_weather_breaker_opens_skips_provider_and_recovers(
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(weather_response)
     ) as client:
+
         async def make_trip() -> dict[str, Any]:
             return await trips.plan_trip(
                 plan_form(),
@@ -669,6 +672,7 @@ async def test_guide_breaker_opens_uses_fallback_and_recovers(monkeypatch) -> No
     storage = MemoryStorage()
 
     async with httpx.AsyncClient() as client:
+
         async def make_trip() -> dict[str, Any]:
             return await trips.plan_trip(
                 plan_form(),
@@ -690,9 +694,7 @@ async def test_guide_breaker_opens_uses_fallback_and_recovers(monkeypatch) -> No
         assert first["diagnostico_ia"]["motivo"] == "falha_rede"
         assert second["diagnostico_ia"]["motivo"] == "falha_rede"
         assert opened_fallback["diagnostico_ia"]["motivo"] == "circuito_aberto"
-        assert opened_fallback["dicas_destino"].startswith(
-            "🧭 Guia de contingência"
-        )
+        assert opened_fallback["dicas_destino"].startswith("🧭 Guia de contingência")
 
         now[0] += 5
         recovered = await make_trip()
@@ -718,10 +720,14 @@ async def _weather_success() -> dict[str, str]:
 
 
 @pytest.mark.asyncio
-async def test_missing_guide_key_does_not_count_as_provider_failure(monkeypatch) -> None:
+async def test_missing_guide_key_does_not_count_as_provider_failure(
+    monkeypatch,
+) -> None:
     from app.services import guide, trips
 
-    def unexpected_guide_request(destination: str, api_key: str, timeout_seconds: float) -> str:
+    def unexpected_guide_request(
+        destination: str, api_key: str, timeout_seconds: float
+    ) -> str:
         raise AssertionError("Gemini must not be called without an API key")
 
     monkeypatch.setattr(guide, "_request_guide", unexpected_guide_request)
@@ -923,7 +929,13 @@ async def test_mocked_pipeline_runs_independent_stages_concurrently(
         await measured_stage("providers")
         return {"temperatura": "20 °C", "umidade": "50%", "vento": "5 km/h"}
 
-    async def delayed_route(client, latitude_origin, longitude_origin, latitude_destination, longitude_destination):
+    async def delayed_route(
+        client,
+        latitude_origin,
+        longitude_origin,
+        latitude_destination,
+        longitude_destination,
+    ):
         await measured_stage("providers")
         return {"distancia": "100 km", "tempo": "2h"}
 

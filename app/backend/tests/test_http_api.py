@@ -42,6 +42,70 @@ def test_session_bootstrap_preserves_existing_frontend_contract(
     assert len(data["ufs"]) == 27
 
 
+def test_planejamento_integra_geometria_osrm_no_contrato(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.services.trips as services
+    from app.core.dependencies import get_http_client
+
+    async def fake_geocode(client, city, state, states):
+        return (-8.0, -34.0, city)
+
+    async def fake_weather(client, lat, lon):
+        return {
+            "temperatura": "20 °C",
+            "sensacao_termica": "20 °C",
+            "umidade": "50%",
+            "vento": "5 km/h",
+            "condicao": "Céu limpo",
+        }
+
+    async def fake_guide(destination, *, api_key, timeout_seconds):
+        return "guia", {"status": "sucesso", "fallback_utilizado": False}
+
+    async def mock_http_client():
+        payload = {
+            "code": "Ok",
+            "routes": [
+                {
+                    "distance": 1000,
+                    "duration": 120,
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [[-34, -8], [-35, -9]],
+                    },
+                }
+            ],
+        }
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(200, json=payload)
+            )
+        ) as http_client:
+            yield http_client
+
+    monkeypatch.setattr(services, "geocode", fake_geocode)
+    monkeypatch.setattr(services, "get_weather", fake_weather)
+    monkeypatch.setattr(services, "get_guide_with_diagnostics", fake_guide)
+    app.dependency_overrides[get_http_client] = mock_http_client
+    assert client.post("/api/v1/auth/visitor").status_code == 200
+    response = client.post(
+        "/api/v1/roteiros/planejar",
+        json={
+            "origem_cidade": "Recife",
+            "origem_uf": "PE",
+            "destino_cidade": "Salvador",
+            "destino_uf": "BA",
+        },
+    )
+    assert response.status_code == 200
+    percurso = response.json()["viagem"]["percurso"]
+    assert percurso["geometria"] == [[-8, -34], [-9, -35]]
+    assert percurso["distancia"] == "1.0 km"
+    assert percurso["tempo"] == "0h 2min de carro"
+    assert percurso["alternativas"] == []
+
+
 def test_visitor_session_create_list_delete_and_logout(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
