@@ -18,10 +18,12 @@ import { obterCoordenadasNavegador, obterSugestoesDestino } from '../services/ge
 import {
   connectivityCondition,
   copyRequestId,
+  mergeStreamTelemetry,
   providerDiagnostics,
   safeRoute,
   serviceCondition,
   sessionSummary,
+  unavailableValue,
 } from '../services/telemetry';
 import {
   clearSavedGoogleUser,
@@ -32,6 +34,7 @@ import type {
   HistoryStatus,
   PersistenceStatus,
   RoteiroFormData,
+  StreamTelemetryUpdate,
   SugestaoDestino,
   SuggestionStatus,
   TelemetryPanelState,
@@ -126,6 +129,27 @@ export function useApp() {
   const mountedRef = useRef(true);
   const persistenceRef = useRef<Record<string, PersistenceStatus>>({});
   const googleCredentialRef = useRef<string | null>(null);
+  const sessionTimingRef = useRef<{
+    sessionStartedAt?: string | null;
+    sessionDurationMs?: number | null;
+    receivedAtPerfNow: number;
+  }>({ receivedAtPerfNow: performance.now() });
+
+  const currentSessionTiming = useCallback(() => {
+    const timing = sessionTimingRef.current;
+    if (
+      !timing.sessionStartedAt ||
+      timing.sessionDurationMs === undefined ||
+      timing.sessionDurationMs === null
+    ) {
+      return undefined;
+    }
+    const elapsed = Math.max(0, performance.now() - timing.receivedAtPerfNow);
+    return {
+      sessionStartedAt: timing.sessionStartedAt,
+      sessionDurationMs: Math.round(timing.sessionDurationMs + elapsed),
+    };
+  }, []);
 
   const updatePersistence = useCallback(
     (update: (current: Record<string, PersistenceStatus>) => Record<string, PersistenceStatus>) => {
@@ -153,6 +177,12 @@ export function useApp() {
       const generation = sessionGeneration.current;
       const session = await carregarSessao(signal);
       if (generation !== sessionGeneration.current) return;
+
+      sessionTimingRef.current = {
+        sessionStartedAt: session.session_started_at,
+        sessionDurationMs: session.session_duration_ms,
+        receivedAtPerfNow: performance.now(),
+      };
 
       const base: AppData = {
         ...session,
@@ -381,6 +411,7 @@ export function useApp() {
         routeLabel(form.origem_cidade, form.origem_uf),
         routeLabel(form.destino_cidade, form.destino_uf),
       );
+      const sessionBase = sessionSummary(usuario, data.viagens.length + 1, currentSessionTiming());
       let previous: TelemetrySnapshot | undefined;
       setTelemetryState((current) => {
         previous =
@@ -389,7 +420,7 @@ export function useApp() {
             : current.kind === 'loading' || current.kind === 'error'
               ? current.previous
               : undefined;
-        return { kind: 'loading', attemptId, route, previous };
+        return { kind: 'loading', attemptId, route, previous, session: sessionBase };
       });
       setPendingRoute({ origem: route.origin, destino: route.destination });
       setIsSubmitting(true);
@@ -404,7 +435,7 @@ export function useApp() {
           route,
           ...result.metadata,
           providers: providerDiagnostics(result.viagem),
-          session: sessionSummary(usuario, data.viagens.length + 1),
+          session: sessionBase,
           service: serviceCondition(true),
           connectivity: connectivityCondition(networkStatus),
         };
@@ -439,6 +470,7 @@ export function useApp() {
     },
     [
       addToast,
+      currentSessionTiming,
       data.usuario,
       data.viagens.length,
       networkStatus,
@@ -446,6 +478,93 @@ export function useApp() {
       updatePersistence,
     ],
   );
+
+  const handleStreamTelemetry = useCallback(
+    (trip: Viagem | null, update: StreamTelemetryUpdate) => {
+      const generation = sessionGeneration.current;
+      const usuario = data.usuario;
+      if (!usuario || !trip) return;
+      if (update.session?.userId && update.session.userId !== usuario.id) return;
+      if (generation !== sessionGeneration.current) return;
+
+      if (update.session?.sessionStartedAt.available) {
+        sessionTimingRef.current = {
+          sessionStartedAt: update.session.sessionStartedAt.value,
+          sessionDurationMs: update.session.sessionDuration.available
+            ? update.session.sessionDuration.value
+            : sessionTimingRef.current.sessionDurationMs,
+          receivedAtPerfNow: performance.now(),
+        };
+      }
+
+      setTelemetryState((current) => {
+        if (current.kind === 'settled') {
+          return {
+            ...current,
+            snapshot: mergeStreamTelemetry(current.snapshot, update),
+          };
+        }
+        const route = safeRoute(trip.origem, trip.destino);
+        const baseSnapshot: TelemetrySnapshot = {
+          attemptId: attemptSequence.current,
+          sessionIdentityId: usuario.id,
+          recordedAt: new Date().toISOString(),
+          route,
+          apiTimeMs: unavailableValue(),
+          totalTimeMs: unavailableValue(),
+          requestId: update.requestId,
+          providers: providerDiagnostics(trip),
+          session: sessionSummary(usuario, data.viagens.length, currentSessionTiming()),
+          service: serviceCondition(true),
+          connectivity: connectivityCondition(networkStatus),
+        };
+        return {
+          kind: 'settled',
+          snapshot: mergeStreamTelemetry(baseSnapshot, update),
+        };
+      });
+    },
+    [currentSessionTiming, data.usuario, data.viagens.length, networkStatus],
+  );
+
+  useEffect(() => {
+    setTelemetryState((current) => {
+      if (current.kind !== 'settled') return current;
+      if (current.snapshot.session.userTripCount === data.viagens.length) return current;
+      return {
+        ...current,
+        snapshot: {
+          ...current.snapshot,
+          session: {
+            ...current.snapshot.session,
+            userTripCount: data.viagens.length,
+          },
+        },
+      };
+    });
+  }, [data.viagens.length]);
+
+  useEffect(() => {
+    if (telemetryState.kind !== 'settled' || !sessionTimingRef.current.sessionStartedAt) return;
+    const interval = setInterval(() => {
+      const timing = currentSessionTiming();
+      if (!timing) return;
+      setTelemetryState((current) => {
+        if (current.kind !== 'settled') return current;
+        return {
+          ...current,
+          snapshot: {
+            ...current.snapshot,
+            session: {
+              ...current.snapshot.session,
+              sessionDuration: { available: true, value: timing.sessionDurationMs },
+            },
+          },
+        };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [telemetryState.kind, currentSessionTiming]);
 
   const deleteTrip = useCallback(
     async (tripId: string) => {
@@ -504,6 +623,18 @@ export function useApp() {
 
   const selectTrip = useCallback((trip: Viagem) => {
     setActiveTrip(trip);
+    setActiveTripForm(null);
+    setTelemetryState((current) => {
+      if (current.kind !== 'settled') return current;
+      return {
+        ...current,
+        snapshot: {
+          ...current.snapshot,
+          route: safeRoute(trip.origem, trip.destino),
+          providers: providerDiagnostics(trip),
+        },
+      };
+    });
   }, []);
 
   const toggleVisitaAtrativo = useCallback(
@@ -526,6 +657,17 @@ export function useApp() {
     },
     [data.usuario?.id],
   );
+
+  useEffect(() => {
+    const onCustomTelemetry = (event: Event) => {
+      const custom = event as CustomEvent<{ trip: Viagem; update: StreamTelemetryUpdate }>;
+      if (custom.detail?.trip && custom.detail?.update) {
+        handleStreamTelemetry(custom.detail.trip, custom.detail.update);
+      }
+    };
+    window.addEventListener('guia:stream-telemetry', onCustomTelemetry);
+    return () => window.removeEventListener('guia:stream-telemetry', onCustomTelemetry);
+  }, [handleStreamTelemetry]);
 
   return {
     data,
@@ -559,5 +701,6 @@ export function useApp() {
     deleteTrip,
     selectTrip,
     toggleVisitaAtrativo,
+    handleStreamTelemetry,
   };
 }

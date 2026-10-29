@@ -1,6 +1,7 @@
 import logging
 import time
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -13,6 +14,26 @@ from app.services.integrations import verify_google_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["autenticação"])
+
+
+def _session_timing(request: Request) -> tuple[str | None, float | None]:
+    started_at = request.session.get("session_started_at")
+    now = time.time()
+    if started_at is None:
+        if request.session.get("usuario"):
+            started_at = now
+            request.session["session_started_at"] = started_at
+        else:
+            return None, None
+    try:
+        started_at_f = float(started_at)
+    except (TypeError, ValueError):
+        started_at_f = now
+        request.session["session_started_at"] = started_at_f
+
+    iso = datetime.fromtimestamp(started_at_f, tz=UTC).isoformat()
+    duration_ms = max(0.0, round((now - started_at_f) * 1000, 2))
+    return iso, duration_ms
 
 
 def _user_response(data: dict[str, Any]) -> User:
@@ -39,10 +60,15 @@ def get_session(request: Request) -> SessionResponse:
             request.session.clear()
             user = None
     settings = get_settings()
+    session_started_at, session_duration_ms = (
+        _session_timing(request) if isinstance(user, dict) else (None, None)
+    )
     return SessionResponse(
         usuario=_user_response(user) if isinstance(user, dict) else None,
         google_client_id=settings.google_client_id,
         ufs=sorted(settings.states),
+        session_started_at=session_started_at,
+        session_duration_ms=session_duration_ms,
     )
 
 
@@ -80,9 +106,16 @@ async def login_google(
         "foto": profile.get("picture") or profile.get("foto") or "",
         "tipo": "google",
     }
+    now = time.time()
     request.session.clear()
     request.session["usuario"] = user
-    return UserResponse(usuario=_user_response(user))
+    request.session["session_started_at"] = now
+    iso = datetime.fromtimestamp(now, tz=UTC).isoformat()
+    return UserResponse(
+        usuario=_user_response(user),
+        session_started_at=iso,
+        session_duration_ms=0.0,
+    )
 
 
 @router.post("/visitor", response_model=UserResponse)
@@ -98,11 +131,18 @@ def login_visitor(
         "foto": "https://lh3.googleusercontent.com/a/default-user=s96-c",
         "tipo": "visitante",
     }
+    now = time.time()
     storage.ensure_visitor(visitor_id)
     request.session.clear()
     request.session["usuario"] = user
-    request.session["visitor_expires_at"] = time.time() + VISITOR_TTL_SECONDS
-    return UserResponse(usuario=_user_response(user))
+    request.session["session_started_at"] = now
+    request.session["visitor_expires_at"] = now + VISITOR_TTL_SECONDS
+    iso = datetime.fromtimestamp(now, tz=UTC).isoformat()
+    return UserResponse(
+        usuario=_user_response(user),
+        session_started_at=iso,
+        session_duration_ms=0.0,
+    )
 
 
 @router.post("/logout", status_code=204)

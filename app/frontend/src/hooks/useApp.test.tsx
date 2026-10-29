@@ -395,4 +395,49 @@ describe('useApp GPS suggestions', () => {
       false,
     );
   });
+
+  it('atualiza telemetria da sessão e roteiros via handleStreamTelemetry', async () => {
+    api.carregarSessao.mockResolvedValue({
+      usuario: { ...usuario, id: 'user-1' },
+      google_client_id: '',
+      ufs: ['PE'],
+      session_started_at: '2026-10-28T21:00:00Z',
+      session_duration_ms: 5000,
+    });
+    api.listarViagens.mockResolvedValue({ viagens: [viagem] });
+
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    await waitFor(() => expect(result.current.data.viagens.length).toBe(1));
+
+    act(() => {
+      result.current.handleStreamTelemetry(viagem, {
+        stage: 'connected',
+        requestId: available('req-stream-999'),
+        rttMs: available(25),
+        networkType: available('SSE ativo'),
+        elapsedStreamMs: available(50),
+        session: {
+          userId: 'user-1',
+          displayName: 'Pessoa Teste',
+          kind: 'visitante',
+          persistence: 'temporaria',
+          sessionStartedAt: available('28/10/2026, 21:00:00'),
+          sessionDuration: available(12000),
+          userTripCount: 1,
+        },
+      });
+    });
+
+    expect(result.current.telemetryState.kind).toBe('settled');
+    if (result.current.telemetryState.kind === 'settled') {
+      const snap = result.current.telemetryState.snapshot;
+      expect(snap.requestId).toEqual(available('req-stream-999'));
+      expect(snap.connectivity.rtt).toEqual(available(25));
+      expect(snap.connectivity.networkType).toEqual(available('SSE ativo'));
+      expect(snap.session.sessionStartedAt).toEqual(available('28/10/2026, 21:00:00'));
+      expect(snap.session.sessionDuration).toEqual(available(12000));
+      expect(snap.session.userTripCount).toBe(1);
+    }
+  });
 });

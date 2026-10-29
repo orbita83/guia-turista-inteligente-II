@@ -9,7 +9,9 @@ import type {
   TelemetrySnapshot,
 } from '../types/domain';
 import {
+  connectionQualityLabel,
   formatDuration,
+  formatSessionDuration,
   latencyAlertLabel,
   maskRequestId,
   unavailableValue,
@@ -37,6 +39,13 @@ const providerStates: Record<ProviderState, string> = {
 };
 
 function connectivityLabel(connectivity?: ConnectivityCondition): string {
+  if (
+    connectivity?.networkType.available &&
+    (connectivity.networkType.value === 'SSE ativo' ||
+      connectivity.networkType.value === 'SSE concluído')
+  ) {
+    return `Online (${connectivity.networkType.value})`;
+  }
   if (connectivity?.state === 'online') return 'Online (indício do navegador)';
   if (connectivity?.state === 'offline') return 'Offline (indício do navegador)';
   return 'Aguardando dados';
@@ -70,8 +79,20 @@ export function TelemetriaCard({
       : state.kind === 'loading' || state.kind === 'error'
         ? state.route
         : undefined;
+  const sessionData =
+    snapshot?.session ??
+    (state.kind === 'loading' || state.kind === 'error' ? state.session : undefined);
   const trigger = snapshot ? latencyAlertLabel(snapshot.totalTimeMs, snapshot.apiTimeMs) : null;
-  const currentConnectivity = connectivity ?? snapshot?.connectivity;
+  const effectiveConnectivity = snapshot?.connectivity ?? connectivity;
+  const currentConnectivity: ConnectivityCondition = {
+    state: effectiveConnectivity?.state ?? connectivity?.state ?? 'unknown',
+    rtt: snapshot?.connectivity?.rtt.available
+      ? snapshot.connectivity.rtt
+      : (connectivity?.rtt ?? unavailableValue()),
+    networkType: snapshot?.connectivity?.networkType.available
+      ? snapshot.connectivity.networkType
+      : (connectivity?.networkType ?? unavailableValue()),
+  };
   const missing = unavailableValue<number>();
   const displayDuration = (value: AvailableValue<number>) =>
     value.available ? formatDuration(value) : 'Aguardando dados';
@@ -175,31 +196,29 @@ export function TelemetriaCard({
             <dl className="telemetry-details">
               <div>
                 <dt>Usuário ativo</dt>
-                <dd>{snapshot?.session.displayName ?? 'Aguardando dados'}</dd>
+                <dd>{sessionData?.displayName ?? 'Aguardando dados'}</dd>
               </div>
               <div>
                 <dt>Início da sessão</dt>
-                {/* TODO(backend): preencher sessionStartedAt a partir do contrato de sessão quando disponível. */}
                 <dd>
-                  {snapshot?.session.sessionStartedAt.available
-                    ? snapshot.session.sessionStartedAt.value
+                  {sessionData?.sessionStartedAt.available
+                    ? sessionData.sessionStartedAt.value
                     : 'Aguardando dados'}
                 </dd>
               </div>
               <div>
                 <dt>Tempo total da sessão</dt>
-                {/* TODO(backend): preencher sessionDuration a partir de um dado de sessão confiável; não estimar pela montagem do card. */}
                 <dd>
-                  {snapshot?.session.sessionDuration.available
-                    ? formatDuration(snapshot.session.sessionDuration)
+                  {sessionData?.sessionDuration.available
+                    ? formatSessionDuration(sessionData.sessionDuration)
                     : 'Aguardando dados'}
                 </dd>
               </div>
               <div>
                 <dt>Persistência dos dados</dt>
                 <dd>
-                  {snapshot
-                    ? snapshot.session.persistence === 'permanente'
+                  {sessionData
+                    ? sessionData.persistence === 'permanente'
                       ? 'Permanente (conta Google)'
                       : 'Temporária (visitante)'
                     : 'Aguardando dados'}
@@ -207,12 +226,11 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Meus roteiros</dt>
-                <dd>{snapshot?.session.userTripCount ?? 'Aguardando dados'}</dd>
+                <dd>{sessionData?.userTripCount ?? 'Aguardando dados'}</dd>
               </div>
               <div>
                 <dt>Qualidade da conexão</dt>
-                {/* TODO(integração): exibir RTT/tipo de rede apenas se houver medição confiável; navigator.onLine não informa qualidade. */}
-                <dd>Aguardando dados</dd>
+                <dd>{connectionQualityLabel(currentConnectivity)}</dd>
               </div>
               <div>
                 <dt>Conectividade do navegador</dt>
