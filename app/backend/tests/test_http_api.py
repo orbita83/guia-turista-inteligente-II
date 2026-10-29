@@ -695,6 +695,22 @@ def test_operational_endpoints_and_request_headers(client: TestClient) -> None:
     assert client.get("/readyz").json() == {"status": "ready"}
 
 
+def test_operational_telemetry_requires_session_and_returns_real_numbers(
+    client: TestClient,
+) -> None:
+    unauthorized = client.get("/api/v1/operacao/telemetria")
+    assert unauthorized.status_code == 401
+
+    assert client.post("/api/v1/auth/visitor").status_code == 200
+    response = client.get("/api/v1/operacao/telemetria")
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload["uptime_seconds"], (int, float))
+    assert payload["uptime_seconds"] >= 0
+    assert isinstance(payload["total_roteiros_persistidos"], int)
+    assert payload["total_roteiros_persistidos"] >= 0
+
+
 def test_old_json_file_is_read_without_changing_its_user_shape(tmp_path) -> None:
     import json
 
