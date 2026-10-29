@@ -140,9 +140,9 @@ export function TelemetriaCard({
                 value={displayDuration(snapshot?.totalTimeMs ?? missing)}
                 tone="total"
               />
-              {/* TODO(backend): ligar a duração de geocoding quando o contrato de planejamento expuser essa etapa. */}
+              {/* TODO: preencher a duração de geocodificação com viagem.telemetria.duracoes_etapas_ms. */}
               <Metric label="Geocoding" value="Aguardando dados" />
-              {/* TODO(backend): ligar a duração agregada das APIs e da IA quando vier no payload; não inferir pelo tempo total. */}
+              {/* TODO: mapear durações e estados reais dos provedores; não inferir pelo tempo total. */}
               <Metric label="APIs + IA Gemini" value="Aguardando dados" />
               <Metric
                 label="Servidor local (Tempo da API)"
@@ -158,7 +158,7 @@ export function TelemetriaCard({
                     <li key={provider.provider}>
                       {providerNames[provider.provider]}:{' '}
                       <span>{providerStates[provider.state]}</span>
-                      {/* TODO(backend): usar a duração individual de cada provedor quando a API a fornecer. */}
+                      {/* TODO: preencher cada duração e disponibilidade com a telemetria da viagem. */}
                       {' · Tempo: '}
                       {displayDuration(provider.durationMs)}
                     </li>
@@ -179,7 +179,7 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Início da sessão</dt>
-                {/* TODO(backend): preencher sessionStartedAt a partir do contrato de sessão quando disponível. */}
+                {/* TODO: preencher sessionStartedAt a partir do contrato de sessão quando disponível. */}
                 <dd>
                   {snapshot?.session.sessionStartedAt.available
                     ? snapshot.session.sessionStartedAt.value
@@ -188,7 +188,7 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Tempo total da sessão</dt>
-                {/* TODO(backend): preencher sessionDuration a partir de um dado de sessão confiável; não estimar pela montagem do card. */}
+                {/* TODO: preencher sessionDuration a partir de um dado de sessão confiável; não estimar pela montagem do card. */}
                 <dd>
                   {snapshot?.session.sessionDuration.available
                     ? formatDuration(snapshot.session.sessionDuration)
@@ -257,9 +257,9 @@ export function TelemetriaCard({
                 }
                 tone={apiHealthStatus === 'online' ? 'server' : undefined}
               />
-              {/* TODO(backend): consumir uptime da API operacional quando houver campo estável no contrato. */}
+              {/* TODO: consumir uptime da API operacional quando houver campo estável no contrato. */}
               <Metric label="Uptime backend" value="Aguardando dados" />
-              {/* TODO(backend): consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
+              {/* TODO: consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
               <Metric label="Roteiros totais" value="Aguardando dados" />
             </dl>
             <p className="telemetry-health-note">

@@ -129,27 +129,205 @@ async def test_weather_and_route_retain_legacy_output_shapes() -> None:
                 json={
                     "current": {
                         "temperature_2m": 28.5,
+                        "apparent_temperature": 29.0,
                         "relative_humidity_2m": 35,
                         "wind_speed_10m": 12.0,
+                        "weather_code": 2,
                     }
                 },
             )
         return httpx.Response(
             200,
-            json={"code": "Ok", "routes": [{"distance": 1674600, "duration": 77880}]},
+            json={
+                "code": "Ok",
+                "routes": [
+                    {
+                        "distance": 1674600,
+                        "duration": 77880,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [
+                                [-34.9, -8.05],
+                                [-35.2, -9.1],
+                            ],
+                        },
+                    }
+                ],
+            },
         )
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
         weather = await get_weather(client, -8.05, -34.9)
         route = await get_route(client, -8.05, -34.9, -9.1, -35.2)
         unavailable = await get_weather(client, 0, 0)
-    assert weather == {"temperatura": "28.5 °C", "umidade": "35%", "vento": "12.0 km/h"}
+    assert weather == {
+        "temperatura": "28.5 °C",
+        "sensacao_termica": "29.0 °C",
+        "umidade": "35%",
+        "vento": "12.0 km/h",
+        "condicao": "Parcialmente nublado",
+    }
     assert route == {
         "distancia": "1674.6 km",
         "tempo": "21h 38min de carro",
         "modal": "carro",
+        "status": "disponivel",
+        "motivo": None,
+        "geometria": [[-8.05, -34.9], [-9.1, -35.2]],
+        "alternativas": [],
     }
-    assert unavailable == {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
+    assert unavailable == {
+        "temperatura": "N/D",
+        "sensacao_termica": "N/D",
+        "umidade": "N/D",
+        "vento": "N/D",
+        "condicao": "N/D",
+    }
+
+
+@pytest.mark.asyncio
+async def test_route_requests_full_geojson_geometry_and_real_alternatives() -> None:
+    def response(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["overview"] == "full"
+        assert request.url.params["geometries"] == "geojson"
+        assert request.url.params["alternatives"] == "true"
+        assert request.url.path.endswith(
+            "driving/-34.9,-8.05;-35.2,-9.1"
+        )
+        return httpx.Response(
+            200,
+            json={
+                "code": "Ok",
+                "routes": [
+                    {
+                        "distance": 1_000,
+                        "duration": 60,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-34.9, -8.05], [-35.0, -8.5]],
+                        },
+                    },
+                    {
+                        "distance": 1_200,
+                        "duration": 90,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-34.9, -8.05], [-35.2, -9.1]],
+                        },
+                    },
+                ],
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
+        route = await get_route(client, -8.05, -34.9, -9.1, -35.2)
+
+    assert route == {
+        "distancia": "1.0 km",
+        "tempo": "0h 1min de carro",
+        "modal": "carro",
+        "status": "disponivel",
+        "motivo": None,
+        "geometria": [[-8.05, -34.9], [-8.5, -35.0]],
+        "alternativas": [
+            {
+                "geometria": [[-8.05, -34.9], [-9.1, -35.2]],
+                "distancia": "1.2 km",
+                "tempo": "0h 2min de carro",
+            }
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_route_without_osrm_alternatives_returns_empty_list() -> None:
+    def response(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "code": "Ok",
+                "routes": [
+                    {
+                        "distance": 1000,
+                        "duration": 60,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-34.9, -8.05], [-35.0, -8.5]],
+                        },
+                    }
+                ],
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
+        route = await get_route(client, -8.05, -34.9, -9.1, -35.2)
+
+    assert route["status"] == "disponivel"
+    assert route["alternativas"] == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("handler", "expected_reason"),
+    [
+        (
+            lambda request: httpx.Response(
+                200, json={"code": "NoRoute", "routes": []}
+            ),
+            "sem_rota",
+        ),
+        (
+            lambda request: httpx.Response(
+                503, json={"code": "ServiceUnavailable", "routes": []}
+            ),
+            "falha_http",
+        ),
+        (
+            lambda request: (_ for _ in ()).throw(
+                httpx.ReadTimeout("OSRM timeout", request=request)
+            ),
+            "timeout",
+        ),
+        (
+            lambda request: httpx.Response(200, content=b"not-json"),
+            "resposta_malformada",
+        ),
+        (
+            lambda request: httpx.Response(
+                200,
+                json={
+                    "code": "Ok",
+                    "routes": [
+                        {
+                            "distance": 1000,
+                            "duration": 60,
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [[-34.9, -8.05], [181, -8.5]],
+                            },
+                        }
+                    ],
+                },
+            ),
+            "geometria_invalida",
+        ),
+    ],
+)
+async def test_route_failures_return_explicit_fallback(
+    handler, expected_reason: str
+) -> None:
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        route = await get_route(client, -8.05, -34.9, -9.1, -35.2)
+
+    assert route == {
+        "distancia": "Sem rota direta",
+        "tempo": "Considere voos ou barcos",
+        "modal": "alternativo",
+        "status": "indisponivel",
+        "motivo": expected_reason,
+        "geometria": [],
+        "alternativas": [],
+    }
 
 
 def test_sanitize_input_matches_legacy_cleanup_and_limit() -> None:
@@ -172,6 +350,45 @@ def test_storage_keeps_visitor_in_memory_and_persistent_user_isolated(tmp_path) 
 
     storage.forget_visitor("visitante_123")
     assert storage.list_for_user("visitante_123") == []
+
+
+def test_storage_updates_visits_atomically_without_cross_user_access(tmp_path) -> None:
+    storage_path = tmp_path / "viagens.json"
+    storage = TripStorage(storage_path)
+    trip = {"id": "trip-1", "atrativos_visitados_ids": []}
+    other_trip = {"id": "private-trip", "atrativos_visitados_ids": []}
+    storage.add_for_user("google-1", trip, {"id": "google-1", "tipo": "google"})
+    storage.add_for_user(
+        "google-2", other_trip, {"id": "google-2", "tipo": "google"}
+    )
+
+    assert storage.update_attraction_visit("google-1", "trip-1", "poi-1", True) == [
+        "poi-1"
+    ]
+    assert storage.update_attraction_visit("google-1", "trip-1", "poi-1", True) == [
+        "poi-1"
+    ]
+    assert storage.update_attraction_visit("google-1", "trip-1", "poi-1", False) == []
+    assert storage.update_attraction_visit(
+        "google-1", "private-trip", "poi-2", True
+    ) is None
+    assert storage.list_for_user("google-2") == [other_trip]
+    assert TripStorage(storage_path).list_for_user("google-1") == [
+        {"id": "trip-1", "atrativos_visitados_ids": []}
+    ]
+
+    storage.ensure_visitor("visitante_1")
+    storage.add_for_user(
+        "visitante_1",
+        {"id": "visitor-trip"},
+        {"tipo": "visitante"},
+    )
+    assert storage.update_attraction_visit(
+        "visitante_1", "visitor-trip", "poi-visitor", True
+    ) == ["poi-visitor"]
+    assert storage.list_for_user("visitante_1")[0]["atrativos_visitados_ids"] == [
+        "poi-visitor"
+    ]
 
 
 class MemoryStorage:
@@ -274,6 +491,19 @@ async def test_plan_trip_keeps_trip_fields_and_persists_result(monkeypatch) -> N
     assert trip["destino"] == "Salvador - BA"
     assert trip["dicas_destino"] == "guia legado"
     assert trip["diagnostico_ia"]["motivo"] == "chave_ausente"
+    assert set(trip["telemetria"]["duracoes_etapas_ms"]) == {
+        "geocodificacao_origem_ms",
+        "geocodificacao_destino_ms",
+        "clima_ms",
+        "roteamento_ms",
+        "guia_ms",
+        "total_servicos_ms",
+    }
+    assert all(
+        duration >= 0
+        for duration in trip["telemetria"]["duracoes_etapas_ms"].values()
+    )
+    assert trip["telemetria"]["provedores"]["open_elevation"] == "nao_integrado"
     assert storage.trips == [trip]
 
 
@@ -317,8 +547,10 @@ async def test_weather_breaker_opens_skips_provider_and_recovers(
             json={
                 "current": {
                     "temperature_2m": 22,
+                    "apparent_temperature": 21,
                     "relative_humidity_2m": 60,
                     "wind_speed_10m": 8,
+                    "weather_code": 1,
                 }
             },
         )
@@ -348,8 +580,10 @@ async def test_weather_breaker_opens_skips_provider_and_recovers(
         assert first["clima"] == second["clima"] == opened_fallback["clima"]
         assert opened_fallback["clima"] == {
             "temperatura": "N/D",
+            "sensacao_termica": "N/D",
             "umidade": "N/D",
             "vento": "N/D",
+            "condicao": "N/D",
         }
 
         now[0] += 5
@@ -358,8 +592,10 @@ async def test_weather_breaker_opens_skips_provider_and_recovers(
     assert calls == 3
     assert recovered["clima"] == {
         "temperatura": "22.0 °C",
+        "sensacao_termica": "21.0 °C",
         "umidade": "60%",
         "vento": "8.0 km/h",
+        "condicao": "Predominantemente limpo",
     }
     assert breakers["weather"].state == CircuitState.CLOSED
     assert breakers["weather"].failure_count == 0
@@ -396,8 +632,10 @@ async def test_invalid_weather_coordinates_do_not_open_breaker(monkeypatch) -> N
 
     assert trip["clima"] == {
         "temperatura": "N/D",
+        "sensacao_termica": "N/D",
         "umidade": "N/D",
         "vento": "N/D",
+        "condicao": "N/D",
     }
     assert breakers["weather"].state == CircuitState.CLOSED
     assert breakers["weather"].failure_count == 0
@@ -470,7 +708,13 @@ async def test_guide_breaker_opens_uses_fallback_and_recovers(monkeypatch) -> No
 
 
 async def _weather_success() -> dict[str, str]:
-    return {"temperatura": "20 °C", "umidade": "50%", "vento": "5 km/h"}
+    return {
+        "temperatura": "20 °C",
+        "sensacao_termica": "19 °C",
+        "umidade": "50%",
+        "vento": "5 km/h",
+        "condicao": "Céu limpo",
+    }
 
 
 @pytest.mark.asyncio
@@ -619,8 +863,10 @@ async def test_concurrent_plans_update_shared_breaker_without_lost_failures(
         await all_started.wait()
         return {
             "temperatura": "N/D",
+            "sensacao_termica": "N/D",
             "umidade": "N/D",
             "vento": "N/D",
+            "condicao": "N/D",
         }
 
     monkeypatch.setattr(trips, "geocode", fixed_geocode)
