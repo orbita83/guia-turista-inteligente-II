@@ -12,7 +12,8 @@ que retornam `204 No Content`.
 | Método e caminho | Contrato | Identidade |
 | --- | --- | --- |
 | `POST /api/v1/auth/restore-google` | saída `{ usuario }` | restaura identidade Google preservada enquanto o vínculo e a sessão visitante forem válidos |
-| `GET /api/v1/auth/session` | `{ usuario, google_client_id, ufs, session_started_at, session_duration_ms, visitor_remaining_ms }` | cookie de sessão opcional |
+| `GET /api/v1/auth/session` | `{ usuario, google_client_id, ufs, session_started_at, session_duration_ms, visitor_remaining_ms, telemetria_operacional }` | cookie opcional; métricas presentes apenas em sessão ativa |
+| `GET /api/v1/operacao/telemetria` | `{ uptime_seconds, total_roteiros_persistidos }` | sessão obrigatória; 401 sem autenticação |
 | `POST /api/v1/auth/google` | entrada `{ credential }`; saída `{ usuario, session_started_at, session_duration_ms }` | valida credencial no Google e cria cookie |
 | `POST /api/v1/auth/visitor` | saída `{ usuario, session_started_at, session_duration_ms }` | cria sessão visitante com validade de 2 horas e preserva identidade Google autorizada |
 | `POST /api/v1/auth/logout` | `204` | encerra sessão e limpa dados temporários do visitante |
@@ -22,6 +23,21 @@ que retornam `204 No Content`.
 | `PATCH /api/v1/roteiros/{roteiro_id}/visitas` | entrada `{ atrativo_id, visitado }`; saída com os IDs visitados atualizados | sessão obrigatória; altera somente roteiro da identidade ativa |
 | `POST /api/v1/roteiros/stream-guia` | entrada `{ destino, dias_estadia?, estilo_viagem?, clima_info?, atrativos?, gastronomia? }`; resposta HTTP 200 `text/event-stream` | sessão obrigatória, inclusive visitante |
 | `DELETE /api/v1/roteiros/{roteiro_id}` | `204` | sessão obrigatória; exclusão limitada à identidade ativa |
+
+### Indicadores operacionais
+
+`uptime_seconds` (número não negativo, em segundos) mede o tempo desde a
+inicialização do processo FastAPI atual. Não é o uptime do host ou do conjunto de
+workers. `total_roteiros_persistidos` (inteiro não negativo) é a soma dos
+roteiros dos usuários efetivamente gravados no arquivo de persistência; viagens
+temporárias de visitantes, mantidas apenas em memória, não entram nessa soma.
+
+Ambos os indicadores são obtidos pelo endpoint autenticado de telemetria e,
+quando há sessão ativa, também pelo `telemetria_operacional` da resposta
+de `GET /auth/session`. O frontend aproveita o contrato na inicialização e
+consulta o endpoint para atualizar os números. Falhas de acesso devem ser
+indicadas como indisponibilidade, sem inventar valores. A resposta de sessão
+sem autenticação contém `telemetria_operacional: null`.
 
 O planejamento mantém os campos de viagem já produzidos pelo Flask: `id`, `criado_em`,
 `origem`, `destino`, `clima`, `percurso`, `dicas_destino` e `diagnostico_ia`; também
