@@ -304,9 +304,8 @@ export function useApp() {
 
   const restoreGoogleUser = useCallback(async () => {
     if (!savedGoogleUser || data.usuario?.tipo !== 'visitante') return;
-    // TODO(backend): criar restauração da sessão Google preservada, vinculada à sessão
-    // assinada no servidor. O perfil no localStorage não autentica; a credencial
-    // mantida apenas em memória permite um clique somente enquanto ainda é válida.
+    // TODO: restaurar pelo endpoint da sessão assinada; o perfil salvo no navegador
+    // serve apenas para exibição e não pode ser usado como credencial.
     const credential = googleCredentialRef.current;
     if (!credential) {
       addToast('Saia do modo visitante e entre novamente com Google.');
@@ -517,7 +516,8 @@ export function useApp() {
       setVisitasPorViagem(proximo);
       saveVisitas(data.usuario?.id, proximo);
 
-      // TODO(backend): sincronizar marcação de visita via PATCH /api/v1/roteiros/{id}/visitas quando disponível.
+      // TODO: hidratar as visitas persistidas ao carregar o histórico e reconciliar
+      // falhas de sincronização com o estado otimista local.
       try {
         await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
       } catch {

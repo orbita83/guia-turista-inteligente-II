@@ -1,4 +1,5 @@
 import logging
+import math
 import time
 import uuid
 from typing import Any
@@ -13,6 +14,25 @@ from app.services.integrations import verify_google_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["autenticação"])
+GOOGLE_RESTORE_TTL_SECONDS = VISITOR_TTL_SECONDS
+PRESERVED_GOOGLE_USER = "google_usuario_preservado"
+PRESERVED_GOOGLE_EXPIRATION = "google_usuario_expira_em"
+
+
+def _session_expiration(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return None
+    try:
+        expiration = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return expiration if math.isfinite(expiration) else None
+
+
+def _forget_active_visitor(request: Request, storage: Any) -> None:
+    user = request.session.get("usuario")
+    if isinstance(user, dict) and user.get("tipo") == "visitante":
+        storage.forget_visitor(str(user.get("id", "")))
 
 
 def _user_response(data: dict[str, Any]) -> User:
@@ -28,13 +48,9 @@ def _user_response(data: dict[str, Any]) -> User:
 @router.get("/session", response_model=SessionResponse)
 def get_session(request: Request) -> SessionResponse:
     user = request.session.get("usuario")
-    expires_at = request.session.get("visitor_expires_at")
-    if isinstance(user, dict) and user.get("tipo") == "visitante" and expires_at:
-        try:
-            is_expired = time.time() >= float(expires_at)
-        except (TypeError, ValueError):
-            is_expired = True
-        if is_expired:
+    if isinstance(user, dict) and user.get("tipo") == "visitante":
+        expires_at = _session_expiration(request.session.get("visitor_expires_at"))
+        if expires_at is None or time.time() >= expires_at:
             request.app.state.trip_storage.forget_visitor(str(user.get("id", "")))
             request.session.clear()
             user = None
@@ -51,6 +67,7 @@ async def login_google(
     payload: GoogleLoginRequest,
     request: Request,
     client: httpx.AsyncClient = Depends(get_http_client),  # noqa: B008
+    storage: Any = Depends(get_storage),  # noqa: B008
 ) -> UserResponse:
     settings = get_settings()
     try:
@@ -80,6 +97,7 @@ async def login_google(
         "foto": profile.get("picture") or profile.get("foto") or "",
         "tipo": "google",
     }
+    _forget_active_visitor(request, storage)
     request.session.clear()
     request.session["usuario"] = user
     return UserResponse(usuario=_user_response(user))
@@ -91,6 +109,26 @@ def login_visitor(
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> UserResponse:
     visitor_id = f"visitante_{uuid.uuid4().hex[:8]}"
+    current_user = request.session.get("usuario")
+    preserved_user = None
+    preserved_expiration = None
+    now = time.time()
+    if isinstance(current_user, dict) and current_user.get("tipo") == "google":
+        preserved_user = current_user
+        preserved_expiration = now + GOOGLE_RESTORE_TTL_SECONDS
+    elif isinstance(current_user, dict) and current_user.get("tipo") == "visitante":
+        existing_expiration = _session_expiration(
+            request.session.get(PRESERVED_GOOGLE_EXPIRATION)
+        )
+        if (
+            isinstance(request.session.get(PRESERVED_GOOGLE_USER), dict)
+            and existing_expiration is not None
+            and now < existing_expiration
+        ):
+            preserved_user = request.session[PRESERVED_GOOGLE_USER]
+            preserved_expiration = existing_expiration
+        _forget_active_visitor(request, storage)
+
     user = {
         "id": visitor_id,
         "nome": "Viajante Convidado",
@@ -101,14 +139,64 @@ def login_visitor(
     storage.ensure_visitor(visitor_id)
     request.session.clear()
     request.session["usuario"] = user
-    request.session["visitor_expires_at"] = time.time() + VISITOR_TTL_SECONDS
+    request.session["visitor_expires_at"] = now + VISITOR_TTL_SECONDS
+    if preserved_user is not None and preserved_expiration is not None:
+        request.session[PRESERVED_GOOGLE_USER] = preserved_user
+        request.session[PRESERVED_GOOGLE_EXPIRATION] = preserved_expiration
     return UserResponse(usuario=_user_response(user))
+
+
+@router.post("/restore-google", response_model=UserResponse)
+def restore_google_user(
+    request: Request,
+    storage: Any = Depends(get_storage),  # noqa: B008
+) -> UserResponse:
+    visitor = request.session.get("usuario")
+    visitor_expiration = _session_expiration(
+        request.session.get("visitor_expires_at")
+    )
+    if (
+        not isinstance(visitor, dict)
+        or visitor.get("tipo") != "visitante"
+        or visitor_expiration is None
+        or time.time() >= visitor_expiration
+    ):
+        if isinstance(visitor, dict) and visitor.get("tipo") == "visitante":
+            storage.forget_visitor(str(visitor.get("id", "")))
+            request.session.clear()
+        raise HTTPException(status_code=401, detail="Sessão de visitante inválida.")
+
+    preserved_user = request.session.get(PRESERVED_GOOGLE_USER)
+    preserved_expiration = _session_expiration(
+        request.session.get(PRESERVED_GOOGLE_EXPIRATION)
+    )
+    if (
+        not isinstance(preserved_user, dict)
+        or preserved_user.get("tipo") != "google"
+        or not str(preserved_user.get("id", "")).strip()
+        or preserved_expiration is None
+        or time.time() >= preserved_expiration
+    ):
+        request.session.pop(PRESERVED_GOOGLE_USER, None)
+        request.session.pop(PRESERVED_GOOGLE_EXPIRATION, None)
+        raise HTTPException(
+            status_code=401,
+            detail="Não há uma sessão Google válida para restaurar.",
+        )
+
+    google_user = {
+        **preserved_user,
+        "id": str(preserved_user["id"]),
+        "tipo": "google",
+    }
+    storage.forget_visitor(str(visitor.get("id", "")))
+    request.session.clear()
+    request.session["usuario"] = google_user
+    return UserResponse(usuario=_user_response(google_user))
 
 
 @router.post("/logout", status_code=204)
 def logout(request: Request, storage: Any = Depends(get_storage)) -> Response:  # noqa: B008
-    active_user = request.session.get("usuario")
-    if isinstance(active_user, dict) and active_user.get("tipo") == "visitante":
-        storage.forget_visitor(str(active_user.get("id", "")))
+    _forget_active_visitor(request, storage)
     request.session.clear()
     return Response(status_code=204)

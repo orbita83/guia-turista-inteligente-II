@@ -1,3 +1,4 @@
+import math
 import time
 from typing import Any
 
@@ -41,19 +42,21 @@ def get_current_user(request: Request) -> dict[str, Any]:
     if not isinstance(user, dict) or not user.get("id"):
         raise HTTPException(status_code=401, detail="Autenticação necessária.")
 
-    expires_at = request.session.get("visitor_expires_at")
-    if user.get("tipo") == "visitante" and expires_at:
-        try:
-            expired = time.time() >= float(expires_at)
-        except (TypeError, ValueError):
-            expired = True
-        if expired:
+    if user.get("tipo") == "visitante":
+        expiration = request.session.get("visitor_expires_at")
+        if isinstance(expiration, bool) or not isinstance(
+            expiration, (int, float, str)
+        ):
+            expires_at: float = 0.0
+        else:
+            try:
+                expires_at = float(expiration)
+            except (TypeError, ValueError, OverflowError):
+                expires_at = 0
+        if not math.isfinite(expires_at) or time.time() >= expires_at:
             storage = getattr(request.app.state, "trip_storage", None)
             if storage is not None and hasattr(storage, "forget_visitor"):
-                try:
-                    storage.forget_visitor(str(user["id"]))
-                except Exception:
-                    pass
+                storage.forget_visitor(str(user["id"]))
             request.session.clear()
             raise HTTPException(
                 status_code=401, detail="A sessão de visitante expirou."

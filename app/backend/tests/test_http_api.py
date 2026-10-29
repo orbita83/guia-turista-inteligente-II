@@ -159,7 +159,15 @@ def test_planning_endpoint_meets_mocked_latency_target_with_concurrent_stages(
         longitude_destination,
     ):
         await asyncio.sleep(0.3)
-        return {"distancia": "100 km", "tempo": "2h"}
+        return {
+            "distancia": "100 km",
+            "tempo": "2h",
+            "modal": "carro",
+            "status": "disponivel",
+            "motivo": None,
+            "geometria": [[-8.0, -34.0], [-9.0, -35.0]],
+            "alternativas": [],
+        }
 
     async def successful_guide(destination, *, api_key, timeout_seconds):
         return "guia válido", {
@@ -193,6 +201,11 @@ def test_planning_endpoint_meets_mocked_latency_target_with_concurrent_stages(
     assert response.json()["viagem"]["percurso"] == {
         "distancia": "100 km",
         "tempo": "2h",
+        "modal": "carro",
+        "status": "disponivel",
+        "motivo": None,
+        "geometria": [[-8.0, -34.0], [-9.0, -35.0]],
+        "alternativas": [],
     }
 
 
@@ -507,6 +520,139 @@ def test_google_auth_maps_verified_profile_to_session(
     assert client.get("/api/v1/auth/session").json()["usuario"]["id"] == (
         "google-user-1"
     )
+
+
+def test_google_session_can_be_restored_after_visitor_mode(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    storage: TripStorage,
+) -> None:
+    import app.routers.auth as auth_router
+
+    async def fake_verify(client, credential, *, google_client_id):
+        return {
+            "sub": "google-user-restore",
+            "name": "Ana",
+            "email": "ana@example.test",
+        }
+
+    monkeypatch.setattr(auth_router, "verify_google_token", fake_verify)
+    google_trip = {"id": "google-trip", "origem": "Recife"}
+    storage.add_for_user(
+        "google-user-restore",
+        google_trip,
+        {"id": "google-user-restore", "nome": "Ana", "tipo": "google"},
+    )
+    assert client.post(
+        "/api/v1/auth/google", json={"credential": "verified"}
+    ).status_code == 200
+
+    visitor = client.post("/api/v1/auth/visitor").json()["usuario"]
+    visitor_trip = {"id": "visitor-trip", "origem": "Natal"}
+    storage.add_for_user(visitor["id"], visitor_trip, visitor)
+    assert client.get("/api/v1/roteiros/minhas-viagens").json() == {
+        "viagens": [visitor_trip]
+    }
+
+    reloaded_session = client.get("/api/v1/auth/session")
+    assert reloaded_session.json()["usuario"]["tipo"] == "visitante"
+    restored = client.post("/api/v1/auth/restore-google")
+
+    assert restored.status_code == 200
+    assert restored.json()["usuario"]["id"] == "google-user-restore"
+    assert client.get("/api/v1/roteiros/minhas-viagens").json() == {
+        "viagens": [google_trip]
+    }
+    assert storage.list_for_user(visitor["id"]) == []
+
+
+def test_google_restore_requires_an_unexpired_signed_session(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import app.routers.auth as auth_router
+
+    async def fake_verify(client, credential, *, google_client_id):
+        return {"sub": "google-user-expiring", "name": "Ana"}
+
+    monkeypatch.setattr(auth_router, "verify_google_token", fake_verify)
+    client.post("/api/v1/auth/google", json={"credential": "verified"})
+    client.post("/api/v1/auth/visitor")
+    monkeypatch.setattr(auth_router, "_session_expiration", lambda value: 0.0)
+
+    expired = client.post("/api/v1/auth/restore-google")
+    assert expired.status_code == 401
+    assert client.get("/api/v1/auth/session").json()["usuario"] is None
+
+
+def test_google_restore_is_revoked_by_account_switch_and_logout(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import app.routers.auth as auth_router
+
+    async def fake_verify(client, credential, *, google_client_id):
+        return {"sub": f"google-{credential}", "name": credential}
+
+    monkeypatch.setattr(auth_router, "verify_google_token", fake_verify)
+    client.post("/api/v1/auth/google", json={"credential": "one"})
+    client.post("/api/v1/auth/visitor")
+    client.post("/api/v1/auth/google", json={"credential": "two"})
+    assert client.post("/api/v1/auth/restore-google").status_code == 401
+    assert client.get("/api/v1/auth/session").json()["usuario"]["id"] == "google-two"
+
+    client.post("/api/v1/auth/visitor")
+    assert client.post("/api/v1/auth/logout").status_code == 204
+    assert client.post("/api/v1/auth/restore-google").status_code == 401
+
+
+def test_attraction_visit_patch_persists_only_for_active_users(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    storage: TripStorage,
+) -> None:
+    import app.routers.auth as auth_router
+
+    async def fake_verify(client, credential, *, google_client_id):
+        return {"sub": f"google-{credential}", "name": credential}
+
+    monkeypatch.setattr(auth_router, "verify_google_token", fake_verify)
+    storage.add_for_user(
+        "google-owner",
+        {"id": "owner-trip"},
+        {"id": "google-owner", "tipo": "google"},
+    )
+    storage.add_for_user(
+        "google-other",
+        {"id": "other-trip"},
+        {"id": "google-other", "tipo": "google"},
+    )
+
+    unauthorized = client.patch(
+        "/api/v1/roteiros/owner-trip/visitas",
+        json={"atrativo_id": "poi-1", "visitado": True},
+    )
+    assert unauthorized.status_code == 401
+    client.post("/api/v1/auth/google", json={"credential": "owner"})
+
+    updated = client.patch(
+        "/api/v1/roteiros/owner-trip/visitas",
+        json={"atrativo_id": "poi-1", "visitado": True},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["atrativos_visitados_ids"] == ["poi-1"]
+    assert storage.list_for_user("google-owner")[0]["atrativos_visitados_ids"] == [
+        "poi-1"
+    ]
+    assert storage.list_for_user("google-other") == [{"id": "other-trip"}]
+    assert client.patch(
+        "/api/v1/roteiros/other-trip/visitas",
+        json={"atrativo_id": "poi-1", "visitado": True},
+    ).status_code == 404
+    assert client.patch(
+        "/api/v1/roteiros/owner-trip/visitas",
+        json={"atrativo_id": "  ", "visitado": True},
+    ).status_code == 422
 
 
 def test_expired_visitor_session_is_cleared(
