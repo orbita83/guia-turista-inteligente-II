@@ -75,9 +75,7 @@ async def get_my_trips_json(
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> dict[str, Any]:
     """Expõe os metadados antigos da base, isolando a exportação ao usuário ativo."""
-    return await run_in_threadpool(
-        storage.data_for_user, str(user["id"]), user
-    )
+    return await run_in_threadpool(storage.data_for_user, str(user["id"]), user)
 
 
 @router.post("/planejar", response_model=TripCreateResponse)
@@ -179,6 +177,8 @@ async def update_attraction_visit(
     user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> dict[str, Any]:
+    # TODO(integracao): validar se o ID pertence aos atrativos do roteiro quando
+    # a coleção estruturada e seus IDs estáveis da issue #25 estiverem disponíveis.
     visited_ids = await run_in_threadpool(
         storage.update_attraction_visit,
         str(user["id"]),
@@ -188,6 +188,8 @@ async def update_attraction_visit(
     )
     if visited_ids is None:
         raise HTTPException(status_code=404, detail="Roteiro não encontrado.")
+    # TODO(frontend): mapear atrativos_visitados_ids no histórico e na resposta
+    # para hidratar as visitas confirmadas após recarga (issue #26).
     return {
         "roteiro_id": trip_id,
         "atrativo_id": payload.atrativo_id,

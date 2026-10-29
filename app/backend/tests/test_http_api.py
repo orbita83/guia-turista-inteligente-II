@@ -760,6 +760,29 @@ def test_attraction_visit_patch_persists_only_for_active_users(
     )
 
 
+def test_visitas_sao_idempotentes_e_recarregadas_no_historico(
+    client: TestClient, storage: TripStorage
+) -> None:
+    visitor = client.post("/api/v1/auth/visitor").json()["usuario"]
+    storage.add_for_user(visitor["id"], {"id": "trip-visits"}, visitor)
+    path = "/api/v1/roteiros/trip-visits/visitas"
+    for _ in range(2):
+        response = client.patch(path, json={"atrativo_id": "poi-1", "visitado": True})
+        assert response.json()["atrativos_visitados_ids"] == ["poi-1"]
+    assert client.get("/api/v1/roteiros/minhas-viagens").json()["viagens"][0][
+        "atrativos_visitados_ids"
+    ] == ["poi-1"]
+    for _ in range(2):
+        response = client.patch(path, json={"atrativo_id": "poi-1", "visitado": False})
+        assert response.json()["atrativos_visitados_ids"] == []
+    assert (
+        client.get("/api/v1/roteiros/minhas-viagens").json()["viagens"][0][
+            "atrativos_visitados_ids"
+        ]
+        == []
+    )
+
+
 def test_expired_visitor_session_is_cleared(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
