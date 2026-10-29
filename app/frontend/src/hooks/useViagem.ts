@@ -344,6 +344,8 @@ export function useViagem() {
           ...result.metadata,
           // TODO(integracao): carregar diagnósticos e tempos reais do payload de planejamento.
           providers: providerDiagnostics(result.viagem),
+          // TODO(integracao): propagar session_started_at e session_duration_ms da sessão
+          // ao painel e conciliar atualizações SSE sem confundir duração com expiração.
           session: sessionSummary(usuario, data.viagens.length + 1),
           service: serviceCondition(true),
           connectivity,
@@ -463,7 +465,8 @@ export function useViagem() {
       saveVisitas(data.usuario?.id, proximo);
       setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
 
-      // TODO: hidratar as visitas confirmadas da resposta do histórico ao carregá-lo.
+      // TODO(integracao): hidratar visitas do histórico e reconciliar mudanças locais
+      // pendentes sem sobrescrevê-las ao recarregar ou sincronizar.
       try {
         const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
         if (generation !== sessionGeneration.current) return;

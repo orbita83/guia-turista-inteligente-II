@@ -20,6 +20,8 @@ export function useAuth({ usuario, runSessionAction, addToast }: UseAuthOptions)
   const googleCredential = useRef<string | null>(null);
   // TODO: consumir POST /auth/restore-google para restaurar pela sessão assinada,
   // sem exigir uma credencial Google mantida apenas em memória.
+  // TODO(integracao): sincronizar o temporizador visitante com prazo confiável do servidor;
+  // o contrato atual não expõe visitor_expires_at e recarregar não deve reiniciar a sessão.
   const sessionTimer = useSessionTimer(null);
 
   const loginWithGoogle = useCallback(

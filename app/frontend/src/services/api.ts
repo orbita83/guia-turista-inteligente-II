@@ -256,6 +256,8 @@ export async function criarViagem(data: RoteiroFormData): Promise<PlanTripRespon
   const apiTimeMs = parseProcessTime(response.headers.get('X-Process-Time'));
   const requestId = parseRequestId(response.headers.get('X-Request-ID'));
   const payload = parsePlanTripResponse(await parseResponse<unknown>(response));
+  // TODO(frontend): identificar no painel que este tempo inclui requisição e parsing,
+  // mas termina antes da renderização; medir atualização visual separadamente se necessária.
   const elapsed = performance.now() - startedAt;
   const totalTimeMs: AvailableValue<number> =
     Number.isFinite(elapsed) && elapsed >= 0
