@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field, field_validator
 from starlette.concurrency import run_in_threadpool
 
 from app.core.circuit_breaker import CircuitBreaker
@@ -27,6 +28,19 @@ WARNING_TIMEOUT = (
     "O serviço Gemini excedeu o tempo limite da requisição. "
     "Um guia de contingência foi gerado."
 )
+
+
+class AttractionVisitUpdate(BaseModel):
+    atrativo_id: str = Field(min_length=1, max_length=200)
+    visitado: bool
+
+    @field_validator("atrativo_id")
+    @classmethod
+    def normalize_attraction_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("atrativo_id não pode ser vazio.")
+        return normalized
 
 
 def _request_key(user_id: str, payload: TripCreateRequest) -> str:
@@ -156,3 +170,27 @@ async def remove_trip(
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> None:
     await run_in_threadpool(delete_trip, storage, str(user["id"]), trip_id)
+
+
+@router.patch("/{trip_id}/visitas")
+async def update_attraction_visit(
+    trip_id: str,
+    payload: AttractionVisitUpdate,
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    storage: Any = Depends(get_storage),  # noqa: B008
+) -> dict[str, Any]:
+    visited_ids = await run_in_threadpool(
+        storage.update_attraction_visit,
+        str(user["id"]),
+        trip_id,
+        payload.atrativo_id,
+        payload.visitado,
+    )
+    if visited_ids is None:
+        raise HTTPException(status_code=404, detail="Roteiro não encontrado.")
+    return {
+        "roteiro_id": trip_id,
+        "atrativo_id": payload.atrativo_id,
+        "visitado": payload.visitado,
+        "atrativos_visitados_ids": visited_ids,
+    }

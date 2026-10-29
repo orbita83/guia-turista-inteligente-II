@@ -159,3 +159,55 @@ class TripStorage:
             data["atualizado_em"] = datetime.now(UTC).isoformat()
             self._write_unlocked(data)
             return True
+
+    def update_attraction_visit(
+        self,
+        user_id: str,
+        trip_id: str,
+        attraction_id: str,
+        visited: bool,
+    ) -> list[str] | None:
+        """Atualiza a marcação de um atrativo somente na viagem do usuário ativo."""
+        with self._lock:
+            is_visitor = user_id in self._visitor_trips or self._is_visitor(user_id)
+            if is_visitor:
+                trips = self._visitor_trips.get(user_id, [])
+                data = None
+            else:
+                data = self._read_unlocked()
+                users = data.get("usuarios", {})
+                user = users.get(user_id) if isinstance(users, dict) else None
+                trips = user.get("roteiros", []) if isinstance(user, dict) else []
+
+            if not isinstance(trips, list):
+                return None
+            trip = next(
+                (
+                    item
+                    for item in trips
+                    if isinstance(item, dict) and item.get("id") == trip_id
+                ),
+                None,
+            )
+            if trip is None:
+                return None
+
+            ids = trip.get("atrativos_visitados_ids")
+            visited_ids = (
+                list(dict.fromkeys(item for item in ids if isinstance(item, str)))
+                if isinstance(ids, list)
+                else []
+            )
+            if visited:
+                if attraction_id not in visited_ids:
+                    visited_ids.append(attraction_id)
+            else:
+                visited_ids = [
+                    item for item in visited_ids if item != attraction_id
+                ]
+            trip["atrativos_visitados_ids"] = visited_ids
+
+            if not is_visitor and data is not None:
+                data["atualizado_em"] = datetime.now(UTC).isoformat()
+                self._write_unlocked(data)
+            return visited_ids
