@@ -58,5 +58,101 @@
 - `HistoricoViagens.test.tsx` cobre resumo compacto, “Aguardando dados”, carregamento,
   vazio, erro, persistência pendente e exclusão acessível.
 
+### Evidência frontend de F01 para CA-PLN-003, CA-MAP-001 e CA-HIS-001
+
+- `api.test.ts` verifica que campos opcionais válidos de clima, geometria, rotas,
+  atrativos e visitas atravessam o parser; campos malformados são descartados sem
+  impedir a leitura de viagens antigas. A disponibilidade desses campos em produção
+  ainda depende da evolução do contrato do backend.
+
+### Evidência frontend de F02 para CA-MAP-001
+
+- `MapaRota.test.tsx` valida o estado sem geometria, a preservação do resumo textual e
+  a seleção apenas de alternativas recebidas. `routeCalculator.test.ts` confirma que
+  o cliente não inventa alternativas quando a API não as fornece.
+
+### Evidência frontend de F03 para CA-MAP-003
+
+- `api.test.ts` rejeita série altimétrica fora de ordem; `MapaRota.test.tsx` verifica
+  que o gráfico usa amostras recebidas e mostra indisponibilidade na ausência delas.
+  Indicadores de relevo sem dados de origem deixam de ser exibidos.
+
+### Evidência frontend de F04 para CA-PLN-003
+
+- `RoteiroResult.test.tsx` confirma a apresentação de clima parcial recebido e
+  mensagens de indisponibilidade no lugar de temperaturas e condição fixas.
+
+### Evidência frontend de F12 para CA-PLN-003
+
+- `atrativosService.test.ts` garante que destinos não catalogados não recebem locais
+  inventados; `RoteiroResult.test.tsx` verifica o estado vazio correspondente.
+
+### Evidência frontend de F06 e F07 para CA-PLN-001
+
+- `api.test.ts` verifica extração segura dos detalhes HTTP 422; `RoteiroForm.test.tsx`
+  cobre associação aos campos, entradas numéricas vazias, preço zero e exigências
+  condicionais para veículo elétrico. O formulário não envia números não finitos.
+
+### Evidência frontend de F08 para CA-PLN-003
+
+- `useApp.test.tsx` cobre confirmação, salvamento apenas local quando o endpoint não
+  existe, reversão após falha e sincronização posterior. A tela distingue esses
+  estados e oferece nova tentativa quando há alterações locais pendentes.
+
+### Evidência frontend de F09 para CA-GUI-001 e CA-GUI-002
+
+- `streamingGuide.test.ts` diferencia SSE, reprodução de conteúdo existente,
+  cancelamento e encerramento sem `done`; `RoteiroResult.test.tsx` verifica que a
+  contingência concluída não é apresentada como transmissão ao vivo.
+
+### Evidência frontend de F05 e F16 para CA-MAP-001 e CA-EXP-001
+
+- `MapaRota.test.tsx` verifica que a seleção da alternativa é controlada pela
+  aplicação; `TripNavigationTabs.test.tsx` cobre a indisponibilidade do GPX sem
+  geometria. `routeCalculator.test.ts` cobre GPX com pontos recebidos, escape XML e
+  rejeição de trajeto inválido.
+
+### Evidência frontend de F10 para CA-HIS-001
+
+- `useApp.test.tsx` verifica que a troca de viagem descarta parâmetros de outra e
+  restaura os da viagem criada na sessão quando disponíveis. `RoteiroResult.test.tsx`
+  confirma que perfil e duração ausentes são apresentados como não informados.
+
+### Evidência frontend de F13 para CA-PLN-005
+
+- `geolocation.test.ts` preserva Haversine e as quatro sugestões; `RoteiroForm.test.tsx`
+  verifica que a distância aparece como aproximação em linha reta e o preenchimento
+  manual continua disponível.
+
+### Evidência frontend de F14 para CA-PLN-004
+
+- `ErrorBoundary.test.tsx` provoca erro de renderização, verifica a mensagem
+  acessível e a recuperação pelo botão de nova tentativa.
+
+### Auditoria frontend F15 para CA-PLN-004
+
+- `App.test.tsx` e `TripNavigationTabs.test.tsx` verificam setas de teclado, foco e
+  associação entre abas e painéis. Os filtros de atrativos agora são um grupo de
+  botões com `aria-pressed`, sem semântica de abas sem painéis.
+- `themeContrast.test.tsx` verifica os pares de contraste dos dois temas. O foco
+  visível está definido em `styles/tokens-base.css`; movimento reduzido em
+  `styles/responsive.css`. Mensagens de estado usam `role="status"` ou `role="alert"`.
+- A compatibilidade com leitores de tela específicos depende da homologação em
+  dispositivos assistivos, ainda fora da suíte automatizada.
+
+### Avaliação frontend F17 para CA-OPS-003
+
+- `index.html` referencia o favicon SVG do diretório `public/`; o build o distribui.
+  Sprite de ícones não utilizado e manifesto PWA sem escopo offline definido seguem
+  fora da implementação, conforme arquitetura de referência.
+
+### Evidência frontend F18 para CA-OPS-002
+
+- As suítes de API, formulário, mapa, histórico, visitas, streaming e GPX cobrem
+  respostas completas/parciais, validação, falha e sincronização. Testes que
+  esperavam alternativas, custos e paradas simulados foram removidos junto dos
+  helpers sem uso; `routeCalculator.test.ts` agora verifica apenas dados recebidos,
+  links e GPX com geometria válida.
+
 Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
 

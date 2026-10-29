@@ -261,9 +261,30 @@ export function unknownConnectivity(): ConnectivityCondition {
 
 export function connectivityCondition(
   state: ConnectivityCondition['state'],
+  estimates?: { rtt?: unknown; type?: unknown; effectiveType?: unknown },
 ): ConnectivityCondition {
-  // TODO(integração): preencher RTT e tipo de rede somente com uma fonte confiável; online/offline não mede qualidade.
-  return { state, rtt: unavailableValue(), networkType: unavailableValue() };
+  const rtt =
+    typeof estimates?.rtt === 'number' && Number.isFinite(estimates.rtt) && estimates.rtt >= 0
+      ? { available: true as const, value: estimates.rtt }
+      : unavailableValue<number>(estimates?.rtt === undefined ? 'unsupported' : 'invalid');
+  const validTypes = ['bluetooth', 'cellular', 'ethernet', 'wifi', 'wimax', 'other'] as const;
+  const validEffectiveTypes = ['slow-2g', '2g', '3g', '4g'] as const;
+  const type =
+    typeof estimates?.type === 'string' &&
+    validTypes.includes(estimates.type as (typeof validTypes)[number])
+      ? estimates.type
+      : undefined;
+  const effectiveType =
+    typeof estimates?.effectiveType === 'string' &&
+    validEffectiveTypes.includes(estimates.effectiveType as (typeof validEffectiveTypes)[number])
+      ? estimates.effectiveType
+      : undefined;
+  const networkType = type
+    ? { available: true as const, value: `Tipo: ${type}` }
+    : effectiveType
+      ? { available: true as const, value: `Efetiva: ${effectiveType}` }
+      : unavailableValue<string>();
+  return { state, rtt, networkType };
 }
 
 export function maskRequestId(requestId: string): string {

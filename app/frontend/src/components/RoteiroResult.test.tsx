@@ -46,7 +46,36 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(screen.getByText('18 km/h')).toBeInTheDocument();
     expect(screen.getByText('75%')).toBeInTheDocument();
     expect(screen.getByText('31 °C')).toBeInTheDocument();
-    expect(await screen.findByText(/✓ Guia completo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/✓ Conteúdo existente exibido/i)).toBeInTheDocument();
+  });
+
+  it('não inventa perfil e duração para viagem histórica sem parâmetros', async () => {
+    render(<RoteiroResult viagem={mockViagem} formParams={null} />);
+    expect(screen.getByText(/Perfil não informado · Duração não informada/)).toBeInTheDocument();
+    await screen.findByText(/Conteúdo existente exibido/);
+  });
+
+  it('não inventa temperaturas nem condição para clima parcial', async () => {
+    render(
+      <RoteiroResult
+        viagem={{
+          ...mockViagem,
+          clima: {
+            temperatura: 'Aguardando dados',
+            umidade: 'N/D',
+            vento: '',
+            sensacao: '30 °C',
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('Temperatura indisponível')).toBeInTheDocument();
+    expect(screen.getByText('Condição indisponível')).toBeInTheDocument();
+    expect(screen.getByText('30 °C')).toBeInTheDocument();
+    expect(screen.queryByText('Céu Limpo')).not.toBeInTheDocument();
+    expect(screen.queryByText('27.1°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('28.8°C')).not.toBeInTheDocument();
+    await screen.findByText(/Conteúdo existente exibido/);
   });
 
   it('exibe o Guia do Viajante com selo Gemini AI e seções estruturadas', async () => {
@@ -56,7 +85,9 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(screen.getByText('Gemini AI')).toBeInTheDocument();
 
     // Aguarda o término do streaming
-    expect(await screen.findByText(/✓ Guia completo/i, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/✓ Conteúdo existente exibido/i, {}, { timeout: 4000 }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Pelourinho e Farol da Barra/i)).toBeInTheDocument();
     expect(screen.getByText(/Acarajé tradicional/i)).toBeInTheDocument();
     expect(screen.getByText(/Use roupas leves/i)).toBeInTheDocument();
@@ -96,12 +127,21 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     );
   });
 
+  it('mostra estado vazio para destino sem atrativos confirmados', async () => {
+    render(<RoteiroResult viagem={{ ...mockViagem, destino: 'Piripiri - PI' }} />);
+    expect(
+      screen.getByText('Ainda não há atrativos confirmados para este destino.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Filtrar atrativos' })).not.toBeInTheDocument();
+    await screen.findByText(/Conteúdo existente exibido/);
+  });
+
   it('filtra atrativos por categoria ao clicar nas abas', async () => {
     const user = userEvent.setup();
     render(<RoteiroResult viagem={mockViagem} visitadosIds={['atrativo-1']} />);
 
     // Clica na aba Gastronomia
-    const abaGastronomia = screen.getByRole('tab', { name: /Gastronomia/i });
+    const abaGastronomia = screen.getByRole('button', { name: /Gastronomia/i });
     await user.click(abaGastronomia);
     expect(abaGastronomia).toHaveClass('is-active');
 
@@ -109,7 +149,7 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(screen.getByText(/Acarajé Completo com Vatapá/i)).toBeInTheDocument();
 
     // Clica na aba Visitados
-    const abaVisitados = screen.getByRole('tab', { name: /Visitados/i });
+    const abaVisitados = screen.getByRole('button', { name: /Visitados/i });
     await user.click(abaVisitados);
     expect(abaVisitados).toHaveClass('is-active');
   });

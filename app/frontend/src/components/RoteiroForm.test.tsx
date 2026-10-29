@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import type { RoteiroFormData } from '../types/domain';
+import { ApiError } from '../services/api';
 import { RoteiroForm } from './RoteiroForm';
 
 describe('RoteiroForm', () => {
@@ -55,6 +56,74 @@ describe('RoteiroForm', () => {
     resolver();
   });
 
+  it('associa erro 422 ao campo de origem', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn(async () => {
+      throw new ApiError('HTTP 422', 422, { origem_cidade: 'Cidade não encontrada' });
+    });
+    render(<RoteiroForm ufs={['PE']} isSubmitting={false} onSubmit={onSubmit} />);
+    await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
+    await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
+    await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
+    await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
+    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
+    expect(await screen.findByText('Cidade não encontrada')).toBeInTheDocument();
+    expect(screen.getByLabelText('Cidade de origem')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('associa erro 422 a um campo numérico', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn(async () => {
+      throw new ApiError('HTTP 422', 422, { consumo_km_l: 'Consumo inválido' });
+    });
+    render(<RoteiroForm ufs={['PE']} isSubmitting={false} onSubmit={onSubmit} />);
+    await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
+    await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
+    await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
+    await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
+    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
+    expect(await screen.findByText('Consumo inválido')).toBeInTheDocument();
+    expect(screen.getByLabelText('Consumo médio')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('impede envio com consumo vazio ou preço zero', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<RoteiroForm ufs={['PE']} isSubmitting={false} onSubmit={onSubmit} />);
+    await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
+    await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
+    await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
+    await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
+    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByText(/Personalizar parâmetros/i));
+    await user.clear(screen.getByLabelText('Consumo médio'));
+    await user.clear(screen.getByLabelText('Preço por litro'));
+    await user.type(screen.getByLabelText('Preço por litro'), '0');
+    await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Consumo médio')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Preço por litro')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('valida capacidade elétrica e ignora parâmetros de combustão inativos', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<RoteiroForm ufs={['PE']} isSubmitting={false} onSubmit={onSubmit} />);
+    await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
+    await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
+    await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
+    await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
+    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByRole('button', { name: /100% Elétrico/i }));
+    await user.click(screen.getByText(/Personalizar parâmetros/i));
+    await user.clear(screen.getByLabelText('Capacidade da bateria'));
+    await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Capacidade da bateria')).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('mantém o planejamento manual e informa integrações indisponíveis por padrão', () => {
     render(<RoteiroForm ufs={['PE']} isSubmitting={false} onSubmit={vi.fn()} />);
 
@@ -86,6 +155,7 @@ describe('RoteiroForm', () => {
     expect(onRequestSuggestions).toHaveBeenCalledOnce();
 
     await user.click(screen.getByRole('button', { name: /Juazeiro do Norte.*425 km/i }));
+    expect(screen.getByText('≈ 425 km em linha reta')).toBeInTheDocument();
     expect(screen.getByLabelText('Cidade de destino')).toHaveValue('Juazeiro do Norte');
     expect(screen.getByLabelText('UF de destino')).toHaveValue('CE');
     expect(screen.getByRole('button', { name: /Juazeiro do Norte.*425 km/i })).toHaveAttribute(

@@ -14,8 +14,9 @@ export interface RoteiroResultProps {
   formParams?: RoteiroFormData | null;
   visitasIds?: readonly string[];
   visitadosIds?: readonly string[];
+  visitPersistenceStatus?: 'pending' | 'local' | 'confirmed' | 'error';
   onToggleVisita?: (atrativoId: string) => void | Promise<void>;
-  onStreamTelemetry?: (update: StreamTelemetryUpdate) => void;
+  onRetryVisitas?: () => void | Promise<void>;
 }
 
 type FiltroAtrativo = 'todos' | 'pendentes' | 'visitados' | 'gastronomia';
@@ -78,7 +79,7 @@ function formatarPerfilViagem(perfis?: readonly string[]): string {
 }
 
 function obterIconeClima(condicao?: string): string {
-  if (!condicao) return '☀️';
+  if (!condicao) return '🌡️';
   const c = condicao.toLowerCase();
   if (c.includes('chuva') || c.includes('chuv')) return '🌧️';
   if (c.includes('nublado') || c.includes('parcialmente')) return '🌤️';
@@ -88,13 +89,21 @@ function obterIconeClima(condicao?: string): string {
   return '☀️';
 }
 
+function climaDisponivel(value?: string): string | null {
+  const normalized = value?.trim();
+  return normalized && normalized !== 'Aguardando dados' && normalized.toUpperCase() !== 'N/D'
+    ? normalized
+    : null;
+}
+
 export function RoteiroResult({
   viagem,
   formParams,
   visitasIds,
   visitadosIds,
+  visitPersistenceStatus,
   onToggleVisita,
-  onStreamTelemetry,
+  onRetryVisitas,
 }: RoteiroResultProps) {
   const idsVisitados = useMemo(
     () => visitasIds ?? visitadosIds ?? viagem.atrativosVisitadosIds ?? [],
@@ -104,7 +113,7 @@ export function RoteiroResult({
   // Estado do Streaming
   const [streamText, setStreamText] = useState('');
   const [streamStatus, setStreamStatus] = useState<GuiaStreamingStatus>('idle');
-  const [streamMessage, setStreamMessage] = useState('');
+  const [streamMode, setStreamMode] = useState<'connecting' | 'sse' | 'fallback'>('connecting');
   const [copiado, setCopiado] = useState(false);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -160,17 +169,19 @@ export function RoteiroResult({
     setStreamText('');
     setStreamMessage('');
     setStreamStatus('streaming');
+    setStreamMode('connecting');
 
     const payload = {
       destino: viagem.destino,
-      dias_estadia: formParams?.duracao_dias || 1,
-      estilo_viagem: formParams?.perfis?.[0] || 'cultural',
+      ...(formParams?.duracao_dias ? { dias_estadia: formParams.duracao_dias } : {}),
+      ...(formParams?.perfis?.[0] ? { estilo_viagem: formParams.perfis[0] } : {}),
       clima_info: viagem.clima,
     };
 
     void streamGuiaTuristico(
       payload,
       {
+        onMode: setStreamMode,
         onChunk: (chunk) => {
           if (!controller.signal.aborted) setStreamText((atual) => atual + chunk);
         },
@@ -238,9 +249,13 @@ export function RoteiroResult({
 
   const secoesParsed = useMemo(() => extrairSecoesGuia(streamText), [streamText]);
 
-  const duracao = formParams?.duracao_dias || 1;
-  const duracaoLabel = `${duracao} Dia${duracao > 1 ? 's' : ''}`;
-  const perfilLabel = formatarPerfilViagem(formParams?.perfis);
+  const duracao = formParams?.duracao_dias;
+  const duracaoLabel = duracao
+    ? `${duracao} Dia${duracao > 1 ? 's' : ''}`
+    : 'Duração não informada';
+  const perfilLabel = formParams?.perfis?.length
+    ? formatarPerfilViagem(formParams.perfis)
+    : 'Perfil não informado';
 
   const renderCard = (item: AtrativoTuristico) => {
     const isVisitado = idsVisitados.includes(item.id);
@@ -327,7 +342,7 @@ export function RoteiroResult({
         <div className="weather-banner-header">
           <div className="weather-destination-group">
             <span className="weather-icon" aria-hidden="true">
-              {obterIconeClima(viagem.clima.condicao)}
+              {obterIconeClima(climaDisponivel(viagem.clima.condicao) ?? undefined)}
             </span>
             <h3
               id="weather-title"
@@ -338,33 +353,40 @@ export function RoteiroResult({
             </h3>
             <span className="sr-only">Clima em {viagem.destino}</span>
           </div>
-          <span className="weather-provider-badge">Open-Meteo API</span>
+          {(climaDisponivel(viagem.clima.temperatura) ||
+            climaDisponivel(viagem.clima.condicao)) && (
+            <span className="weather-provider-badge">Open-Meteo API</span>
+          )}
         </div>
 
         <div className="weather-banner-details">
           <div className="weather-highlight">
-            <strong className="weather-temp-val">{viagem.clima.temperatura || '27.1°C'}</strong>
+            <strong className="weather-temp-val">
+              {climaDisponivel(viagem.clima.temperatura) ?? 'Temperatura indisponível'}
+            </strong>
             <span className="weather-dot-sep">·</span>
-            <span className="weather-cond-label">{viagem.clima.condicao || 'Céu Limpo'}</span>
+            <span className="weather-cond-label">
+              {climaDisponivel(viagem.clima.condicao) ?? 'Condição indisponível'}
+            </span>
           </div>
 
           <div className="weather-sub-metrics">
             <div className="weather-sub-item">
               <span className="weather-sub-label">Sensação:</span>
               <strong className="weather-sub-val">
-                {viagem.clima.sensacao || viagem.clima.temperatura || '28.8°C'}
+                {climaDisponivel(viagem.clima.sensacao) ?? 'Indisponível'}
               </strong>
             </div>
-            {viagem.clima.vento && (
+            {climaDisponivel(viagem.clima.vento) && (
               <div className="weather-sub-item">
                 <span className="weather-sub-label">Vento:</span>
-                <strong className="weather-sub-val">{viagem.clima.vento}</strong>
+                <strong className="weather-sub-val">{climaDisponivel(viagem.clima.vento)}</strong>
               </div>
             )}
-            {viagem.clima.umidade && (
+            {climaDisponivel(viagem.clima.umidade) && (
               <div className="weather-sub-item">
                 <span className="weather-sub-label">Umidade:</span>
-                <strong className="weather-sub-val">{viagem.clima.umidade}</strong>
+                <strong className="weather-sub-val">{climaDisponivel(viagem.clima.umidade)}</strong>
               </div>
             )}
           </div>
@@ -387,12 +409,16 @@ export function RoteiroResult({
             {streamStatus === 'streaming' && (
               <span className="guide-status-badge is-streaming" role="status">
                 <span className="pulse-dot" aria-hidden="true" />
-                Transmitindo ao vivo…
+                {streamMode === 'sse'
+                  ? 'Transmitindo ao vivo…'
+                  : streamMode === 'fallback'
+                    ? 'Exibindo conteúdo existente…'
+                    : 'Conectando ao guia…'}
               </span>
             )}
             {streamStatus === 'completed' && (
               <span className="guide-status-badge is-completed" role="status">
-                ✓ Guia completo
+                {streamMode === 'sse' ? '✓ Transmissão concluída' : '✓ Conteúdo existente exibido'}
               </span>
             )}
             {streamStatus === 'idle' && streamMessage && (
@@ -480,6 +506,20 @@ export function RoteiroResult({
           </div>
         </div>
 
+        {visitPersistenceStatus && (
+          <p role="status" className="visits-persistence-status">
+            {visitPersistenceStatus === 'pending' && 'Salvando visita…'}
+            {visitPersistenceStatus === 'local' && 'Visitas salvas apenas neste dispositivo.'}
+            {visitPersistenceStatus === 'confirmed' && 'Visitas confirmadas no servidor.'}
+            {visitPersistenceStatus === 'error' && 'Falha ao salvar visita. Tente novamente.'}
+          </p>
+        )}
+        {visitPersistenceStatus === 'local' && onRetryVisitas && (
+          <button type="button" className="btn-guide-action" onClick={onRetryVisitas}>
+            Tentar sincronizar visitas
+          </button>
+        )}
+
         {/* Barra de Progresso de Visitas */}
         <div className="visits-progress-container">
           <div className="visits-progress-header">
@@ -500,24 +540,29 @@ export function RoteiroResult({
           </div>
         </div>
 
+        {totalAtrativos === 0 && (
+          <p role="status">Ainda não há atrativos confirmados para este destino.</p>
+        )}
+
         {/* Abas de Filtros */}
-        <div className="attractions-filter-tabs" role="tablist" aria-label="Filtrar atrativos">
-          {(['todos', 'pendentes', 'visitados', 'gastronomia'] as const).map((aba) => (
-            <button
-              key={aba}
-              type="button"
-              role="tab"
-              aria-selected={filtroAtrativo === aba}
-              className={`filter-tab-btn${filtroAtrativo === aba ? ' is-active' : ''}`}
-              onClick={() => setFiltroAtrativo(aba)}
-            >
-              {aba === 'todos' && 'Todos'}
-              {aba === 'pendentes' && 'A visitar'}
-              {aba === 'visitados' && `Visitados (${visitadosCount})`}
-              {aba === 'gastronomia' && 'Gastronomia'}
-            </button>
-          ))}
-        </div>
+        {totalAtrativos > 0 && (
+          <div className="attractions-filter-tabs" role="group" aria-label="Filtrar atrativos">
+            {(['todos', 'pendentes', 'visitados', 'gastronomia'] as const).map((aba) => (
+              <button
+                key={aba}
+                type="button"
+                aria-pressed={filtroAtrativo === aba}
+                className={`filter-tab-btn${filtroAtrativo === aba ? ' is-active' : ''}`}
+                onClick={() => setFiltroAtrativo(aba)}
+              >
+                {aba === 'todos' && 'Todos'}
+                {aba === 'pendentes' && 'A visitar'}
+                {aba === 'visitados' && `Visitados (${visitadosCount})`}
+                {aba === 'gastronomia' && 'Gastronomia'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Seção 1: Pontos Turísticos & Atrativos */}
         {pontosTuristicos.length > 0 && (

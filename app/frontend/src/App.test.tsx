@@ -127,6 +127,14 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /Atrativos & Gastronomia/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Clima em Olinda/i })).toBeInTheDocument();
 
+    const overviewTab = screen.getByRole('tab', { name: 'Visão Geral' });
+    expect(overviewTab).toHaveAttribute('aria-controls', 'panel-mapa panel-guia');
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(2);
+    overviewTab.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Mapa & Paradas' })).toHaveFocus();
+    expect(screen.getByRole('tabpanel').id).toBe('panel-mapa');
+
     await user.click(screen.getByRole('button', { name: 'Pessoa' }));
     await user.click(screen.getByRole('button', { name: '🚪 Sair do Modo Visitante' }));
     expect(
