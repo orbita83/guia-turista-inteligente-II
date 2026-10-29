@@ -17,6 +17,7 @@ export interface RoteiroResultProps {
   visitPersistenceStatus?: 'pending' | 'local' | 'confirmed' | 'error';
   onToggleVisita?: (atrativoId: string) => void | Promise<void>;
   onRetryVisitas?: () => void | Promise<void>;
+  onStreamTelemetry?: (update: StreamTelemetryUpdate) => void;
 }
 
 type FiltroAtrativo = 'todos' | 'pendentes' | 'visitados' | 'gastronomia';
@@ -104,6 +105,7 @@ export function RoteiroResult({
   visitPersistenceStatus,
   onToggleVisita,
   onRetryVisitas,
+  onStreamTelemetry,
 }: RoteiroResultProps) {
   const idsVisitados = useMemo(
     () => visitasIds ?? visitadosIds ?? viagem.atrativosVisitadosIds ?? [],
@@ -113,6 +115,7 @@ export function RoteiroResult({
   // Estado do Streaming
   const [streamText, setStreamText] = useState('');
   const [streamStatus, setStreamStatus] = useState<GuiaStreamingStatus>('idle');
+  const [streamMessage, setStreamMessage] = useState('');
   const [streamMode, setStreamMode] = useState<'connecting' | 'sse' | 'fallback'>('connecting');
   const [copiado, setCopiado] = useState(false);
   const streamAbortControllerRef = useRef<AbortController | null>(null);

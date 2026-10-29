@@ -163,7 +163,7 @@ describe('streamingGuide service', () => {
       expect(telemetryUpdates.length).toBeGreaterThanOrEqual(3);
       expect(telemetryUpdates[0]).toMatchObject({
         stage: 'connected',
-        networkType: { available: true, value: 'SSE ativo' },
+        networkType: { available: false },
       });
       expect(telemetryUpdates[1]).toMatchObject({
         stage: 'connected',

@@ -150,10 +150,106 @@ def _valid_coordinates(latitude: float, longitude: float) -> bool:
     )
 
 
+def _route_geometry(route: dict[str, Any]) -> list[list[float]] | None:
+    geometry = route.get("geometry")
+    if not isinstance(geometry, dict) or geometry.get("type") != "LineString":
+        return None
+    coordinates = geometry.get("coordinates")
+    if not isinstance(coordinates, list) or len(coordinates) < 2:
+        return None
+
+    points: list[list[float]] = []
+    for coordinate in coordinates:
+        if not isinstance(coordinate, list) or len(coordinate) != 2:
+            return None
+        longitude = _finite_number(coordinate[0])
+        latitude = _finite_number(coordinate[1])
+        if (
+            longitude is None
+            or latitude is None
+            or not -180 <= longitude < 180
+            or not -90 <= latitude <= 90
+        ):
+            return None
+        points.append([latitude, longitude])
+    return points
+
+
+def _route_metrics(route: dict[str, Any]) -> tuple[str, str] | None:
+    distance = _finite_number(route.get("distance"))
+    duration = _finite_number(route.get("duration"))
+    if distance is None or duration is None or distance < 0 or duration < 0:
+        return None
+    total_minutes = math.floor(duration / 60 + 0.5)
+    hours, minutes = divmod(total_minutes, 60)
+    return (
+        f"{round(distance / 1000, 1)} km",
+        f"{hours}h {minutes}min de carro",
+    )
+
+
+def _route_fallback(reason: str) -> dict[str, Any]:
+    return {
+        "distancia": "Sem rota direta" if reason == "sem_rota" else "Rota indisponível",
+        "tempo": "Considere voos ou barcos" if reason == "sem_rota" else "N/D",
+        "modal": "alternativo",
+        "status": "indisponivel",
+        "motivo": reason,
+        "geometria": [],
+        "alternativas": [],
+    }
+
+
+WEATHER_FALLBACK = {
+    "temperatura": "N/D",
+    "sensacao_termica": "N/D",
+    "umidade": "N/D",
+    "vento": "N/D",
+    "condicao": "N/D",
+}
+
+WEATHER_CONDITIONS = {
+    0: "Céu limpo",
+    1: "Predominantemente limpo",
+    2: "Parcialmente nublado",
+    3: "Nublado",
+    45: "Nevoeiro",
+    48: "Nevoeiro com geada",
+    51: "Garoa fraca",
+    53: "Garoa moderada",
+    55: "Garoa intensa",
+    56: "Garoa congelante fraca",
+    57: "Garoa congelante intensa",
+    61: "Chuva fraca",
+    63: "Chuva moderada",
+    65: "Chuva intensa",
+    66: "Chuva congelante fraca",
+    67: "Chuva congelante intensa",
+    71: "Neve fraca",
+    73: "Neve moderada",
+    75: "Neve intensa",
+    77: "Grãos de neve",
+    80: "Pancadas de chuva fracas",
+    81: "Pancadas de chuva moderadas",
+    82: "Pancadas de chuva violentas",
+    85: "Pancadas de neve fracas",
+    86: "Pancadas de neve intensas",
+    95: "Trovoada",
+    96: "Trovoada com granizo fraco",
+    99: "Trovoada com granizo intenso",
+}
+
+
+def weather_result_is_failure(
+    result: dict[str, str], latitude: float, longitude: float
+) -> bool:
+    return _valid_coordinates(latitude, longitude) and result == WEATHER_FALLBACK
+
+
 async def get_weather(
     client: httpx.AsyncClient, latitude: float, longitude: float
 ) -> dict[str, str]:
-    fallback = {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
+    fallback = dict(WEATHER_FALLBACK)
     if not _valid_coordinates(latitude, longitude):
         return fallback
     try:
@@ -162,7 +258,10 @@ async def get_weather(
             params={
                 "latitude": latitude,
                 "longitude": longitude,
-                "current": "temperature_2m,relative_humidity_2m,wind_speed_10m",
+                "current": (
+                    "temperature_2m,apparent_temperature,relative_humidity_2m,"
+                    "wind_speed_10m,weather_code"
+                ),
                 "temperature_unit": "celsius",
                 "wind_speed_unit": "kmh",
             },
@@ -176,20 +275,24 @@ async def get_weather(
         return fallback
     current = data["current"]
     temperature = _finite_number(current.get("temperature_2m"))
+    apparent_temperature = _finite_number(current.get("apparent_temperature"))
     humidity = _finite_number(current.get("relative_humidity_2m"))
     wind = _finite_number(current.get("wind_speed_10m"))
-    if (
-        temperature is None
-        or humidity is None
-        or wind is None
-        or not 0 <= humidity <= 100
-        or wind < 0
-    ):
-        return fallback
+    weather_code = current.get("weather_code")
+    # TODO(integracao): alinhar `sensacao_termica` com o campo `sensacao` do
+    # Frontend ao integrar o contrato meteorológico da issue #25.
     return {
-        "temperatura": f"{temperature} °C",
-        "umidade": f"{humidity:g}%",
-        "vento": f"{wind} km/h",
+        "temperatura": f"{temperature} °C" if temperature is not None else "N/D",
+        "sensacao_termica": f"{apparent_temperature} °C"
+        if apparent_temperature is not None
+        else "N/D",
+        "umidade": f"{humidity:g}%"
+        if humidity is not None and 0 <= humidity <= 100
+        else "N/D",
+        "vento": f"{wind} km/h" if wind is not None and wind >= 0 else "N/D",
+        "condicao": WEATHER_CONDITIONS.get(weather_code, "N/D")
+        if isinstance(weather_code, int) and not isinstance(weather_code, bool)
+        else "N/D",
     }
 
 
@@ -200,55 +303,76 @@ async def get_route(
     latitude_destination: float,
     longitude_destination: float,
 ) -> dict[str, Any]:
-    fallback = {
-        "distancia": "Sem rota direta",
-        "tempo": "Considere voos ou barcos",
-        "modal": "alternativo",
-    }
     if not (
         _valid_coordinates(latitude_origin, longitude_origin)
         and _valid_coordinates(latitude_destination, longitude_destination)
     ):
-        return fallback
+        return _route_fallback("coordenadas_invalidas")
     try:
         response = await client.get(
             "https://router.project-osrm.org/route/v1/driving/"
             f"{longitude_origin},{latitude_origin};{longitude_destination},{latitude_destination}",
-            params={"overview": "full", "geometries": "geojson", "radiuses": "1000;1000"},
+            params={
+                "overview": "full",
+                "geometries": "geojson",
+                "alternatives": "true",
+                "radiuses": "1000;1000",
+            },
             timeout=6.0,
         )
         response.raise_for_status()
         data = response.json()
-    except (httpx.HTTPError, ValueError):
-        return fallback
-    if not isinstance(data, dict) or data.get("code") != "Ok":
-        return fallback
+    except httpx.TimeoutException:
+        return _route_fallback("timeout")
+    except httpx.HTTPStatusError:
+        return _route_fallback("falha_http")
+    except httpx.HTTPError:
+        return _route_fallback("falha_rede")
+    except ValueError:
+        return _route_fallback("resposta_malformada")
+    if not isinstance(data, dict):
+        return _route_fallback("resposta_malformada")
+    if data.get("code") in {"NoRoute", "NoSegment"}:
+        return _route_fallback("sem_rota")
+    if data.get("code") != "Ok":
+        return _route_fallback("resposta_invalida")
     routes = data.get("routes")
-    if not isinstance(routes, list) or not routes or not isinstance(routes[0], dict):
-        return fallback
-    distance = _finite_number(routes[0].get("distance"))
-    duration = _finite_number(routes[0].get("duration"))
-    if distance is None or duration is None or distance < 0 or duration < 0:
-        return fallback
-    total_minutes = math.floor(duration / 60 + 0.5)
-    hours, minutes = divmod(total_minutes, 60)
-    result: dict[str, Any] = {
-        "distancia": f"{round(distance / 1000, 1)} km",
-        "tempo": f"{hours}h {minutes}min de carro",
+    if not isinstance(routes, list):
+        return _route_fallback("resposta_invalida")
+    if not routes:
+        return _route_fallback("sem_rota")
+    primary = routes[0]
+    if not isinstance(primary, dict):
+        return _route_fallback("resposta_invalida")
+    metrics = _route_metrics(primary)
+    geometry = _route_geometry(primary)
+    if metrics is None:
+        return _route_fallback("resposta_invalida")
+    if geometry is None:
+        return _route_fallback("geometria_invalida")
+
+    alternatives: list[dict[str, Any]] = []
+    for route in routes[1:]:
+        if not isinstance(route, dict):
+            continue
+        alternative_metrics = _route_metrics(route)
+        alternative_geometry = _route_geometry(route)
+        if alternative_metrics is None or alternative_geometry is None:
+            continue
+        alternatives.append(
+            {
+                "geometria": alternative_geometry,
+                "distancia": alternative_metrics[0],
+                "tempo": alternative_metrics[1],
+            }
+        )
+
+    return {
+        "distancia": metrics[0],
+        "tempo": metrics[1],
         "modal": "carro",
+        "status": "disponivel",
+        "motivo": None,
+        "geometria": geometry,
+        "alternativas": alternatives,
     }
-    geometry = routes[0].get("geometry")
-    if isinstance(geometry, dict) and geometry.get("type") == "LineString":
-        points = geometry.get("coordinates")
-        if isinstance(points, list) and len(points) >= 2:
-            converted = []
-            for pair in points:
-                if not isinstance(pair, list) or len(pair) != 2:
-                    break
-                lon, lat = _finite_number(pair[0]), _finite_number(pair[1])
-                if lon is None or lat is None or not (-180 <= lon < 180 and -90 <= lat <= 90):
-                    break
-                converted.append([lat, lon])
-            else:
-                result["geometria"] = converted
-    return result

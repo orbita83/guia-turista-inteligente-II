@@ -32,3 +32,22 @@ manual de ambiente virtual. O arquivo `.env` da raiz fornece `GEMINI_API_KEY`,
 - `app/core/`: configuração, dependências e persistência;
 - `tests/`: testes de serviço e contrato HTTP.
 
+## Sessões e revogação
+
+O Backend associa cada cookie assinado a uma sessão ativa no armazenamento do
+processo. Logout, troca de identidade e restauração revogam a sessão anterior;
+um cookie antigo não permite reativá-la. O vínculo visitante/Google expira conforme
+o prazo da sessão visitante.
+
+As sessões ativas e as viagens de visitante ficam em memória: reiniciar a API
+encerra as sessões e múltiplos workers independentes não compartilham revogações.
+Para execução distribuída, é necessário armazenamento compartilhado e atômico
+para as sessões antes de habilitar múltiplos processos.
+
+## Diagnósticos de provedores
+
+Na telemetria do planejamento, `nao_consultado` identifica operações que não
+chegaram ao provedor por ausência de coordenadas ou chave, ou por circuito aberto.
+As durações das etapas incluem esse tratamento local e não representam, por si
+sós, o tempo de uma chamada de rede; operações paralelas não devem ser somadas.
+

@@ -326,6 +326,7 @@ def test_real_visitor_cookie_can_stream_without_creating_trip(monkeypatch, tmp_p
     monkeypatch.setattr(streaming, 'get_settings', lambda: SimpleNamespace(gemini_api_key='', gemini_timeout_seconds=1))
     try:
         with TestClient(main.app) as client:
+            main.app.state.trip_storage = storage
             assert client.post('/api/v1/roteiros/stream-guia', json={'destino':'Recife'}).status_code == 401
             login = client.post('/api/v1/auth/visitor')
             assert login.status_code == 200
@@ -387,7 +388,7 @@ async def test_deadline_survives_separate_tasks_for_each_fragment(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('invalid', ['<script>unsafe</script>', 'x' * (32 * 1024 + 1)])
+@pytest.mark.parametrize('invalid', ['<script>unsafe</script>', 'x' * (32 * 1024 + 1)], ids=['html', 'excessivo'])
 async def test_invalid_or_excessive_content_is_replaced_by_contingency(monkeypatch, invalid):
     provider = FakeProvider([invalid])
     install_provider(monkeypatch, provider)

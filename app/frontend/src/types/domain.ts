@@ -14,6 +14,7 @@ export interface ClimaViagem {
   temperatura: string;
   umidade: string;
   vento: string;
+  // TODO: mapear sensacao_termica retornada pela API para este campo.
   sensacao?: string;
   condicao?: string;
   icone?: string;
@@ -40,6 +41,7 @@ export interface Viagem {
   percurso: PercursoViagem;
   dicas_destino: string;
   diagnostico_ia?: Record<string, unknown>;
+  // TODO: tipar e mapear a telemetria por etapa e os provedores retornados pela API.
   rotas?: RotaAlternativa[];
   atrativos?: AtrativoTuristico[];
   atrativosVisitadosIds?: string[];

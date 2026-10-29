@@ -202,12 +202,12 @@ describe('RoteiroResult: estados reais da transmissão', () => {
     const { enviar } = prepararStream();
     render(<RoteiroResult viagem={mockViagem} />);
     expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeDisabled();
-    expect(screen.getByRole('status')).toHaveTextContent('Transmitindo ao vivo');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Transmitindo ao vivo'));
     await enviar('chunk', { chunk: 'Conteúdo que chegou primeiro', done: false });
     expect(screen.getByText('Conteúdo que chegou primeiro')).toBeInTheDocument();
     expect(screen.queryByText(/✓ Guia completo/i)).not.toBeInTheDocument();
     await enviar('done', { done: true });
-    expect(await screen.findByText(/✓ Guia completo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/✓ Transmissão concluída/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeEnabled();
   });
 
@@ -220,7 +220,7 @@ describe('RoteiroResult: estados reais da transmissão', () => {
     expect(screen.getByText('Conteúdo completo de contingência')).toBeInTheDocument();
     expect(screen.queryByText('Resposta interrompida')).not.toBeInTheDocument();
     await enviar('done', { done: true });
-    expect(await screen.findByText(/✓ Guia completo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/✓ Transmissão concluída/i)).toBeInTheDocument();
   });
 
   it('apresenta conflito 409 como erro sem declarar sucesso com o guia antigo', async () => {

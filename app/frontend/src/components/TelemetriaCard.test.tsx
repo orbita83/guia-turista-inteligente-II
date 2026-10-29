@@ -154,7 +154,7 @@ describe('TelemetriaCard', () => {
       connectivity: {
         state: 'online',
         rtt: available(35),
-        networkType: available('SSE ativo'),
+        networkType: available('Efetiva: 4g'),
       },
     });
 
@@ -172,10 +172,10 @@ describe('TelemetriaCard', () => {
     expect(screen.getByText('Tempo total da sessão').nextElementSibling).toHaveTextContent('2 min');
     expect(screen.getByText('Permanente (conta Google)')).toBeInTheDocument();
     expect(screen.getByText('Qualidade da conexão').nextElementSibling).toHaveTextContent(
-      '35 ms (SSE ativo · Excelente)',
+      'RTT estimado: 35 ms · Efetiva: 4g',
     );
     expect(screen.getByText('Conectividade do navegador').nextElementSibling).toHaveTextContent(
-      'Online (SSE ativo)',
+      'Online (indício do navegador)',
     );
   });
 });

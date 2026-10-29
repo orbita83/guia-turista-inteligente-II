@@ -65,3 +65,11 @@ def test_http_client_is_closed_when_startup_fails(
         pass
 
     assert created and created[0].is_closed
+
+
+def test_http_client_is_closed_after_successful_lifespan() -> None:
+    with TestClient(app) as client:
+        http_client = client.app.state.http_client  # type: ignore[attr-defined]
+        assert not http_client.is_closed
+
+    assert http_client.is_closed

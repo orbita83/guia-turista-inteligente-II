@@ -63,12 +63,30 @@ Os dois últimos pontos exigem decisão antes de implantação distribuída.
 
 ## Cancelamento por desconexão
 
-`await request.is_disconnected()` é verificado antes e entre estágios custosos. A fonte usa o código `499` para representar cancelamento pelo cliente.
+No endpoint de planejamento, uma tarefa observa a mensagem `http.disconnect` do
+protocolo ASGI enquanto outra executa o pipeline. Quando a desconexão é observada,
+o endpoint cancela e aguarda o encerramento da tarefa de planejamento, e encerra a
+tarefa observadora ao final de qualquer requisição. `asyncio.CancelledError` se
+propaga; não é convertido em fallback nem contado como falha de provedor. Como o
+cliente já se desconectou, não há garantia de que ele receba ou observe um status
+HTTP específico, incluindo 499.
 
 - não agendar persistência de roteiro incompleto;
 - interromper o gerador SSE quando o cliente fechar a conexão;
-- **Proposto:** cancelar explicitamente tasks filhas ainda pendentes quando aplicável;
-- **Questão em aberto:** definir como métricas e logs classificam `499` sem tratá-lo como erro interno.
+- `asyncio.gather()` propaga o cancelamento às operações assíncronas ainda pendentes;
+- a persistência só começa depois da conclusão dos dados do roteiro. Como ela usa
+  `asyncio.to_thread()`, um cancelamento depois do início não interrompe a escrita
+  que já está executando; nesse caso, somente um roteiro completo pode terminar de
+  ser persistido.
+- a geração Gemini usa uma thread para a chamada síncrona do SDK. Cancelar sua
+  `Future` impede trabalho ainda não iniciado, mas não interrompe uma chamada que
+  já começou. A chamada usa o executor compartilhado do event loop, que é encerrado
+  com o loop; o timeout do SDK limita a duração do trabalho e a thread é liberada
+  quando o SDK retorna. Um trabalho já iniciado pode prolongar o encerramento do
+  loop até atingir esse timeout.
+
+O observador de desconexão é encerrado quando o planejamento termina, evitando
+deixar uma tarefa de leitura ASGI pendente após a resposta.
 
 ## Streaming SSE
 
@@ -117,4 +135,3 @@ Adequado na fonte para persistência e despacho que não precisam bloquear a res
 | provedores | indicador 4/4 quando todos estão operacionais | métrica/status por integração |
 
 Os números são metas declaradas na atividade, não garantia universal. O ambiente e a metodologia de teste precisam ser definidos.
-

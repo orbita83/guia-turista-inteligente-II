@@ -462,6 +462,7 @@ export function useViagem() {
       saveVisitas(data.usuario?.id, proximo);
       setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
 
+      // TODO: hidratar as visitas confirmadas da resposta do histórico ao carregá-lo.
       try {
         const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
         if (generation !== sessionGeneration.current) return;

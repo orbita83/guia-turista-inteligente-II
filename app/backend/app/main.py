@@ -18,7 +18,9 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+from starlette.datastructures import Headers
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.circuit_breaker import CircuitBreaker, CircuitState
 from app.core.config import get_settings
@@ -125,38 +127,79 @@ app.include_router(trips.router)
 app.include_router(streaming.router)
 
 
-def _request_id(request: Request) -> str:
+def _request_id(scope: Scope) -> str:
     """Reaproveita o X-Request-ID do cliente só se for seguro; senão gera um novo."""
-    received = request.headers.get("X-Request-ID", "").strip()
+    received = Headers(scope=scope).get("X-Request-ID", "").strip()
     if REQUEST_ID_PATTERN.fullmatch(received):
         return received
     return uuid4().hex
 
 
-def _route_template(request: Request) -> str:
+def _route_template(scope: Scope) -> str:
     """Rota declarada (ex.: /api/v1/roteiros/{trip_id}); evita cardinalidade alta."""
-    route = request.scope.get("route")
+    route = scope.get("route")
     return str(getattr(route, "path", "não_mapeada"))
 
 
-@app.middleware("http")
-async def request_observability(request: Request, call_next) -> Response:
-    started_at = perf_counter()
-    request_id = _request_id(request)
-    request.state.request_id = request_id
-    status_code = 500
-    try:
-        response = await call_next(request)
-        status_code = response.status_code
-    finally:
-        elapsed = perf_counter() - started_at
-        if request.url.path != "/metrics":
-            path = _route_template(request)
-            HTTP_REQUESTS.labels(request.method, path, str(status_code)).inc()
-            HTTP_LATENCY.labels(request.method, path).observe(elapsed)
-    response.headers["X-Process-Time"] = f"{elapsed * 1000:.3f}ms"
-    response.headers["X-Request-ID"] = request_id
-    return response
+class RequestObservabilityMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        started_at = perf_counter()
+        request_id = _request_id(scope)
+        scope.setdefault("state", {})["request_id"] = request_id
+        status_code = 500
+        metrics_recorded = False
+
+        def record_metrics() -> None:
+            nonlocal metrics_recorded
+            if metrics_recorded:
+                return
+            elapsed = perf_counter() - started_at
+            if scope.get("path") != "/metrics":
+                path = _route_template(scope)
+                HTTP_REQUESTS.labels(
+                    str(scope.get("method", "")), path, str(status_code)
+                ).inc()
+                HTTP_LATENCY.labels(str(scope.get("method", "")), path).observe(
+                    elapsed
+                )
+            metrics_recorded = True
+
+        async def send_with_observability(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+                elapsed = perf_counter() - started_at
+                headers = [
+                    (name, value)
+                    for name, value in message.get("headers", [])
+                    if name.lower() not in {b"x-process-time", b"x-request-id"}
+                ]
+                headers.extend(
+                    (
+                        (b"x-process-time", f"{elapsed * 1000:.3f}ms".encode()),
+                        (b"x-request-id", request_id.encode("ascii")),
+                    )
+                )
+                message = {**message, "headers": headers}
+                record_metrics()
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_observability)
+        finally:
+            record_metrics()
+
+
+app.add_middleware(RequestObservabilityMiddleware)
 
 
 @app.get("/healthz", tags=["operação"])

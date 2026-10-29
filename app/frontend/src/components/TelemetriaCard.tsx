@@ -9,7 +9,6 @@ import type {
   TelemetrySnapshot,
 } from '../types/domain';
 import {
-  connectionQualityLabel,
   formatDuration,
   formatSessionDuration,
   latencyAlertLabel,
@@ -83,15 +82,11 @@ export function TelemetriaCard({
     snapshot?.session ??
     (state.kind === 'loading' || state.kind === 'error' ? state.session : undefined);
   const trigger = snapshot ? latencyAlertLabel(snapshot.totalTimeMs, snapshot.apiTimeMs) : null;
-  const effectiveConnectivity = snapshot?.connectivity ?? connectivity;
+  const effectiveConnectivity = connectivity ?? snapshot?.connectivity;
   const currentConnectivity: ConnectivityCondition = {
     state: effectiveConnectivity?.state ?? connectivity?.state ?? 'unknown',
-    rtt: snapshot?.connectivity?.rtt.available
-      ? snapshot.connectivity.rtt
-      : (connectivity?.rtt ?? unavailableValue()),
-    networkType: snapshot?.connectivity?.networkType.available
-      ? snapshot.connectivity.networkType
-      : (connectivity?.networkType ?? unavailableValue()),
+    rtt: effectiveConnectivity?.rtt ?? unavailableValue(),
+    networkType: effectiveConnectivity?.networkType ?? unavailableValue(),
   };
   const missing = unavailableValue<number>();
   const displayDuration = (value: AvailableValue<number>) =>
@@ -161,9 +156,9 @@ export function TelemetriaCard({
                 value={displayDuration(snapshot?.totalTimeMs ?? missing)}
                 tone="total"
               />
-              {/* TODO(backend): ligar a duração de geocoding quando o contrato de planejamento expuser essa etapa. */}
+              {/* TODO: preencher a duração de geocodificação com viagem.telemetria.duracoes_etapas_ms. */}
               <Metric label="Geocoding" value="Aguardando dados" />
-              {/* TODO(backend): ligar a duração agregada das APIs e da IA quando vier no payload; não inferir pelo tempo total. */}
+              {/* TODO: mapear durações e estados reais dos provedores; não inferir pelo tempo total. */}
               <Metric label="APIs + IA Gemini" value="Aguardando dados" />
               <Metric
                 label="Servidor local (Tempo da API)"
@@ -179,7 +174,7 @@ export function TelemetriaCard({
                     <li key={provider.provider}>
                       {providerNames[provider.provider]}:{' '}
                       <span>{providerStates[provider.state]}</span>
-                      {/* TODO(backend): usar a duração individual de cada provedor quando a API a fornecer. */}
+                      {/* TODO: preencher cada duração e disponibilidade com a telemetria da viagem. */}
                       {' · Tempo: '}
                       {displayDuration(provider.durationMs)}
                     </li>
@@ -282,9 +277,9 @@ export function TelemetriaCard({
                 }
                 tone={apiHealthStatus === 'online' ? 'server' : undefined}
               />
-              {/* TODO(backend): consumir uptime da API operacional quando houver campo estável no contrato. */}
+              {/* TODO: consumir uptime da API operacional quando houver campo estável no contrato. */}
               <Metric label="Uptime backend" value="Aguardando dados" />
-              {/* TODO(backend): consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
+              {/* TODO: consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
               <Metric label="Roteiros totais" value="Aguardando dados" />
             </dl>
             <p className="telemetry-health-note">

@@ -1,6 +1,6 @@
 import type { GuiaStreamPayload, StreamTelemetryUpdate } from '../types/domain';
 import { API_BASE_URL } from '../config';
-import { parseProcessTime, parseRequestId } from './api';
+import { parseRequestId } from './api';
 import { formatSessionStartedAt, unavailableValue } from './telemetry';
 
 export interface StreamingCallbacks {
@@ -167,7 +167,6 @@ export async function streamGuiaTuristico(
 ): Promise<void> {
   const signal = options?.signal;
   if (signal?.aborted) return;
-  let emittedSseChunk = false;
 
   const startedAt = performance.now();
   let response: Response;
@@ -182,6 +181,7 @@ export async function streamGuiaTuristico(
   } catch (err: unknown) {
     if (signal?.aborted || (err instanceof Error && err.name === 'AbortError')) return;
     if (options?.fallbackText) {
+      callbacks.onMode?.('fallback');
       await executarFallbackProgressivo(options.fallbackText, callbacks, options);
     } else {
       callbacks.onError(err instanceof Error ? err : new Error(String(err)));
@@ -189,64 +189,50 @@ export async function streamGuiaTuristico(
     return;
   }
 
-    // Se o endpoint estiver disponível e retornar text/event-stream com sucesso
-    const contentType = response.headers.get('content-type') || '';
-    if (response.ok && contentType.includes('text/event-stream') && response.body) {
-      callbacks.onMode?.('sse');
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
-      let fullText = '';
+  if (signal?.aborted) return;
+  if ((response.status === 404 || response.status === 501) && options?.fallbackText) {
+    callbacks.onMode?.('fallback');
+    await executarFallbackProgressivo(options.fallbackText, callbacks, options);
+    return;
+  }
+  if (!response.ok) {
+    callbacks.onError(new Error(`Não foi possível gerar o guia (HTTP ${response.status}).`));
+    return;
+  }
+  if (!response.headers.get('content-type')?.includes('text/event-stream') || !response.body) {
+    callbacks.onError(new Error('Resposta inválida: esperado um stream SSE.'));
+    return;
+  }
 
-      while (true) {
-        if (signal?.aborted) {
-          await reader.cancel();
-          return;
-        }
+  callbacks.onMode?.('sse');
+  const requestIdHeader = parseRequestId(response.headers.get('x-request-id'));
+  const initialNow = performance.now();
+  const rttMs = unavailableValue<number>('unsupported');
+  const activeNetworkType = unavailableValue<string>('unsupported');
 
-        const { done: streamDone, value } = await reader.read();
-        if (streamDone) break;
+  callbacks.onTelemetry?.({
+    stage: 'connected',
+    requestId: requestIdHeader,
+    rttMs,
+    networkType: activeNetworkType,
+    elapsedStreamMs: { available: true, value: Math.round(initialNow - startedAt) },
+  });
 
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split('\n\n');
-        // Mantém no buffer o último trecho que pode estar incompleto
-        buffer = events.pop() || '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let buffer = '';
+  let fullText = '';
+  const onAbort = () => {
+    void reader.cancel().catch(() => {});
+  };
+  signal?.addEventListener('abort', onAbort, { once: true });
 
-        for (const event of events) {
-          const parsed = parseSseBlock(event);
-          if (parsed) {
-            if (parsed.chunk) {
-              emittedSseChunk = true;
-              fullText += parsed.chunk;
-              callbacks.onChunk(parsed.chunk);
-            }
-            if (parsed.done) {
-              callbacks.onDone(fullText);
-              return;
-            }
-          }
-        }
-      }
-
-      // Processa eventual remanescente no buffer
-      if (buffer.trim()) {
-        const parsed = parseSseBlock(buffer);
-        if (parsed?.chunk) {
-          emittedSseChunk = true;
-          fullText += parsed.chunk;
-          callbacks.onChunk(parsed.chunk);
-        }
-      }
-
-      throw new Error('Transmissão encerrada sem confirmação de conclusão.');
-    }
-
-    // Se o backend retornou 404, 501 ou outro status (endpoint ainda em desenvolvimento)
-    if (options?.fallbackText) {
-      callbacks.onMode?.('fallback');
-      await executarFallbackProgressivo(options.fallbackText, callbacks, options);
-      return;
-    }
+  try {
+    while (!signal?.aborted) {
+      const { done: streamDone, value } = await reader.read();
+      if (signal?.aborted) return;
+      if (streamDone) throw new Error('Transmissão interrompida sem confirmação de conclusão.');
+      buffer += decoder.decode(value, { stream: true });
 
       let separator: RegExpExecArray | null;
       while ((separator = /\r?\n\r?\n/.exec(buffer))) {
@@ -271,11 +257,93 @@ export async function streamGuiaTuristico(
               ? (event.data.diagnostico_ia as Record<string, unknown>)
               : undefined;
 
-    // Em falha de rede/conexão, ativa fallback progressivo se disponível
-    if (options?.fallbackText && !emittedSseChunk && !signal?.aborted) {
-      callbacks.onMode?.('fallback');
-      await executarFallbackProgressivo(options.fallbackText, callbacks, options);
-      return;
+          callbacks.onTelemetry?.({
+            stage: (event.data.stage as any) || 'streaming',
+            requestId: remoteReqId.available ? remoteReqId : requestIdHeader,
+            rttMs,
+            networkType: activeNetworkType,
+            elapsedStreamMs: { available: true, value: Math.round(performance.now() - startedAt) },
+            session: sessionPayload
+              ? {
+                  userId:
+                    typeof sessionPayload.userId === 'string' ? sessionPayload.userId : undefined,
+                  displayName:
+                    typeof sessionPayload.displayName === 'string'
+                      ? sessionPayload.displayName
+                      : 'Viajante',
+                  kind: sessionPayload.kind === 'google' ? 'google' : 'visitante',
+                  persistence:
+                    sessionPayload.persistence === 'permanente' ? 'permanente' : 'temporaria',
+                  sessionStartedAt: formatSessionStartedAt(
+                    typeof sessionStarted === 'string' ? sessionStarted : undefined,
+                  ),
+                  sessionDuration:
+                    typeof sessionDur === 'number' && sessionDur >= 0
+                      ? { available: true, value: sessionDur }
+                      : unavailableValue(),
+                  userTripCount:
+                    typeof sessionPayload.userTripCount === 'number'
+                      ? sessionPayload.userTripCount
+                      : undefined,
+                }
+              : undefined,
+            diagnosticoIa: diag,
+          });
+        } else if (event.type === 'replace') {
+          fullText = event.text;
+          callbacks.onReplace?.(event.text);
+          callbacks.onTelemetry?.({
+            stage: 'streaming',
+            requestId: requestIdHeader,
+            rttMs,
+            networkType: activeNetworkType,
+            elapsedStreamMs: { available: true, value: Math.round(performance.now() - startedAt) },
+          });
+        } else if (event.type === 'chunk') {
+          if (event.chunk) {
+            fullText += event.chunk;
+            callbacks.onChunk(event.chunk);
+            callbacks.onTelemetry?.({
+              stage: 'streaming',
+              requestId: requestIdHeader,
+              rttMs,
+              networkType: activeNetworkType,
+              elapsedStreamMs: {
+                available: true,
+                value: Math.round(performance.now() - startedAt),
+              },
+            });
+          }
+          if (event.done) {
+            callbacks.onTelemetry?.({
+              stage: 'completed',
+              requestId: requestIdHeader,
+              rttMs,
+              networkType: activeNetworkType,
+              elapsedStreamMs: {
+                available: true,
+                value: Math.round(performance.now() - startedAt),
+              },
+            });
+            callbacks.onDone(fullText);
+            return;
+          }
+        } else if (event.type === 'done') {
+          callbacks.onTelemetry?.({
+            stage: 'completed',
+            requestId: requestIdHeader,
+            rttMs,
+            networkType: activeNetworkType,
+            elapsedStreamMs: {
+              available: true,
+              value: Math.round(performance.now() - startedAt),
+            },
+            diagnosticoIa: event.diagnosticoIa,
+          });
+          callbacks.onDone(fullText);
+          return;
+        }
+      }
     }
   } catch (err: unknown) {
     if (!signal?.aborted) callbacks.onError(err instanceof Error ? err : new Error(String(err)));

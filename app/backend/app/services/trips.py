@@ -3,18 +3,48 @@
 import asyncio
 import re
 import uuid
+from collections.abc import Awaitable
 from datetime import UTC, datetime
-from typing import Any
+from time import perf_counter
+from typing import Any, TypeVar
 
 import httpx
 
+from app.core.circuit_breaker import CircuitBreaker
 from app.core.storage import TripStorage
-from app.services.guide import get_guide_with_diagnostics
-from app.services.integrations import geocode, get_route, get_weather
+from app.services.guide import (
+    fallback_guide_with_diagnostics,
+    get_guide_with_diagnostics,
+)
+from app.services.integrations import (
+    WEATHER_FALLBACK,
+    geocode,
+    get_route,
+    get_weather,
+    weather_result_is_failure,
+)
 
 
 class InvalidTripInput(ValueError):
     """Entrada obrigatória para o planejamento não informada."""
+
+
+T = TypeVar("T")
+
+
+async def _measure(awaitable: Awaitable[T]) -> tuple[T, float]:
+    started_at = perf_counter()
+    result = await awaitable
+    return result, round((perf_counter() - started_at) * 1000, 3)
+
+
+def _coordinates_available(coordinates: tuple[float, float, str]) -> bool:
+    latitude, longitude, _ = coordinates
+    return (
+        -90 <= latitude <= 90
+        and -180 <= longitude <= 180
+        and (latitude, longitude) != (0.0, 0.0)
+    )
 
 
 def sanitize_input(text: str, max_length: int = 80) -> str:
@@ -33,8 +63,10 @@ async def plan_trip(
     states: dict[str, str],
     gemini_api_key: str,
     gemini_timeout_seconds: float,
+    circuit_breakers: dict[str, CircuitBreaker],
 ) -> dict[str, Any]:
     """Planeja e persiste uma viagem usando as mesmas integrações e respostas do Flask."""
+    planning_started_at = perf_counter()
     user_id = str(user["id"])
     origin_city = (
         sanitize_input(form.get("origem_cidade", "")) or form.get("origem_cidade", "")
@@ -53,12 +85,26 @@ async def plan_trip(
         if destination_state
         else destination_city
     )
-    weather: dict[str, str] = {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
-    route: dict[str, Any] = {"distancia": "N/D", "tempo": "N/D"}
+    weather: dict[str, str] = dict(WEATHER_FALLBACK)
+    route: dict[str, Any] = {
+        "distancia": "Sem rota direta",
+        "tempo": "Considere voos ou barcos",
+        "modal": "alternativo",
+        "status": "indisponivel",
+        "motivo": "nao_consultada",
+        "geometria": [],
+        "alternativas": [],
+    }
 
-    origin_coords, destination_coords = await asyncio.gather(
-        geocode(client, origin_city, origin_state, states),
-        geocode(client, destination_city, destination_state, states),
+    (
+        (origin_coords, origin_geocoding_ms),
+        (
+            destination_coords,
+            destination_geocoding_ms,
+        ),
+    ) = await asyncio.gather(
+        _measure(geocode(client, origin_city, origin_state, states)),
+        _measure(geocode(client, destination_city, destination_state, states)),
     )
     latitude_origin, longitude_origin, resolved_origin = origin_coords
     latitude_destination, longitude_destination, resolved_destination = (
@@ -69,14 +115,33 @@ async def plan_trip(
     if resolved_destination:
         destination_name = resolved_destination
 
-    weather_result, route_result = await asyncio.gather(
-        get_weather(client, latitude_destination, longitude_destination),
-        get_route(
-            client,
-            latitude_origin,
-            longitude_origin,
-            latitude_destination,
-            longitude_destination,
+    weather_called = False
+
+    async def measured_weather() -> dict[str, str]:
+        nonlocal weather_called
+        weather_called = _coordinates_available(destination_coords)
+        return await get_weather(client, latitude_destination, longitude_destination)
+
+    (weather_result, weather_ms), (route_result, route_ms) = await asyncio.gather(
+        _measure(
+            circuit_breakers["weather"].call(
+                measured_weather,
+                fallback=dict(WEATHER_FALLBACK),
+                is_failure=lambda result: weather_result_is_failure(
+                    result, latitude_destination, longitude_destination
+                ),
+            ),
+        ),
+        _measure(
+            # TODO(integracao): encaminhar preferência de rota ao serviço depois
+            # da definição do schema #30 e da interface de roteamento (issue #20).
+            get_route(
+                client,
+                latitude_origin,
+                longitude_origin,
+                latitude_destination,
+                longitude_destination,
+            )
         ),
     )
     if weather_result:
@@ -84,10 +149,75 @@ async def plan_trip(
     if route_result:
         route = route_result
 
-    guide, diagnostics = await get_guide_with_diagnostics(
-        destination_name,
-        api_key=gemini_api_key,
-        timeout_seconds=gemini_timeout_seconds,
+    # TODO(integracao): encaminhar duração e perfis ao guia quando o schema #30
+    # e o serviço do Aluno 4 aceitarem esses campos (issue #20); incluir atrativos
+    # e gastronomia somente após definição da fonte e contrato da issue #25.
+    guide_called = False
+
+    async def measured_guide() -> tuple[str, dict[str, Any]]:
+        nonlocal guide_called
+        guide_called = bool(gemini_api_key.strip())
+        return await get_guide_with_diagnostics(
+            destination_name,
+            api_key=gemini_api_key,
+            timeout_seconds=gemini_timeout_seconds,
+        )
+
+    (guide, diagnostics), guide_ms = await _measure(
+        circuit_breakers["guide"].call(
+            measured_guide,
+            fallback=lambda: fallback_guide_with_diagnostics(
+                destination_name, "circuito_aberto"
+            ),
+            is_failure=lambda result: (
+                result[1].get("fallback_utilizado") is True
+                and result[1].get("motivo")
+                not in {
+                    "chave_ausente",
+                    "chave_invalida",
+                    "acesso_negado",
+                    "requisicao_ou_chave_invalida",
+                }
+            ),
+        ),
+    )
+    geocoding_available = _coordinates_available(origin_coords) and (
+        _coordinates_available(destination_coords)
+    )
+    weather_status = (
+        "nao_consultado"
+        if not weather_called
+        else (
+            "indisponivel"
+            if weather_result_is_failure(
+                weather_result, latitude_destination, longitude_destination
+            )
+            else "disponivel"
+        )
+    )
+    route_status = (
+        "nao_consultado"
+        if not geocoding_available
+        else "disponivel"
+        if isinstance(route_result, dict) and route_result.get("status") == "disponivel"
+        else "indisponivel"
+    )
+    guide_status = (
+        "nao_consultado"
+        if not guide_called
+        else "indisponivel"
+        if diagnostics.get("fallback_utilizado") is True
+        else "disponivel"
+    )
+    stage_durations = {
+        "geocodificacao_origem_ms": origin_geocoding_ms,
+        "geocodificacao_destino_ms": destination_geocoding_ms,
+        "clima_ms": weather_ms,
+        "roteamento_ms": route_ms,
+        "guia_ms": guide_ms,
+    }
+    stage_durations["total_servicos_ms"] = round(
+        (perf_counter() - planning_started_at) * 1000, 3
     )
     trip = {
         "id": str(uuid.uuid4()),
@@ -98,6 +228,21 @@ async def plan_trip(
         "percurso": route,
         "dicas_destino": guide,
         "diagnostico_ia": diagnostics,
+        "telemetria": {
+            "duracoes_etapas_ms": stage_durations,
+            "provedores": {
+                "open_meteo_geocoding": (
+                    "disponivel" if geocoding_available else "indisponivel"
+                ),
+                "open_meteo_weather": weather_status,
+                "osrm": route_status,
+                "gemini": guide_status,
+                # TODO(aluno-3): integrar elevação, autonomia, postos e custos
+                # com geometria real e parâmetros validados quando os serviços e
+                # schemas das issues #27 a #30 estiverem disponíveis (issue #23).
+                "open_elevation": "nao_integrado",
+            },
+        },
     }
     await asyncio.to_thread(storage.add_for_user, user_id, trip, user)
     return trip

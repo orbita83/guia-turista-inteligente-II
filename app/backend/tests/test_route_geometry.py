@@ -36,5 +36,6 @@ async def test_invalid_geometry_never_becomes_exportable(geometry) -> None:
         lambda request: httpx.Response(200, json=payload)
     )) as client:
         route = await get_route(client, -8, -34.9, -8.1, -34.8)
-    assert "geometria" not in route
-    assert route["distancia"] == "1.0 km"
+    assert route["geometria"] == []
+    assert route["status"] == "indisponivel"
+    assert route["motivo"] == "geometria_invalida"

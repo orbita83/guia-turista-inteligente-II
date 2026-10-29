@@ -19,6 +19,7 @@ def test_history_and_deletion_remain_scoped_to_active_identity(tmp_path, monkeyp
     app.dependency_overrides[get_storage] = lambda: storage
     try:
         with TestClient(app) as client:
+            app.state.trip_storage = storage
             assert client.post("/api/v1/auth/google", json={"credential": "alice"}).status_code == 200
             history = client.get("/api/v1/roteiros/minhas-viagens")
             assert history.status_code == 200

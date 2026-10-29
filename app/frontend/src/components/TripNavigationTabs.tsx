@@ -77,7 +77,6 @@ export function TripNavigationTabs({
 
   return (
     <nav className="trip-navigation-container" aria-label="Navegação e ações da viagem planejada">
-      {erroGpx && <p role="alert">{erroGpx}</p>}
       {/* 1. Linha de Abas de Navegação (Issue #11) */}
       <div
         className="trip-tabs-bar"
@@ -189,7 +188,7 @@ export function TripNavigationTabs({
           <span>Baixar GPX</span>
         </button>
       </div>
-      {gpxFeedback && <p role="status">{gpxFeedback}</p>}
+      {gpxFeedback && <p role={gpxFeedback.startsWith('Não') ? 'alert' : 'status'}>{gpxFeedback}</p>}
     </nav>
   );
 }

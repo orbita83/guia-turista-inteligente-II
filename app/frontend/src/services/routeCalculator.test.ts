@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { CoordenadaGPS, RotaAlternativa, Viagem } from '../types/domain';
 import {
   gerarConteudoGpx,
+  baixarArquivoGpx,
   gerarLinkGoogleMaps,
   gerarLinkWhatsApp,
   gerarRotasAlternativas,
@@ -97,14 +98,7 @@ describe('GPX: dados geográficos e download', () => {
   afterEach(() => vi.restoreAllMocks());
 
   function rotaDeTeste() {
-    return gerarRotasAlternativas({
-      id: 'gpx',
-      origem: 'Recife - PE',
-      destino: 'Olinda - PE',
-      clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
-      percurso: { distancia: '10 km', tempo: '25 min' },
-      dicas_destino: 'Guia',
-    })[0];
+    return structuredClone(route);
   }
 
   it('preserva caracteres especiais em XML, latitude/longitude e omite elevação desconhecida', () => {
@@ -276,7 +270,7 @@ describe('GPX: dados geográficos e download', () => {
     });
     baixarArquivoGpx('Recife - PE', 'Olinda - PE', rotaDeTeste());
     const blob = criar.mock.calls[0][0] as Blob;
-    expect(blob.type).toBe('application/gpx+xml;charset=utf-8;');
+    expect(blob.type).toBe('application/gpx+xml;charset=utf-8');
     expect(blob.size).toBeGreaterThan(0);
     const xml = new DOMParser().parseFromString(await blob.text(), 'application/xml');
     expect(xml.querySelector('parsererror')).toBeNull();
@@ -284,7 +278,7 @@ describe('GPX: dados geográficos e download', () => {
       'Rota: Recife - PE para Olinda - PE',
     );
     expect(linkBaixado?.href).toBe('blob:rota-gpx');
-    expect(linkBaixado?.download).toBe('rota-recife___pe-para-olinda___pe.gpx');
+    expect(linkBaixado?.download).toBe('rota-recife-pe-para-olinda-pe.gpx');
     expect(document.querySelector('a[download]')).toBeNull();
     expect(revogar).toHaveBeenCalledWith('blob:rota-gpx');
   });
