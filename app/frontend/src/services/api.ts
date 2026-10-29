@@ -17,6 +17,8 @@ export interface SessionResponse {
   session_started_at?: string | null;
   session_duration_ms?: number | null;
   visitor_remaining_ms?: number | null;
+  telemetria_operacional?: unknown;
+  operationalTelemetry?: OperationalTelemetry;
 }
 
 export interface TripsResponse {
@@ -96,6 +98,19 @@ export interface OperationalTelemetry {
   totalPersistedTrips: number;
 }
 
+export function parseOperationalTelemetry(value: unknown): OperationalTelemetry {
+  const fields = recordValue(value);
+  const uptime = fields?.uptime_seconds;
+  const total = fields?.total_roteiros_persistidos;
+  if (
+    typeof uptime !== 'number' || !Number.isFinite(uptime) || uptime < 0 ||
+    typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0
+  ) {
+    throw new ApiContractError('Resposta de telemetria operacional inválida.');
+  }
+  return { uptimeSeconds: uptime, totalPersistedTrips: total };
+}
+
 export async function obterTelemetriaOperacional(signal?: AbortSignal): Promise<OperationalTelemetry> {
   const response = await fetch(`${API_BASE_URL}/operacao/telemetria`, {
     signal,
@@ -103,15 +118,7 @@ export async function obterTelemetriaOperacional(signal?: AbortSignal): Promise<
     headers: { Accept: 'application/json' },
   });
   if (!response.ok) throw new Error(`Telemetria operacional: HTTP ${response.status}`);
-  const data: unknown = await response.json();
-  const values = recordValue(data);
-  const uptime = values?.uptime_seconds;
-  const total = values?.total_roteiros_persistidos;
-  if (typeof uptime !== 'number' || !Number.isFinite(uptime) || uptime < 0 ||
-      typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0) {
-    throw new ApiContractError('Resposta de telemetria operacional inválida.');
-  }
-  return { uptimeSeconds: uptime, totalPersistedTrips: total };
+  return parseOperationalTelemetry(await response.json());
 }
 
 /** Verifica apenas a saúde do processo da API; não representa provedores externos. */
@@ -350,8 +357,19 @@ export function parseRequestId(value: string | null): AvailableValue<string> {
   return { available: true, value: normalized };
 }
 
-export function carregarSessao(signal?: AbortSignal): Promise<SessionResponse> {
-  return request('/auth/session', { signal });
+export async function carregarSessao(signal?: AbortSignal): Promise<SessionResponse> {
+  // A própria sessão já é consultada no bootstrap; aproveita as métricas do mesmo backend.
+  const session = await request<SessionResponse>('/auth/session', { signal });
+  if (!session.telemetria_operacional) return session;
+  try {
+    return {
+      ...session,
+      operationalTelemetry: parseOperationalTelemetry(session.telemetria_operacional),
+    };
+  } catch {
+    // Contrato legado ou inválido: uma consulta independente pode diagnosticar a falha.
+    return session;
+  }
 }
 
 export function autenticarComGoogle(credential: string): Promise<{ usuario: Usuario }> {
