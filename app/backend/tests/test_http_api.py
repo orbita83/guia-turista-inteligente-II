@@ -711,6 +711,30 @@ def test_operational_telemetry_requires_session_and_returns_real_numbers(
     assert payload["total_roteiros_persistidos"] >= 0
 
 
+def test_session_includes_operational_metrics_for_authenticated_visitor(
+    client: TestClient, storage: TripStorage
+) -> None:
+    no_session = client.get("/api/v1/auth/session")
+    assert no_session.status_code == 200
+    assert no_session.json()["telemetria_operacional"] is None
+
+    storage.add_for_user(
+        "persisted-google-user",
+        {"id": "saved-1", "origem": "Recife", "destino": "Natal"},
+        {"id": "persisted-google-user", "tipo": "google"},
+    )
+    assert client.post("/api/v1/auth/visitor").status_code == 200
+    session = client.get("/api/v1/auth/session")
+    assert session.status_code == 200
+    metrics = session.json()["telemetria_operacional"]
+    assert isinstance(metrics["uptime_seconds"], (int, float))
+    assert metrics["uptime_seconds"] >= 0
+    assert metrics["total_roteiros_persistidos"] == 1
+    operational = client.get("/api/v1/operacao/telemetria")
+    assert operational.status_code == 200
+    assert operational.json()["total_roteiros_persistidos"] == 1
+
+
 def test_old_json_file_is_read_without_changing_its_user_shape(tmp_path) -> None:
     import json
 
