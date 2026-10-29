@@ -133,6 +133,8 @@ async def plan_trip(
             ),
         ),
         _measure(
+            # TODO(integracao): encaminhar preferência de rota ao serviço depois
+            # da definição do schema #30 e da interface de roteamento (issue #20).
             get_route(
                 client,
                 latitude_origin,
@@ -147,8 +149,9 @@ async def plan_trip(
     if route_result:
         route = route_result
 
-    # TODO: adicionar ao contexto do guia os dados turísticos estruturados quando
-    # a origem e o formato de atrativos e gastronomia estiverem acordados.
+    # TODO(integracao): encaminhar duração e perfis ao guia quando o schema #30
+    # e o serviço do Aluno 4 aceitarem esses campos (issue #20); incluir atrativos
+    # e gastronomia somente após definição da fonte e contrato da issue #25.
     guide_called = False
 
     async def measured_guide() -> tuple[str, dict[str, Any]]:
@@ -234,8 +237,9 @@ async def plan_trip(
                 "open_meteo_weather": weather_status,
                 "osrm": route_status,
                 "gemini": guide_status,
-                # TODO: integrar os serviços de elevação, autonomia, postos e custos
-                # usando os parâmetros de viagem e veículo do contrato.
+                # TODO(aluno-3): integrar elevação, autonomia, postos e custos
+                # com geometria real e parâmetros validados quando os serviços e
+                # schemas das issues #27 a #30 estiverem disponíveis (issue #23).
                 "open_elevation": "nao_integrado",
             },
         },
