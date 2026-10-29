@@ -131,6 +131,22 @@ class TripStorage:
             trips = user.get("roteiros", [])
             return list(trips) if isinstance(trips, list) else []
 
+    def count_all_persisted(self) -> int:
+        """Conta viagens persistidas de todas as contas, sem criar arquivos nem expor usuários."""
+        with self._lock:
+            if not self.path.exists():
+                return 0
+            with self.path.open("r", encoding="utf-8") as file:
+                data = json.load(file)
+            if not isinstance(data, dict) or not isinstance(data.get("usuarios"), dict):
+                raise ValueError("Formato de persistência inválido.")
+            users = data["usuarios"]
+            return sum(
+                len(user["roteiros"])
+                for user in users.values()
+                if isinstance(user, dict) and isinstance(user.get("roteiros"), list)
+            )
+
     def count_for_user(self, user_id: str) -> int:
         """Contagem somente-leitura de viagens sem criar ou gravar arquivos em disco."""
         with self._lock:
