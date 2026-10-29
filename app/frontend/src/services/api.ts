@@ -73,8 +73,8 @@ export function parseTrip(value: unknown): Viagem | null {
   const diagnostics = recordValue(trip.diagnostico_ia);
   const createdAt = availableText(trip.criado_em, '');
 
-  // TODO(backend): consumir origem, destino, clima e percurso completos quando o contrato
-  // de planejamento/listagem os entregar; os campos ausentes seguem visíveis como "Aguardando dados".
+  // TODO: mapear sensação térmica, condição climática, telemetria, geometria e
+  // alternativas do contrato completo da viagem.
   return {
     id,
     ...(createdAt ? { criado_em: createdAt } : {}),
@@ -224,9 +224,8 @@ export function excluirViagem(tripId: string): Promise<void> {
   return request(`/roteiros/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
 }
 
-// TODO(backend): expor endpoint POST /api/v1/roteiros/stream-guia transmitindo eventos text/event-stream (SSE) com frames data: {"chunk": string, "done": boolean}\n\n.
+// TODO: conectar o consumo do guia por streaming quando o endpoint SSE estiver disponível.
 
-// TODO(backend): implementar endpoint PATCH /api/v1/roteiros/{id}/visitas recebendo { atrativo_id: string, visitado: boolean } com persistência atômica no armazenamento do usuário.
 export async function atualizarVisitaAtrativo(
   tripId: string,
   atrativoId: string,
