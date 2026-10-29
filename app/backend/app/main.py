@@ -1,6 +1,7 @@
 import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from importlib import import_module
 from time import perf_counter
 from typing import Any
 from uuid import uuid4
@@ -22,12 +23,23 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.circuit_breaker import CircuitBreaker, CircuitState
 from app.core.config import get_settings
 from app.core.storage import TripStorage
-from app.routers import auth, trips
+from app.routers import auth, streaming, trips
 
 REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
+
+def _build_stream_observer(registry: CollectorRegistry) -> Any:
+    try:
+        module = import_module("app.core.stream_metrics")
+        cls = getattr(module, "StreamMetrics", None)
+        return cls(registry) if cls is not None else None
+    except ModuleNotFoundError:
+        return None
+
+
 # Registro próprio: evita métricas duplicadas se o módulo for recarregado (--reload).
 METRICS = CollectorRegistry()
+STREAM_METRICS = _build_stream_observer(METRICS)
 HTTP_REQUESTS = Counter(
     "http_requests_total",
     "Total de requisições HTTP.",
@@ -80,6 +92,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # o pool de conexões ainda é fechado.
         app.state.trip_storage = TripStorage(settings.trips_file)
         app.state.circuit_breakers = build_circuit_breakers()
+        app.state.stream_observer = STREAM_METRICS
         yield
     finally:
         await app.state.http_client.aclose()
@@ -109,6 +122,7 @@ app.add_middleware(
 )
 app.include_router(auth.router)
 app.include_router(trips.router)
+app.include_router(streaming.router)
 
 
 def _request_id(request: Request) -> str:
@@ -129,6 +143,7 @@ def _route_template(request: Request) -> str:
 async def request_observability(request: Request, call_next) -> Response:
     started_at = perf_counter()
     request_id = _request_id(request)
+    request.state.request_id = request_id
     status_code = 500
     try:
         response = await call_next(request)
@@ -168,4 +183,4 @@ async def metrics(request: Request) -> Response:
     for name, breaker in breakers.items():
         BREAKER_OPEN.labels(name).set(1 if breaker.state == CircuitState.OPEN else 0)
         BREAKER_FALLBACKS.labels(name).set(breaker.total_fallbacks)
-    return Response(generate_latest(METRICS), media_type=CONTENT_TYPE_LATEST)
+    return Response(generate_latest(METRICS), headers={"Content-Type": CONTENT_TYPE_LATEST})
