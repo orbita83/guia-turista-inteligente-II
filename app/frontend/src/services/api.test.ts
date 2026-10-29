@@ -8,6 +8,7 @@ import {
   parseTrip,
   verificarSaudeApi,
   obterTelemetriaOperacional,
+  carregarSessao,
 } from './api';
 
 describe('saúde da API', () => {
@@ -47,6 +48,30 @@ describe('telemetria operacional', () => {
       Response.json({ uptime_seconds: -1, total_roteiros_persistidos: '42' }),
     ));
     await expect(obterTelemetriaOperacional()).rejects.toBeInstanceOf(ApiContractError);
+  });
+});
+
+describe('métricas vindas do bootstrap de sessão', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('interpreta os indicadores da mesma resposta que autentica o usuário', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
+      google_client_id: '',
+      ufs: ['PE'],
+      telemetria_operacional: { uptime_seconds: 101.25, total_roteiros_persistidos: 0 },
+    })));
+    const session = await carregarSessao();
+    expect(session.operationalTelemetry).toEqual({ uptimeSeconds: 101.25, totalPersistedTrips: 0 });
+  });
+
+  it('não inventa métricas quando uma sessão antiga não fornece o contrato', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
+      google_client_id: '',
+      ufs: ['PE'],
+    })));
+    expect((await carregarSessao()).operationalTelemetry).toBeUndefined();
   });
 });
 
