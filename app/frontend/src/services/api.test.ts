@@ -7,6 +7,7 @@ import {
   listarViagens,
   parseTrip,
   verificarSaudeApi,
+  obterTelemetriaOperacional,
 } from './api';
 
 describe('saúde da API', () => {
@@ -20,6 +21,32 @@ describe('saúde da API', () => {
 
     fetchMock.mockResolvedValueOnce(Response.json({ status: 'degraded' }));
     await expect(verificarSaudeApi()).resolves.toBe(false);
+  });
+});
+
+describe('telemetria operacional', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('lê o uptime e a contagem retornados pela API com sessão', async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({ uptime_seconds: 65.2, total_roteiros_persistidos: 3 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(obterTelemetriaOperacional()).resolves.toEqual({
+      uptimeSeconds: 65.2,
+      totalPersistedTrips: 3,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/operacao\/telemetria$/),
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
+
+  it('rejeita respostas inválidas em vez de inventar métricas', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () =>
+      Response.json({ uptime_seconds: -1, total_roteiros_persistidos: '42' }),
+    ));
+    await expect(obterTelemetriaOperacional()).rejects.toBeInstanceOf(ApiContractError);
   });
 });
 
