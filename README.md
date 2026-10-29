@@ -83,3 +83,8 @@ npm test --workspace @guia/frontend
 
 Os testes usam dependências simuladas e não precisam de credenciais reais. Para
 gerar guias com Gemini em execução local, configure `GEMINI_API_KEY` no `.env`.
+
+As [evidências de QA](docs/qualidade/evidencias-qa.md) registram os cenários e gates
+executados. O [roteiro do aluno 4](docs/operacao/apresentacao-aluno-4.md) inclui uma
+demonstração isolada com provedores controlados, exemplos SSE/409/cancelamento,
+download GPX e métricas Prometheus.

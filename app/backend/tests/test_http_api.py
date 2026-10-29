@@ -46,9 +46,18 @@ def test_visitor_session_create_list_delete_and_logout(
 
     login = client.post("/api/v1/auth/visitor")
     assert login.status_code == 200
-    user = login.json()["usuario"]
+    login_payload = login.json()
+    user = login_payload["usuario"]
     assert user["tipo"] == "visitante"
+    assert login_payload["session_started_at"] is not None
+    assert isinstance(login_payload["session_duration_ms"], (int, float))
     assert client.cookies
+
+    sess = client.get("/api/v1/auth/session")
+    assert sess.status_code == 200
+    sess_payload = sess.json()
+    assert sess_payload["session_started_at"] == login_payload["session_started_at"]
+    assert isinstance(sess_payload["session_duration_ms"], (int, float))
 
     trip: dict[str, Any] = {
         "id": "trip-1",

@@ -140,4 +140,42 @@ describe('TelemetriaCard', () => {
     expect(copy).toHaveBeenCalledWith('abcd1234-5678-90ef-abcd-123456789ef0');
     expect(screen.getByRole('status')).toHaveTextContent('Identificador copiado');
   });
+
+  it('exibe início da sessão, tempo decorrido e qualidade de conexão quando informados', () => {
+    const snapshot = telemetrySnapshotFixture({
+      session: {
+        displayName: 'Maria Santos',
+        kind: 'google',
+        persistence: 'permanente',
+        sessionStartedAt: available('28/10/2026, 21:00:00'),
+        sessionDuration: available(120000), // 2 min
+        userTripCount: 5,
+      },
+      connectivity: {
+        state: 'online',
+        rtt: available(35),
+        networkType: available('SSE ativo'),
+      },
+    });
+
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture(snapshot)}
+        apiHealthStatus="online"
+        onCopyRequestId={vi.fn(async () => true)}
+      />,
+    );
+
+    expect(screen.getByText('Início da sessão').nextElementSibling).toHaveTextContent(
+      '28/10/2026, 21:00:00',
+    );
+    expect(screen.getByText('Tempo total da sessão').nextElementSibling).toHaveTextContent('2 min');
+    expect(screen.getByText('Permanente (conta Google)')).toBeInTheDocument();
+    expect(screen.getByText('Qualidade da conexão').nextElementSibling).toHaveTextContent(
+      '35 ms (SSE ativo · Excelente)',
+    );
+    expect(screen.getByText('Conectividade do navegador').nextElementSibling).toHaveTextContent(
+      'Online (SSE ativo)',
+    );
+  });
 });

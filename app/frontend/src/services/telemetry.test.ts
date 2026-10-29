@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { Viagem } from '../types/domain';
-import { providerDiagnostics } from './telemetry';
+import { connectionQualityLabel, formatSessionDuration, providerDiagnostics } from './telemetry';
 
 const baseTrip: Viagem = {
   id: 'trip-1',
@@ -61,5 +61,60 @@ describe('providerDiagnostics', () => {
     expect(providers.filter(({ state }) => state === 'unavailable')).toHaveLength(0);
     expect(providers.find(({ provider }) => provider === 'open-meteo')?.state).toBe('unknown');
     expect(providers.find(({ provider }) => provider === 'osrm')?.state).toBe('unknown');
+  });
+});
+
+describe('formatSessionDuration', () => {
+  it('retorna Aguardando dados se indisponível', () => {
+    expect(formatSessionDuration({ available: false, reason: 'missing' })).toBe('Aguardando dados');
+  });
+
+  it('formata segundos para durações menores que 1 minuto', () => {
+    expect(formatSessionDuration({ available: true, value: 45000 })).toBe('45 s');
+  });
+
+  it('formata minutos exatos', () => {
+    expect(formatSessionDuration({ available: true, value: 120000 })).toBe('2 min');
+  });
+
+  it('formata minutos e segundos para durações intermediárias', () => {
+    expect(formatSessionDuration({ available: true, value: 125000 })).toBe('2 min 5 s');
+  });
+
+  it('formata horas para durações longas', () => {
+    expect(formatSessionDuration({ available: true, value: 3600000 })).toBe('1 h');
+    expect(formatSessionDuration({ available: true, value: 3900000 })).toBe('1 h 5 min');
+  });
+});
+
+describe('connectionQualityLabel', () => {
+  it('retorna Aguardando dados se conectividade ausente', () => {
+    expect(connectionQualityLabel()).toBe('Aguardando dados');
+  });
+
+  it('classifica qualidade de acordo com o RTT e anexa tipo de rede', () => {
+    expect(
+      connectionQualityLabel({
+        state: 'online',
+        rtt: { available: true, value: 45 },
+        networkType: { available: true, value: 'SSE ativo' },
+      }),
+    ).toBe('45 ms (SSE ativo · Excelente)');
+
+    expect(
+      connectionQualityLabel({
+        state: 'online',
+        rtt: { available: true, value: 250 },
+        networkType: { available: true, value: 'SSE ativo' },
+      }),
+    ).toBe('250 ms (SSE ativo · Boa)');
+
+    expect(
+      connectionQualityLabel({
+        state: 'online',
+        rtt: { available: true, value: 500 },
+        networkType: { available: false, reason: 'missing' },
+      }),
+    ).toBe('500 ms (Elevada)');
   });
 });
