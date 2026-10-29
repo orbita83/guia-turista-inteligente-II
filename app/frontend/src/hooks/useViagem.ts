@@ -449,6 +449,12 @@ export function useViagem() {
           connectivity,
         };
         setTelemetryState({ kind: 'settled', snapshot });
+        void obterTelemetriaOperacional()
+          .then((metrics) => {
+            if (generation === sessionGeneration.current && mountedRef.current)
+              setOperationalTelemetry(metrics);
+          })
+          .catch(() => {});
         setActiveTrip(result.viagem);
         setActiveTripForm(form);
         formByTripId.current[result.viagem.id] = form;
@@ -516,6 +522,12 @@ export function useViagem() {
           return remaining;
         });
         addToast('Roteiro excluído.', 'sucesso');
+        void obterTelemetriaOperacional()
+          .then((metrics) => {
+            if (generation === sessionGeneration.current && mountedRef.current)
+              setOperationalTelemetry(metrics);
+          })
+          .catch(() => {});
       } catch {
         if (generation === sessionGeneration.current) {
           addToast('Não foi possível excluir o roteiro. Tente novamente.');
