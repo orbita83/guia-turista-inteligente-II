@@ -20,6 +20,7 @@ interface TelemetriaCardProps {
   state: TelemetryPanelState;
   apiHealthStatus: 'checking' | 'online' | 'unavailable';
   operationalTelemetry?: { uptimeSeconds: number; totalPersistedTrips: number } | null;
+  operationalError?: string | null;
   onCopyRequestId: (requestId: string) => Promise<boolean>;
   connectivity?: ConnectivityCondition;
 }
@@ -73,6 +74,7 @@ export function TelemetriaCard({
   state,
   apiHealthStatus,
   operationalTelemetry,
+  operationalError,
   connectivity,
   onCopyRequestId,
 }: TelemetriaCardProps) {
@@ -309,9 +311,29 @@ export function TelemetriaCard({
                 }
                 tone={apiHealthStatus === 'online' ? 'server' : undefined}
               />
-              <Metric label="Uptime backend" value={operationalTelemetry ? formatUptime(operationalTelemetry.uptimeSeconds) : 'Aguardando dados'} />
-              <Metric label="Roteiros totais" value={operationalTelemetry ? String(operationalTelemetry.totalPersistedTrips) : 'Aguardando dados'} />
+              <Metric
+                label="Uptime backend"
+                value={
+                  operationalTelemetry
+                    ? formatUptime(operationalTelemetry.uptimeSeconds)
+                    : operationalError ? 'Indisponível' : 'Aguardando dados'
+                }
+              />
+              <Metric
+                label="Roteiros persistidos"
+                value={
+                  operationalTelemetry
+                    ? String(operationalTelemetry.totalPersistedTrips)
+                    : operationalError ? 'Indisponível' : 'Aguardando dados'
+                }
+              />
             </dl>
+            {operationalError ? (
+              <p className="telemetry-notice telemetry-notice-warning" role="status">
+                {operationalError}
+                {operationalTelemetry ? ' Exibindo valores da última sessão válida.' : ''}
+              </p>
+            ) : null}
             <p className="telemetry-health-note">
               Status da API: última verificação de /healthz; não é monitoramento contínuo.
             </p>
