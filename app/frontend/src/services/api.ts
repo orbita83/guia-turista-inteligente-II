@@ -91,6 +91,29 @@ export async function buscarMunicipiosIbge(signal?: AbortSignal): Promise<unknow
   return response.json();
 }
 
+export interface OperationalTelemetry {
+  uptimeSeconds: number;
+  totalPersistedTrips: number;
+}
+
+export async function obterTelemetriaOperacional(signal?: AbortSignal): Promise<OperationalTelemetry> {
+  const response = await fetch(`${API_BASE_URL}/operacao/telemetria`, {
+    signal,
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Telemetria operacional: HTTP ${response.status}`);
+  const data: unknown = await response.json();
+  const values = recordValue(data);
+  const uptime = values?.uptime_seconds;
+  const total = values?.total_roteiros_persistidos;
+  if (typeof uptime !== 'number' || !Number.isFinite(uptime) || uptime < 0 ||
+      typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0) {
+    throw new ApiContractError('Resposta de telemetria operacional inválida.');
+  }
+  return { uptimeSeconds: uptime, totalPersistedTrips: total };
+}
+
 /** Verifica apenas a saúde do processo da API; não representa provedores externos. */
 export async function verificarSaudeApi(signal?: AbortSignal): Promise<boolean> {
   const healthUrl = `${API_BASE_URL.replace(/\/api\/v1$/, '')}/healthz`;
