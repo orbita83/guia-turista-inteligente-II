@@ -277,6 +277,8 @@ async def get_route(
     if principal is None:
         return unavailable("dados_rota_invalidos")
     principal["estado"] = "disponivel"
+    # TODO(integracao): alinhar com Aluno 1 o contrato de alternativas reais antes
+    # de conectá-las ao mapa; preservar a geometria retornada pelo OSRM (issue #19).
     principal["alternativas"] = [
         route for item in routes[1:] if (route := _parse_osrm_route(item)) is not None
     ]

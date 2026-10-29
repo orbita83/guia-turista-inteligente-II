@@ -82,6 +82,8 @@ async def plan_trip(
     if weather_result:
         weather = weather_result
     if route_result:
+        # TODO(aluno-3): quando autonomia, paradas e altimetria estiverem disponíveis,
+        # integrar seus cálculos à geometria rodoviária validada deste percurso (issue #23).
         route = route_result
 
     guide, diagnostics = await get_guide_with_diagnostics(
