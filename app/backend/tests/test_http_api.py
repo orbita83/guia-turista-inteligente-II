@@ -735,6 +735,29 @@ def test_session_includes_operational_metrics_for_authenticated_visitor(
     assert operational.json()["total_roteiros_persistidos"] == 1
 
 
+def test_global_counter_is_read_only_and_excludes_temporary_trips(tmp_path) -> None:
+    path = tmp_path / "trips.json"
+    storage = TripStorage(path)
+    assert storage.count_all_persisted() == 0
+    assert not path.exists()
+
+    storage.ensure_visitor("visitante_demo")
+    storage.add_for_user(
+        "visitante_demo",
+        {"id": "temporary"},
+        {"id": "visitante_demo", "tipo": "visitante"},
+    )
+    assert storage.count_all_persisted() == 0
+    assert not path.exists()
+
+    storage.add_for_user(
+        "google-demo",
+        {"id": "persisted"},
+        {"id": "google-demo", "tipo": "google"},
+    )
+    assert storage.count_all_persisted() == 1
+
+
 def test_old_json_file_is_read_without_changing_its_user_shape(tmp_path) -> None:
     import json
 
