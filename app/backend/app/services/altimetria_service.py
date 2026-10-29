@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import math
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
@@ -417,6 +417,7 @@ def calcular_indicadores_topograficos(
     )
 
     ganho_por_km = (ganho_acumulado / distancia_total_km) if distancia_total_km > 0 else 0.0
+    fator_terreno: Literal["plano", "ondulado", "montanhoso"]
     if ganho_por_km < 5.0:
         fator_terreno = "plano"
     elif ganho_por_km < 15.0:

@@ -252,7 +252,57 @@ def test_plan_trip_empty_city_returns_validation_error(client: TestClient) -> No
         },
     )
     assert response.status_code == 422
-    assert response.json()["detail"] == "origem_e_destino_obrigatorios"
+    detalhes = response.json()["detail"]
+    assert isinstance(detalhes, list)
+    assert any(item.get("loc") == ["body", "origem_cidade"] for item in detalhes)
+
+
+def test_plan_trip_rejects_unknown_uf(client: TestClient) -> None:
+    client.post("/api/v1/auth/visitor")
+    response = client.post(
+        "/api/v1/roteiros/planejar",
+        json={
+            "origem_cidade": "Recife",
+            "origem_uf": "ZZ",
+            "destino_cidade": "Salvador",
+            "destino_uf": "BA",
+        },
+    )
+    assert response.status_code == 422
+    detalhes = response.json()["detail"]
+    assert isinstance(detalhes, list)
+    assert any(item.get("loc") == ["body", "origem_uf"] for item in detalhes)
+
+
+def test_plan_trip_normalizes_uf_case_and_spacing(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.routers.trips as trips_router
+
+    capturado: dict[str, Any] = {}
+
+    async def fake_plan_trip(form, active_user, **kwargs):
+        capturado.update(form)
+        return {
+            "id": "trip-uf",
+            "origem": form["origem_cidade"],
+            "destino": form["destino_cidade"],
+        }
+
+    monkeypatch.setattr(trips_router, "plan_trip", fake_plan_trip)
+    client.post("/api/v1/auth/visitor")
+    response = client.post(
+        "/api/v1/roteiros/planejar",
+        json={
+            "origem_cidade": "Recife",
+            "origem_uf": "pe",
+            "destino_cidade": "Salvador",
+            "destino_uf": " ba ",
+        },
+    )
+    assert response.status_code == 200
+    assert capturado["origem_uf"] == "PE"
+    assert capturado["destino_uf"] == "BA"
 
 
 def test_duplicate_trip_planning_returns_conflict(

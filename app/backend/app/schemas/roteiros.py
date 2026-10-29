@@ -5,9 +5,9 @@ from __future__ import annotations
 import math
 from decimal import Decimal
 from enum import Enum
-from typing import Any
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StatusAltimetria(str, Enum):
@@ -23,8 +23,20 @@ class StatusAltimetria(str, Enum):
 class Coordenada(BaseModel):
     """Representação de coordenada geográfica WGS-84."""
 
-    latitude: float = Field(..., description="Latitude em graus decimais (-90 a 90)")
-    longitude: float = Field(..., description="Longitude em graus decimais (-180 a 180)")
+    latitude: float = Field(
+        ...,
+        ge=-90.0,
+        le=90.0,
+        allow_inf_nan=False,
+        description="Latitude em graus decimais (-90 a 90)",
+    )
+    longitude: float = Field(
+        ...,
+        ge=-180.0,
+        le=180.0,
+        allow_inf_nan=False,
+        description="Longitude em graus decimais (-180 a 180)",
+    )
 
     @field_validator("latitude")
     @classmethod
@@ -44,41 +56,108 @@ class Coordenada(BaseModel):
 class PontoTopografico(BaseModel):
     """Amostra ordenada do perfil topográfico ao longo do percurso."""
 
-    latitude: float = Field(..., description="Latitude da amostra")
-    longitude: float = Field(..., description="Longitude da amostra")
-    distancia_m: float = Field(..., ge=0.0, description="Distância acumulada na rodovia em metros")
-    distancia_km: float = Field(..., ge=0.0, description="Distância acumulada na rodovia em quilômetros")
-    elevacao_m: float = Field(..., description="Elevação em metros acima do nível do mar")
+    latitude: float = Field(
+        ...,
+        ge=-90.0,
+        le=90.0,
+        allow_inf_nan=False,
+        description="Latitude da amostra",
+    )
+    longitude: float = Field(
+        ...,
+        ge=-180.0,
+        le=180.0,
+        allow_inf_nan=False,
+        description="Longitude da amostra",
+    )
+    distancia_m: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Distância acumulada na rodovia em metros",
+    )
+    distancia_km: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Distância acumulada na rodovia em quilômetros",
+    )
+    elevacao_m: float = Field(
+        ...,
+        allow_inf_nan=False,
+        description="Elevação em metros acima do nível do mar",
+    )
 
 
 class DadosConsumoRelevo(BaseModel):
     """Indicadores de relevo preparados para a integração de consumo e autonomia."""
 
     inclinacao_media_subida_percent: float = Field(
-        default=0.0, description="Inclinação média dos trechos de subida em %"
+        default=0.0,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Inclinação média dos trechos de subida em %",
     )
     inclinacao_media_descida_percent: float = Field(
-        default=0.0, description="Inclinação média dos trechos de descida em %"
+        default=0.0,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Inclinação média dos trechos de descida em %",
     )
-    fator_terreno: str = Field(
-        default="plano", description="Classificação do relevo: plano, ondulado ou montanhoso"
+    fator_terreno: Literal["plano", "ondulado", "montanhoso"] = Field(
+        default="plano", description="Classificação do relevo"
     )
     penalizacao_consumo_estimada_percent: float = Field(
-        default=0.0, description="Estimativa preliminar de impacto do relevo no consumo (%)"
+        default=0.0,
+        allow_inf_nan=False,
+        description="Estimativa preliminar de impacto do relevo no consumo (%)",
     )
 
 
 class AltimetriaInfo(BaseModel):
     """Resumo executivo de altimetria para cartões de métricas e badges."""
 
-    altitude_minima_m: float = Field(..., description="Menor altitude registrada no trajeto (m)")
-    altitude_maxima_m: float = Field(..., description="Maior altitude registrada no trajeto (m)")
-    ganho_elevacao_m: float = Field(..., ge=0.0, description="Ganho de elevação acumulado em subidas (m)")
-    perda_elevacao_m: float = Field(..., ge=0.0, description="Perda de elevação acumulada em descidas (m)")
-    desnivel_liquido_m: float = Field(..., description="Diferença entre altitude final e inicial (m)")
-    distancia_total_km: float = Field(..., ge=0.0, description="Distância total percorrida (km)")
+    altitude_minima_m: float = Field(
+        ..., allow_inf_nan=False, description="Menor altitude registrada no trajeto (m)"
+    )
+    altitude_maxima_m: float = Field(
+        ..., allow_inf_nan=False, description="Maior altitude registrada no trajeto (m)"
+    )
+    ganho_elevacao_m: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Ganho de elevação acumulado em subidas (m)",
+    )
+    perda_elevacao_m: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Perda de elevação acumulada em descidas (m)",
+    )
+    desnivel_liquido_m: float = Field(
+        ...,
+        allow_inf_nan=False,
+        description="Diferença entre altitude final e inicial (m)",
+    )
+    distancia_total_km: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Distância total percorrida (km)",
+    )
     total_pontos: int = Field(..., ge=0, description="Quantidade de pontos amostrados no perfil")
-    fator_terreno: str = Field(default="plano", description="Classificação do relevo")
+    fator_terreno: Literal["plano", "ondulado", "montanhoso"] = Field(
+        default="plano", description="Classificação do relevo"
+    )
+
+    @model_validator(mode="after")
+    def validar_altitudes(self) -> AltimetriaInfo:
+        if self.altitude_minima_m > self.altitude_maxima_m:
+            raise ValueError(
+                "A altitude mínima não pode ser maior que a altitude máxima."
+            )
+        return self
 
 
 class PerfilTopografico(BaseModel):
@@ -88,13 +167,41 @@ class PerfilTopografico(BaseModel):
     status: StatusAltimetria = Field(..., description="Classificação do estado da resposta")
     mensagem: str | None = Field(default=None, description="Mensagem diagnóstica ou causa de erro")
 
-    altitude_minima_m: float | None = Field(default=None, description="Altitude mínima em metros")
-    altitude_maxima_m: float | None = Field(default=None, description="Altitude máxima em metros")
-    ganho_elevacao_m: float | None = Field(default=None, ge=0.0, description="Ganho de altitude acumulado (m)")
-    perda_elevacao_m: float | None = Field(default=None, ge=0.0, description="Perda de altitude acumulada (m)")
-    desnivel_liquido_m: float | None = Field(default=None, description="Desnível líquido (final - inicial) em metros")
-    distancia_total_m: float | None = Field(default=None, ge=0.0, description="Distância total acumulada em metros")
-    distancia_total_km: float | None = Field(default=None, ge=0.0, description="Distância total acumulada em km")
+    altitude_minima_m: float | None = Field(
+        default=None, allow_inf_nan=False, description="Altitude mínima em metros"
+    )
+    altitude_maxima_m: float | None = Field(
+        default=None, allow_inf_nan=False, description="Altitude máxima em metros"
+    )
+    ganho_elevacao_m: float | None = Field(
+        default=None,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Ganho de altitude acumulado (m)",
+    )
+    perda_elevacao_m: float | None = Field(
+        default=None,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Perda de altitude acumulada (m)",
+    )
+    desnivel_liquido_m: float | None = Field(
+        default=None,
+        allow_inf_nan=False,
+        description="Desnível líquido (final - inicial) em metros",
+    )
+    distancia_total_m: float | None = Field(
+        default=None,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Distância total acumulada em metros",
+    )
+    distancia_total_km: float | None = Field(
+        default=None,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Distância total acumulada em km",
+    )
 
     total_amostras: int = Field(default=0, ge=0, description="Número de amostras topográficas válidas")
     pontos: list[PontoTopografico] = Field(default_factory=list, description="Série ordenada do perfil")
@@ -236,22 +343,112 @@ class VeiculoEletrico(BaseModel):
 class ParametrosVeiculo(BaseModel):
     """Entrada flexível unificada para veículos a combustão ou elétricos."""
 
-    propulsao: TipoPropulsao = Field(default=TipoPropulsao.COMBUSTAO, description="Tipo de propulsão")
+    propulsao: TipoPropulsao = Field(
+        default=TipoPropulsao.COMBUSTAO, description="Tipo de propulsão"
+    )
     capacidade_tanque_l: float | None = Field(
-        default=None, description="Capacidade do tanque (L) para veículo a combustão"
+        default=None,
+        gt=0.0,
+        allow_inf_nan=False,
+        description="Capacidade do tanque (L) para veículo a combustão",
     )
     consumo_km_l: float | None = Field(
-        default=None, description="Consumo médio (km/L) para veículo a combustão"
+        default=None,
+        gt=0.0,
+        allow_inf_nan=False,
+        description="Consumo médio (km/L) para veículo a combustão",
+    )
+    preco_combustivel_l: float | None = Field(
+        default=None,
+        gt=0.0,
+        allow_inf_nan=False,
+        description="Preço do combustível em R$/L para veículo a combustão",
     )
     capacidade_bateria_kwh: float | None = Field(
-        default=None, description="Capacidade da bateria (kWh) para veículo elétrico"
+        default=None,
+        gt=0.0,
+        allow_inf_nan=False,
+        description="Capacidade da bateria (kWh) para veículo elétrico",
     )
     eficiencia_km_kwh: float | None = Field(
-        default=None, description="Eficiência energética (km/kWh) para veículo elétrico"
+        default=None,
+        gt=0.0,
+        allow_inf_nan=False,
+        description="Eficiência energética (km/kWh) para veículo elétrico",
+    )
+    preco_energia_kwh: float | None = Field(
+        default=None,
+        gt=0.0,
+        allow_inf_nan=False,
+        description="Preço da energia em R$/kWh para veículo elétrico",
     )
     nivel_inicial_percent: float = Field(
-        default=100.0, ge=0.0, le=100.0, description="Nível inicial disponível (0 a 100%)"
+        default=100.0,
+        ge=0.0,
+        le=100.0,
+        allow_inf_nan=False,
+        description="Nível inicial disponível (0 a 100%)",
     )
+
+    @model_validator(mode="after")
+    def validar_campos_por_propulsao(self) -> ParametrosVeiculo:
+        if self.propulsao == TipoPropulsao.COMBUSTAO:
+            ausentes = [
+                campo
+                for campo, valor in (
+                    ("capacidade_tanque_l", self.capacidade_tanque_l),
+                    ("consumo_km_l", self.consumo_km_l),
+                )
+                if valor is None
+            ]
+            if ausentes:
+                raise ValueError(
+                    "Veículo a combustão requer os campos: " + ", ".join(ausentes) + "."
+                )
+            incompativeis = [
+                campo
+                for campo, valor in (
+                    ("capacidade_bateria_kwh", self.capacidade_bateria_kwh),
+                    ("eficiencia_km_kwh", self.eficiencia_km_kwh),
+                    ("preco_energia_kwh", self.preco_energia_kwh),
+                )
+                if valor is not None
+            ]
+            if incompativeis:
+                raise ValueError(
+                    "Campos de veículo elétrico incompatíveis com combustão: "
+                    + ", ".join(incompativeis)
+                    + "."
+                )
+        else:
+            ausentes = [
+                campo
+                for campo, valor in (
+                    ("capacidade_bateria_kwh", self.capacidade_bateria_kwh),
+                    ("eficiencia_km_kwh", self.eficiencia_km_kwh),
+                )
+                if valor is None
+            ]
+            if ausentes:
+                raise ValueError(
+                    "Veículo elétrico requer os campos: " + ", ".join(ausentes) + "."
+                )
+            incompativeis = [
+                campo
+                for campo, valor in (
+                    ("capacidade_tanque_l", self.capacidade_tanque_l),
+                    ("consumo_km_l", self.consumo_km_l),
+                    ("preco_combustivel_l", self.preco_combustivel_l),
+                )
+                if valor is not None
+            ]
+            if incompativeis:
+                raise ValueError(
+                    "Campos de combustão incompatíveis com veículo elétrico: "
+                    + ", ".join(incompativeis)
+                    + "."
+                )
+        return self
 
     def obter_veiculo_especifico(self) -> VeiculoCombustao | VeiculoEletrico:
         """Instancia o modelo específico correspondente ao tipo de propulsão."""
@@ -302,24 +499,58 @@ class PoliticaReabastecimento(BaseModel):
         return self
 
 
+class DetalhesEstabelecimento(BaseModel):
+    """Metadados opcionais de um estabelecimento verificado."""
+
+    model_config = ConfigDict(extra="allow")
+
+    nome: str | None = Field(default=None, description="Nome do estabelecimento")
+    endereco: str | None = Field(default=None, description="Endereço do estabelecimento")
+    telefone: str | None = Field(default=None, description="Telefone de contato")
+    fonte: str | None = Field(default=None, description="Fonte da verificação")
+    verificado_em: str | None = Field(default=None, description="Data ou instante da verificação")
+    observacoes: str | None = Field(default=None, description="Observações adicionais")
+
+
 class ParadaProjetada(BaseModel):
     """Representação de parada estimada por autonomia na rodovia."""
 
-    id: str = Field(..., description="Identificador da parada (ex.: parada-1)")
+    id: str = Field(..., min_length=1, description="Identificador da parada (ex.: parada-1)")
     ordem: int = Field(..., ge=1, description="Ordem sequencial da parada")
-    nome: str = Field(..., description="Rótulo identificador do ponto projetado")
+    nome: str = Field(..., min_length=1, description="Rótulo identificador do ponto projetado")
     tipo: TipoParada = Field(..., description="Tipo da parada (combustivel ou recarga)")
-    distancia_km: float = Field(..., ge=0.0, description="Distância acumulada desde a origem em km")
-    distancia_m: float = Field(..., ge=0.0, description="Distância acumulada desde a origem em metros")
+    distancia_km: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Distância acumulada desde a origem em km",
+    )
+    distancia_m: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Distância acumulada desde a origem em metros",
+    )
     coordenadas: Coordenada = Field(..., description="Posição geográfica sobre a geometria da rota")
     reserva_estimada_percent: float = Field(
-        ..., ge=0.0, le=100.0, description="Reserva remanescente estimada na chegada (%)"
+        ...,
+        ge=0.0,
+        le=100.0,
+        allow_inf_nan=False,
+        description="Reserva remanescente estimada na chegada (%)",
     )
     autonomia_restante_km: float = Field(
-        ..., ge=0.0, description="Autonomia residual no momento da parada (km)"
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Autonomia residual no momento da parada (km)",
     )
     nivel_pos_parada_percent: float = Field(
-        ..., ge=0.0, le=100.0, description="Nível estimado após reabastecimento/recarga (%)"
+        ...,
+        ge=0.0,
+        le=100.0,
+        allow_inf_nan=False,
+        description="Nível estimado após reabastecimento/recarga (%)",
     )
     origem: OrigemParada = Field(
         default=OrigemParada.PROJETADO, description="Origem da informação: projetado ou verificado"
@@ -330,12 +561,35 @@ class ParadaProjetada(BaseModel):
     estabelecimento_verificado: bool = Field(
         default=False, description="Garantia de que o ponto NÃO é apresentado como estabelecimento confirmado"
     )
-    detalhes_estabelecimento: dict[str, Any] | None = Field(
-        default=None, description="Metadados do estabelecimento quando verificado (None na Issue #28)"
+    detalhes_estabelecimento: DetalhesEstabelecimento | None = Field(
+        default=None, description="Metadados do estabelecimento quando verificado"
     )
     descricao: str | None = Field(
         default=None, description="Descrição e orientações operacionais da parada"
     )
+
+    @model_validator(mode="after")
+    def validar_origem_estabelecimento(self) -> ParadaProjetada:
+        if self.origem == OrigemParada.VERIFICADO:
+            if not self.estabelecimento_verificado or self.eh_ponto_projetado:
+                raise ValueError(
+                    "Parada verificada exige estabelecimento_verificado=True e "
+                    "eh_ponto_projetado=False."
+                )
+            if self.detalhes_estabelecimento is None:
+                raise ValueError(
+                    "Parada verificada exige detalhes_estabelecimento preenchidos."
+                )
+        else:
+            if self.estabelecimento_verificado or not self.eh_ponto_projetado:
+                raise ValueError(
+                    "Parada projetada não pode ser marcada como estabelecimento verificado."
+                )
+            if self.detalhes_estabelecimento is not None:
+                raise ValueError(
+                    "Parada projetada não deve conter detalhes de estabelecimento."
+                )
+        return self
 
 
 class ResultadoAutonomia(BaseModel):
@@ -423,7 +677,9 @@ class AjusteRelevo(BaseModel):
     """
 
     variacao_consumo_percent: Decimal = Field(
-        ..., description="Variação percentual sobre o consumo base (> -100%)"
+        ...,
+        allow_inf_nan=False,
+        description="Variação percentual sobre o consumo base (> -100%)",
     )
     metodo: str = Field(..., min_length=1, description="Método usado para obter o ajuste")
     fonte: str = Field(..., min_length=1, description="Fonte ou referência do ajuste")
@@ -452,10 +708,15 @@ class AjusteRelevoResultado(BaseModel):
 
     status: StatusAjusteRelevo = Field(..., description="Se o ajuste foi aplicado ou está indisponível")
     variacao_consumo_percent: Decimal | None = Field(
-        default=None, description="Variação percentual aplicada ao consumo"
+        default=None,
+        allow_inf_nan=False,
+        description="Variação percentual aplicada ao consumo",
     )
     fator_consumo: Decimal | None = Field(
-        default=None, gt=Decimal(0), description="Multiplicador aplicado ao consumo base"
+        default=None,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Multiplicador aplicado ao consumo base",
     )
     metodo: str | None = Field(default=None, description="Método informado para o ajuste")
     fonte: str | None = Field(default=None, description="Fonte informada para o ajuste")
@@ -472,7 +733,10 @@ class Pedagio(BaseModel):
         description="Identificação estável da praça, por exemplo rodovia:sentido:km",
     )
     valor: Decimal | None = Field(
-        default=None, ge=Decimal(0), description="Valor cobrado na praça em BRL"
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Valor cobrado na praça em BRL",
     )
     confiabilidade: ConfiabilidadePedagio = Field(
         ..., description="Classificação da procedência do valor"
@@ -483,7 +747,12 @@ class Pedagio(BaseModel):
     )
     nome: str | None = Field(default=None, description="Nome da praça ou concessionária")
     rodovia: str | None = Field(default=None, description="Rodovia da praça")
-    km: float | None = Field(default=None, ge=0.0, description="Quilômetro da praça na rodovia")
+    km: float | None = Field(
+        default=None,
+        ge=0.0,
+        allow_inf_nan=False,
+        description="Quilômetro da praça na rodovia",
+    )
     atualizado_em: str | None = Field(default=None, description="Data ou referência de atualização")
     limitacoes: str | None = Field(default=None, description="Limitações do valor ou da fonte")
 
@@ -526,11 +795,13 @@ class ResumoPedagios(BaseModel):
     total: Decimal | None = Field(
         default=None,
         ge=Decimal(0),
+        allow_inf_nan=False,
         description="Total de pedágios quando determinável; None se indisponível",
     )
     total_conhecido: Decimal = Field(
         default=Decimal("0.00"),
         ge=Decimal(0),
+        allow_inf_nan=False,
         description="Soma dos valores conhecidos, mesmo quando o total está incompleto",
     )
     total_completo: bool = Field(..., description="Indica se todas as praças têm valor conhecido")
@@ -540,33 +811,186 @@ class ResumoPedagios(BaseModel):
     limitacoes: list[str] = Field(default_factory=list, description="Limitações do total de pedágios")
 
 
+class CustosRequest(BaseModel):
+    """Entrada preparada para a integração futura com o serviço de custos."""
+
+    propulsao: TipoPropulsao = Field(..., description="Tipo de propulsão do veículo")
+    distancia_km: Decimal = Field(
+        ...,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Distância rodoviária em km",
+    )
+    consumo_km_por_litro: Decimal | None = Field(
+        default=None,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Consumo médio em km/L para combustão",
+    )
+    preco_combustivel_por_litro: Decimal | None = Field(
+        default=None,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Preço do combustível em BRL/L",
+    )
+    eficiencia_km_por_kwh: Decimal | None = Field(
+        default=None,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Eficiência energética em km/kWh para elétricos",
+    )
+    preco_energia_por_kwh: Decimal | None = Field(
+        default=None,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Preço da energia em BRL/kWh",
+    )
+    ajuste_relevo: AjusteRelevo | None = Field(
+        default=None, description="Ajuste de consumo por relevo, quando disponível"
+    )
+    pedagios: list[Pedagio] = Field(
+        default_factory=list, description="Praças de pedágio conhecidas"
+    )
+    rota_sem_pedagios_confirmada: bool = Field(
+        default=False, description="Confirma que a rota realmente não possui pedágios"
+    )
+    passageiros: int = Field(
+        default=1, ge=1, le=8, description="Quantidade de passageiros para rateio"
+    )
+    modo_estrito: bool = Field(
+        default=False, description="Rejeita resultados parciais no serviço de custos"
+    )
+
+    @model_validator(mode="after")
+    def validar_campos_por_propulsao(self) -> CustosRequest:
+        if self.propulsao == TipoPropulsao.COMBUSTAO:
+            ausentes = [
+                campo
+                for campo, valor in (
+                    ("consumo_km_por_litro", self.consumo_km_por_litro),
+                    ("preco_combustivel_por_litro", self.preco_combustivel_por_litro),
+                )
+                if valor is None
+            ]
+            if ausentes:
+                raise ValueError(
+                    "Custos de combustão requerem os campos: "
+                    + ", ".join(ausentes)
+                    + "."
+                )
+            incompativeis = [
+                campo
+                for campo, valor in (
+                    ("eficiencia_km_por_kwh", self.eficiencia_km_por_kwh),
+                    ("preco_energia_por_kwh", self.preco_energia_por_kwh),
+                )
+                if valor is not None
+            ]
+            if incompativeis:
+                raise ValueError(
+                    "Campos de energia incompatíveis com combustão: "
+                    + ", ".join(incompativeis)
+                    + "."
+                )
+        else:
+            ausentes = [
+                campo
+                for campo, valor in (
+                    ("eficiencia_km_por_kwh", self.eficiencia_km_por_kwh),
+                    ("preco_energia_por_kwh", self.preco_energia_por_kwh),
+                )
+                if valor is None
+            ]
+            if ausentes:
+                raise ValueError(
+                    "Custos elétricos requerem os campos: "
+                    + ", ".join(ausentes)
+                    + "."
+                )
+            incompativeis = [
+                campo
+                for campo, valor in (
+                    ("consumo_km_por_litro", self.consumo_km_por_litro),
+                    ("preco_combustivel_por_litro", self.preco_combustivel_por_litro),
+                )
+                if valor is not None
+            ]
+            if incompativeis:
+                raise ValueError(
+                    "Campos de combustão incompatíveis com propulsão elétrica: "
+                    + ", ".join(incompativeis)
+                    + "."
+                )
+        return self
+
+
 class ResultadoCustoPropulsao(BaseModel):
     """Consumo e custo de combustível ou energia para uma propulsão."""
 
     propulsao: TipoPropulsao = Field(..., description="Tipo de propulsão calculado")
-    distancia_km: Decimal = Field(..., ge=Decimal(0), description="Distância rodoviária em km")
-    consumo_base: Decimal = Field(..., ge=Decimal(0), description="Consumo antes do ajuste de relevo")
-    consumo_estimado: Decimal = Field(..., ge=Decimal(0), description="Consumo após o ajuste de relevo")
+    distancia_km: Decimal = Field(
+        ...,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Distância rodoviária em km",
+    )
+    consumo_base: Decimal = Field(
+        ...,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Consumo antes do ajuste de relevo",
+    )
+    consumo_estimado: Decimal = Field(
+        ...,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Consumo após o ajuste de relevo",
+    )
     unidade_consumo: str = Field(..., description="Unidade do consumo: L ou kWh")
-    preco_unitario: Decimal = Field(..., gt=Decimal(0), description="Preço unitário informado")
+    preco_unitario: Decimal = Field(
+        ...,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Preço unitário informado",
+    )
     unidade_preco: str = Field(..., description="Unidade do preço: BRL/L ou BRL/kWh")
-    fator_relevo: Decimal = Field(..., gt=Decimal(0), description="Multiplicador de consumo por relevo")
+    fator_relevo: Decimal = Field(
+        ...,
+        gt=Decimal(0),
+        allow_inf_nan=False,
+        description="Multiplicador de consumo por relevo",
+    )
     ajuste_relevo: AjusteRelevoResultado = Field(..., description="Estado do ajuste de relevo")
-    custo: Decimal = Field(..., ge=Decimal(0), description="Custo de propulsão em BRL")
+    custo: Decimal = Field(
+        ...,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Custo de propulsão em BRL",
+    )
 
 
 class CotaPassageiro(BaseModel):
     """Cota individual de um passageiro após o rateio monetário."""
 
     passageiro: int = Field(..., ge=1, le=8, description="Número do passageiro, iniciando em 1")
-    valor: Decimal = Field(..., ge=Decimal(0), description="Cota individual em BRL")
+    valor: Decimal = Field(
+        ...,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Cota individual em BRL",
+    )
 
 
 class RateioPassageiros(BaseModel):
     """Rateio do custo total com soma das cotas igual ao total rateado."""
 
     quantidade: int = Field(..., ge=1, le=8, description="Quantidade de passageiros")
-    total_rateado: Decimal = Field(..., ge=Decimal(0), description="Total efetivamente rateado em BRL")
+    total_rateado: Decimal = Field(
+        ...,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Total efetivamente rateado em BRL",
+    )
     cotas: list[CotaPassageiro] = Field(..., min_length=1, description="Cotas individuais")
 
 
@@ -577,26 +1001,62 @@ class ResultadoCustosViagem(BaseModel):
     status: StatusCustosViagem = Field(..., description="Completude do custo apresentado")
     mensagem: str | None = Field(default=None, description="Mensagem diagnóstica")
 
-    distancia_km: Decimal | None = Field(default=None, ge=Decimal(0), description="Distância em km")
+    distancia_km: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Distância em km",
+    )
     unidade_distancia: str = Field(default="km", description="Unidade da distância")
     propulsao: TipoPropulsao | None = Field(default=None, description="Tipo de propulsão")
-    consumo_estimado: Decimal | None = Field(default=None, ge=Decimal(0), description="Consumo estimado")
+    consumo_estimado: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Consumo estimado",
+    )
     unidade_consumo: str | None = Field(default=None, description="Unidade do consumo: L ou kWh")
 
-    custo_combustivel: Decimal | None = Field(default=None, ge=Decimal(0), description="Custo de combustível em BRL")
-    custo_energia: Decimal | None = Field(default=None, ge=Decimal(0), description="Custo de energia em BRL")
-    custo_propulsao: Decimal | None = Field(default=None, ge=Decimal(0), description="Custo de combustível ou energia em BRL")
+    custo_combustivel: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Custo de combustível em BRL",
+    )
+    custo_energia: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Custo de energia em BRL",
+    )
+    custo_propulsao: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Custo de combustível ou energia em BRL",
+    )
 
     custo_pedagios: Decimal | None = Field(
-        default=None, ge=Decimal(0), description="Total de pedágios em BRL; None se indisponível"
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Total de pedágios em BRL; None se indisponível",
     )
     custo_pedagios_conhecido: Decimal = Field(
-        default=Decimal("0.00"), ge=Decimal(0), description="Soma conhecida de pedágios em BRL"
+        default=Decimal("0.00"),
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Soma conhecida de pedágios em BRL",
     )
     pedagios: ResumoPedagios | None = Field(default=None, description="Detalhamento dos pedágios")
 
     ajuste_relevo: AjusteRelevoResultado | None = Field(default=None, description="Ajuste de relevo aplicado ou indisponível")
-    custo_total: Decimal | None = Field(default=None, ge=Decimal(0), description="Total conhecido em BRL")
+    custo_total: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0),
+        allow_inf_nan=False,
+        description="Total conhecido em BRL",
+    )
     total_completo: bool = Field(default=False, description="Indica se todos os componentes obrigatórios estão disponíveis")
 
     passageiros: int = Field(default=1, ge=1, le=8, description="Quantidade de passageiros")

@@ -22,11 +22,38 @@ que retornam `204 No Content`.
 | `DELETE /api/v1/roteiros/{roteiro_id}` | `204` | sessão obrigatória; exclusão limitada à identidade ativa |
 
 O planejamento mantém o formato de viagem já produzido pelo Flask: `id`, `criado_em`,
-`origem`, `destino`, `clima`, `percurso`, `dicas_destino` e `diagnostico_ia`. Cidades
-são higienizadas e limitadas a 80 caracteres; origem e destino vazios retornam `422`.
+`origem`, `destino`, `clima`, `percurso`, `dicas_destino` e `diagnostico_ia`.
 Solicitações iguais da mesma identidade têm bloqueio de concorrência e cooldown de
 quatro segundos, respondendo `409`. Falhas HTTP não tratadas pelos fallbacks dos
 provedores respondem `502`.
+
+### Validação de cidades e UFs
+
+A entrada é validada pelo schema Pydantic `TripCreateRequest` antes de qualquer
+integração; violações retornam `422` com a lista de erros em `detail`.
+
+| Campo | Tipo | Obrigatório | Regra |
+| --- | --- | --- | --- |
+| `origem_cidade`, `destino_cidade` | string | sim | espaços externos removidos; não vazio após `strip`; 1 a 80 caracteres; acentos preservados |
+| `origem_uf`, `destino_uf` | string | não (default `""`) | normalizado para maiúsculas sem espaços externos; deve pertencer às 27 siglas oficiais |
+
+Política aplicada:
+
+- **UF válida:** uma das 27 siglas (`AC`, `AL`, ..., `TO`). `pe`, `Pe` e `" ba "`
+  são normalizadas para `PE` e `BA`.
+- **UF inválida:** qualquer valor não vazio que não seja uma sigla oficial (`XX`,
+  `ZZ`, `SAO`, `P`) retorna `422` apontando o campo (`origem_uf`/`destino_uf`).
+- **UF ausente ou vazia:** `""` é aceita e mantida como `""` para preservar o
+  consumidor legado do frontend, que não exige UF para o visitante. Não há inferência
+  a partir da cidade.
+- **Cidade vazia/só espaços ou acima de 80 caracteres:** `422`.
+- **Compatibilidade legada:** a leitura de viagens históricas mantém os campos
+  originais, inclusive desconhecidos, sem inventar valores nem descartar dados.
+
+Os schemas estruturados de altimetria, veículos, paradas e custos
+(`app/backend/app/schemas/roteiros.py`) ficam disponíveis para integração futura nos
+endpoints; ainda não são referenciados por rotas registradas e, por isso, não aparecem
+em `/openapi.json`.
 
 ### Sessão e isolamento
 

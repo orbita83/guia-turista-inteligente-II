@@ -8,7 +8,12 @@ from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user, get_http_client, get_storage
-from app.schemas.trips import TripCreateRequest, TripCreateResponse, TripListResponse
+from app.schemas.trips import (
+    TripCreateRequest,
+    TripCreateResponse,
+    TripListResponse,
+    ViagemLegada,
+)
 from app.services.trips import delete_trip, list_trips, plan_trip
 
 router = APIRouter(prefix="/api/v1/roteiros", tags=["roteiros"])
@@ -38,7 +43,9 @@ async def get_my_trips(
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> TripListResponse:
     trips = await run_in_threadpool(list_trips, storage, str(user["id"]))
-    return TripListResponse(viagens=trips)
+    return TripListResponse(
+        viagens=[ViagemLegada.model_validate(trip) for trip in trips]
+    )
 
 
 @router.get("/minhas-viagens/json")
@@ -110,7 +117,7 @@ async def create_trip(
         and "timeout" in str(diagnostic.get("motivo", "")).lower()
     ):
         warning = WARNING_TIMEOUT
-    return TripCreateResponse(viagem=trip, aviso=warning)
+    return TripCreateResponse(viagem=ViagemLegada.model_validate(trip), aviso=warning)
 
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
