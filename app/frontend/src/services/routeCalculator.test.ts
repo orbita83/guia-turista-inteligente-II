@@ -92,3 +92,211 @@ describe('rotas recebidas e GPX', () => {
     );
   });
 });
+
+describe('GPX: dados geográficos e download', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function rotaDeTeste() {
+    return gerarRotasAlternativas({
+      id: 'gpx',
+      origem: 'Recife - PE',
+      destino: 'Olinda - PE',
+      clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
+      percurso: { distancia: '10 km', tempo: '25 min' },
+      dicas_destino: 'Guia',
+    })[0];
+  }
+
+  it('preserva caracteres especiais em XML, latitude/longitude e omite elevação desconhecida', () => {
+    const rota = rotaDeTeste();
+    rota.titulo = 'Trilha <centro> & "mar"';
+    rota.coordenadas = [
+      [-8.0476, -34.877],
+      [-7.9986, -34.8459],
+    ];
+    rota.paradas = [
+      {
+        id: 'parada',
+        nome: 'Café & pão <local>',
+        descricao: 'Dica: "água" & sombra',
+        km: 5,
+        tipo: 'combustivel',
+        nivelBateriaOuTanquePct: 22,
+        coordenadas: [-8.01, -34.85],
+      },
+    ];
+    const xml = new DOMParser().parseFromString(
+      gerarConteudoGpx('Recife & mar', 'Olinda <centro>', rota),
+      'application/xml',
+    );
+    expect(xml.querySelector('parsererror')).toBeNull();
+    expect(xml.documentElement.namespaceURI).toBe('http://www.topografix.com/GPX/1/1');
+    expect(xml.documentElement.getAttribute('version')).toBe('1.1');
+    expect(xml.querySelector('metadata > name')?.textContent).toBe(
+      'Rota: Recife & mar para Olinda <centro>',
+    );
+    expect(xml.querySelector('trk > name')?.textContent).toBe(rota.titulo);
+    expect(xml.querySelectorAll('wpt')[2].querySelector('name')?.textContent).toBe(
+      'Café & pão <local>',
+    );
+    expect(xml.querySelectorAll('wpt')[2].querySelector('desc')?.textContent).toBe(
+      'Dica: "água" & sombra',
+    );
+    expect(
+      Array.from(xml.querySelectorAll('trkpt'), (ponto) => [
+        ponto.getAttribute('lat'),
+        ponto.getAttribute('lon'),
+      ]),
+    ).toEqual([
+      ['-8.0476', '-34.877'],
+      ['-7.9986', '-34.8459'],
+    ]);
+    expect(xml.querySelector('ele')).toBeNull();
+  });
+
+  it.each([NaN, Infinity, -Infinity, 91, -91])('recusa latitude inválida %s', (latitude) => {
+    const rota = rotaDeTeste();
+    rota.coordenadas = [
+      [latitude, -34],
+      [-8, -35],
+    ];
+    expect(() => gerarConteudoGpx('Recife', 'Olinda', rota)).toThrow(/coordenadas/i);
+  });
+
+  it.each([NaN, Infinity, 181, -181])('recusa longitude inválida %s', (longitude) => {
+    const rota = rotaDeTeste();
+    rota.coordenadas = [
+      [-8, longitude],
+      [-8, -35],
+    ];
+    expect(() => gerarConteudoGpx('Recife', 'Olinda', rota)).toThrow(/coordenadas/i);
+  });
+
+  it('recusa longitude 180 pois GPX 1.1 exige longitude menor que 180', () => {
+    const rota = rotaDeTeste();
+    rota.coordenadas = [
+      [0, 180],
+      [0, -180],
+    ];
+    expect(() => gerarConteudoGpx('Origem', 'Destino', rota)).toThrow(/coordenadas/i);
+  });
+
+  it('aceita latitudes extremas e longitude -180 sem inverter os eixos', () => {
+    const rota = rotaDeTeste();
+    rota.coordenadas = [
+      [-90, -180],
+      [90, 179.999999],
+    ];
+    const xml = new DOMParser().parseFromString(
+      gerarConteudoGpx('Origem', 'Destino', rota),
+      'application/xml',
+    );
+    expect(
+      Array.from(xml.querySelectorAll('trkpt'), (ponto) => [
+        ponto.getAttribute('lat'),
+        ponto.getAttribute('lon'),
+      ]),
+    ).toEqual([
+      ['-90', '-180'],
+      ['90', '179.999999'],
+    ]);
+  });
+
+  it('serializa coordenadas próximas de zero como decimal sem expoente em todos os pontos', () => {
+    const rota = rotaDeTeste();
+    rota.coordenadas = [
+      [1e-7, -3e-8],
+      [-1e-21, 0],
+    ];
+    rota.paradas = [
+      {
+        id: 'parada',
+        nome: 'Ponto',
+        km: 0,
+        tipo: 'combustivel',
+        nivelBateriaOuTanquePct: 22,
+        coordenadas: [1e-7, -3e-8],
+      },
+    ];
+    const xml = new DOMParser().parseFromString(
+      gerarConteudoGpx('Origem', 'Destino', rota),
+      'application/xml',
+    );
+    expect(xml.querySelector('parsererror')).toBeNull();
+    expect(
+      Array.from(xml.querySelectorAll('trkpt'), (ponto) => [
+        ponto.getAttribute('lat'),
+        ponto.getAttribute('lon'),
+      ]),
+    ).toEqual([
+      ['0.0000001', '-0.00000003'],
+      ['-0.000000000000000000001', '0'],
+    ]);
+    expect(
+      Array.from(xml.querySelectorAll('wpt'), (ponto) => [
+        ponto.getAttribute('lat'),
+        ponto.getAttribute('lon'),
+      ]),
+    ).toEqual([
+      ['0.0000001', '-0.00000003'],
+      ['-0.000000000000000000001', '0'],
+      ['0.0000001', '-0.00000003'],
+    ]);
+  });
+
+  it('recusa geometria sem trajeto em vez de inventar pontos de origem e destino', () => {
+    const rota = rotaDeTeste();
+    rota.coordenadas = [];
+    expect(() => gerarConteudoGpx('Recife', 'Olinda', rota)).toThrow(/dois pontos/i);
+  });
+
+  it('recusa coordenadas inválidas em uma parada exportada', () => {
+    const rota = rotaDeTeste();
+    rota.paradas = [
+      {
+        id: 'parada',
+        nome: 'Posto',
+        km: 5,
+        tipo: 'combustivel',
+        nivelBateriaOuTanquePct: 22,
+        coordenadas: [NaN, -35],
+      },
+    ];
+    expect(() => gerarConteudoGpx('Recife', 'Olinda', rota)).toThrow(/coordenadas/i);
+  });
+
+  it('baixa um Blob GPX com nome de arquivo e revoga a URL após o clique', async () => {
+    const criar = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:rota-gpx');
+    const revogar = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    let linkBaixado: { href: string; download: string } | undefined;
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      linkBaixado = { href: this.href, download: this.download };
+    });
+    baixarArquivoGpx('Recife - PE', 'Olinda - PE', rotaDeTeste());
+    const blob = criar.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe('application/gpx+xml;charset=utf-8;');
+    expect(blob.size).toBeGreaterThan(0);
+    const xml = new DOMParser().parseFromString(await blob.text(), 'application/xml');
+    expect(xml.querySelector('parsererror')).toBeNull();
+    expect(xml.querySelector('metadata > name')?.textContent).toBe(
+      'Rota: Recife - PE para Olinda - PE',
+    );
+    expect(linkBaixado?.href).toBe('blob:rota-gpx');
+    expect(linkBaixado?.download).toBe('rota-recife___pe-para-olinda___pe.gpx');
+    expect(document.querySelector('a[download]')).toBeNull();
+    expect(revogar).toHaveBeenCalledWith('blob:rota-gpx');
+  });
+
+  it('remove o link e revoga a URL mesmo se o navegador falhar no download', () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:falha');
+    const revogar = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+      throw new Error('Download bloqueado');
+    });
+    expect(() => baixarArquivoGpx('Recife', 'Olinda', rotaDeTeste())).toThrow('Download bloqueado');
+    expect(document.querySelector('a[download]')).toBeNull();
+    expect(revogar).toHaveBeenCalledWith('blob:falha');
+  });
+});

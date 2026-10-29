@@ -1,6 +1,7 @@
-﻿import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../config';
 import type {
   AvailableValue,
+  CoordenadaGPS,
   PlanningResponseMetadata,
   RoteiroFormData,
   Usuario,
@@ -12,6 +13,8 @@ export interface SessionResponse {
   usuario: Usuario | null;
   google_client_id: string;
   ufs: string[];
+  session_started_at?: string | null;
+  session_duration_ms?: number | null;
 }
 
 export interface TripsResponse {
@@ -94,6 +97,28 @@ function availableText(value: unknown, fallback = UNAVAILABLE): string {
   return normalized && normalized.toUpperCase() !== 'N/D' ? normalized : fallback;
 }
 
+function parseGeometry(value: unknown): CoordenadaGPS[] | undefined {
+  if (!Array.isArray(value) || value.length < 2) return undefined;
+  const points: CoordenadaGPS[] = [];
+  for (const point of value) {
+    if (!Array.isArray(point) || point.length !== 2) return undefined;
+    const [lat, lon] = point;
+    if (
+      typeof lat !== 'number' ||
+      typeof lon !== 'number' ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lon) ||
+      lat < -90 ||
+      lat > 90 ||
+      lon < -180 ||
+      lon >= 180
+    )
+      return undefined;
+    points.push([lat, lon]);
+  }
+  return points;
+}
+
 export function parseTrip(value: unknown): Viagem | null {
   const trip = recordValue(value);
   if (!trip) return null;
@@ -101,6 +126,7 @@ export function parseTrip(value: unknown): Viagem | null {
   if (!id) return null;
   const weather = recordValue(trip.clima);
   const route = recordValue(trip.percurso);
+  const geometry = parseGeometry(route?.geometria);
   const diagnostics = recordValue(trip.diagnostico_ia);
   const createdAt = availableText(trip.criado_em, '');
   const optionalFields = parseTripOptionalFields(trip);

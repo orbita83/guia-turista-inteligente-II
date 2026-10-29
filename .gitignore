@@ -71,5 +71,6 @@ Desktop.ini
 
 # Desenvolvimento
 /.specify
+/.specs
 /specs
 AGENTS.md

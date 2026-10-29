@@ -90,13 +90,10 @@ function paraRadianos(graus: number): number {
 }
 
 /**
- * Calcula a distância geodésica entre duas coordenadas geográficas
- * utilizando a fórmula de Haversine (em quilômetros).
- *
- * d = 2R · atan2(√a, √(1-a))
- * onde a = sin²(Δlat/2) + cos(lat1)·cos(lat2)·sin²(Δlon/2)
+ * Calcula a distância geodésica em quilômetros (ponto flutuante)
+ * utilizando a fórmula de Haversine, sem arredondamento prematuro.
  */
-export function calcularHaversineKm(
+export function calcularHaversineExatoKm(
   lat1: number,
   lon1: number,
   lat2: number,
@@ -114,7 +111,23 @@ export function calcularHaversineKm(
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return Math.round(RAIO_TERRA_KM * c);
+  return RAIO_TERRA_KM * c;
+}
+
+/**
+ * Calcula a distância geodésica entre duas coordenadas geográficas
+ * utilizando a fórmula de Haversine (em quilômetros inteiros arredondados).
+ *
+ * d = 2R · atan2(√a, √(1-a))
+ * onde a = sin²(Δlat/2) + cos(lat1)·cos(lat2)·sin²(Δlon/2)
+ */
+export function calcularHaversineKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  return Math.round(calcularHaversineExatoKm(lat1, lon1, lat2, lon2));
 }
 
 /**

@@ -199,7 +199,7 @@ async def get_route(
     longitude_origin: float,
     latitude_destination: float,
     longitude_destination: float,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     fallback = {
         "distancia": "Sem rota direta",
         "tempo": "Considere voos ou barcos",
@@ -214,7 +214,7 @@ async def get_route(
         response = await client.get(
             "https://router.project-osrm.org/route/v1/driving/"
             f"{longitude_origin},{latitude_origin};{longitude_destination},{latitude_destination}",
-            params={"overview": "false", "radiuses": "1000;1000"},
+            params={"overview": "full", "geometries": "geojson", "radiuses": "1000;1000"},
             timeout=6.0,
         )
         response.raise_for_status()
@@ -232,8 +232,23 @@ async def get_route(
         return fallback
     total_minutes = math.floor(duration / 60 + 0.5)
     hours, minutes = divmod(total_minutes, 60)
-    return {
+    result: dict[str, Any] = {
         "distancia": f"{round(distance / 1000, 1)} km",
         "tempo": f"{hours}h {minutes}min de carro",
         "modal": "carro",
     }
+    geometry = routes[0].get("geometry")
+    if isinstance(geometry, dict) and geometry.get("type") == "LineString":
+        points = geometry.get("coordinates")
+        if isinstance(points, list) and len(points) >= 2:
+            converted = []
+            for pair in points:
+                if not isinstance(pair, list) or len(pair) != 2:
+                    break
+                lon, lat = _finite_number(pair[0]), _finite_number(pair[1])
+                if lon is None or lat is None or not (-180 <= lon < 180 and -90 <= lat <= 90):
+                    break
+                converted.append([lat, lon])
+            else:
+                result["geometria"] = converted
+    return result

@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Any
 
@@ -5,6 +6,7 @@ import httpx
 from fastapi import HTTPException, Request
 
 VISITOR_TTL_SECONDS = 2 * 60 * 60
+logger = logging.getLogger(__name__)
 
 
 def get_http_client(request: Request) -> httpx.AsyncClient:
@@ -37,8 +39,11 @@ def get_current_user(request: Request) -> dict[str, Any]:
             if storage is not None and hasattr(storage, "forget_visitor"):
                 try:
                     storage.forget_visitor(str(user["id"]))
-                except Exception:
-                    pass
+                except Exception as error:  # noqa: BLE001 - expiração invalida sessão mesmo se limpeza falhar
+                    logger.warning(
+                        "Falha ao limpar sessão visitante expirada: %s",
+                        type(error).__name__,
+                    )
             request.session.clear()
             raise HTTPException(
                 status_code=401, detail="A sessão de visitante expirou."
