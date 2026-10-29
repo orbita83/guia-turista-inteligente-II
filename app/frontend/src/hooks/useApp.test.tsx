@@ -16,6 +16,7 @@ const api = vi.hoisted(() => ({
   encerrarSessao: vi.fn(),
   excluirViagem: vi.fn(),
   verificarSaudeApi: vi.fn(),
+  obterTelemetriaOperacional: vi.fn(),
   atualizarVisitaAtrativo: vi.fn(),
 }));
 
@@ -76,6 +77,24 @@ describe('useApp telemetry lifecycle', () => {
     api.carregarSessao.mockResolvedValue({ usuario, google_client_id: '', ufs: ['PE'] });
     api.listarViagens.mockResolvedValue({ viagens: [] });
     api.verificarSaudeApi.mockResolvedValue(true);
+    api.obterTelemetriaOperacional.mockResolvedValue({ uptimeSeconds: 2, totalPersistedTrips: 0 });
+  });
+
+  it('mantém os dados operacionais vindos da sessão se a consulta adicional falhar', async () => {
+    api.carregarSessao.mockResolvedValue({
+      usuario,
+      google_client_id: '',
+      ufs: ['PE'],
+      operationalTelemetry: { uptimeSeconds: 120, totalPersistedTrips: 7 },
+    });
+    api.obterTelemetriaOperacional.mockRejectedValueOnce(new Error('Telemetria operacional: HTTP 404'));
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.operationalTelemetry).toEqual({
+      uptimeSeconds: 120,
+      totalPersistedTrips: 7,
+    }));
+    await waitFor(() => expect(result.current.operationalError).toContain('HTTP 404'));
+    expect(result.current.apiHealthStatus).toBe('online');
   });
 
   it('usa o tempo restante da sessão recebido do servidor', async () => {
