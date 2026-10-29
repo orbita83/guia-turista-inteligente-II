@@ -2,12 +2,12 @@ import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib import import_module
-from time import perf_counter
+from time import perf_counter, monotonic
 from typing import Any
 from uuid import uuid4
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from prometheus_client import (
@@ -18,6 +18,7 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -25,6 +26,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.core.circuit_breaker import CircuitBreaker, CircuitState
 from app.core.config import get_settings
 from app.core.storage import TripStorage
+from app.core.dependencies import get_current_user
 from app.routers import auth, streaming, trips
 
 REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,64}")
@@ -93,6 +95,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # O try começa logo após criar o client: se algo abaixo falhar,
         # o pool de conexões ainda é fechado.
         app.state.trip_storage = TripStorage(settings.trips_file)
+        app.state.started_at = monotonic()
         app.state.circuit_breakers = build_circuit_breakers()
         app.state.stream_observer = STREAM_METRICS
         yield
@@ -210,6 +213,28 @@ async def healthz() -> dict[str, str]:
 @app.get("/readyz", tags=["operação"])
 async def readyz() -> dict[str, str]:
     return {"status": "ready"}
+
+
+@app.get("/api/v1/operacao/telemetria", tags=["operação"])
+async def operational_telemetry(
+    request: Request,
+    _user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+) -> dict[str, Any]:
+    """Métricas operacionais: uptime deste processo e roteiros persistidos globalmente.
+
+    Roteiros voláteis de visitantes não entram no contador.
+    """
+    data = await run_in_threadpool(request.app.state.trip_storage.all_data)
+    users = data.get("usuarios", {})
+    total = sum(
+        len(user.get("roteiros", []))
+        for user in users.values()
+        if isinstance(user, dict) and isinstance(user.get("roteiros"), list)
+    ) if isinstance(users, dict) else 0
+    return {
+        "uptime_seconds": round(max(0.0, monotonic() - request.app.state.started_at), 3),
+        "total_roteiros_persistidos": total,
+    }
 
 
 @app.get("/circuits", tags=["operação"])
