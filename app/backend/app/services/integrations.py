@@ -279,24 +279,20 @@ async def get_weather(
     humidity = _finite_number(current.get("relative_humidity_2m"))
     wind = _finite_number(current.get("wind_speed_10m"))
     weather_code = current.get("weather_code")
-    if (
-        temperature is None
-        or apparent_temperature is None
-        or humidity is None
-        or wind is None
-        or isinstance(weather_code, bool)
-        or not isinstance(weather_code, int)
-        or weather_code not in WEATHER_CONDITIONS
-        or not 0 <= humidity <= 100
-        or wind < 0
-    ):
-        return fallback
+    # TODO(integracao): alinhar `sensacao_termica` com o campo `sensacao` do
+    # Frontend ao integrar o contrato meteorológico da issue #25.
     return {
-        "temperatura": f"{temperature} °C",
-        "sensacao_termica": f"{apparent_temperature} °C",
-        "umidade": f"{humidity:g}%",
-        "vento": f"{wind} km/h",
-        "condicao": WEATHER_CONDITIONS[weather_code],
+        "temperatura": f"{temperature} °C" if temperature is not None else "N/D",
+        "sensacao_termica": f"{apparent_temperature} °C"
+        if apparent_temperature is not None
+        else "N/D",
+        "umidade": f"{humidity:g}%"
+        if humidity is not None and 0 <= humidity <= 100
+        else "N/D",
+        "vento": f"{wind} km/h" if wind is not None and wind >= 0 else "N/D",
+        "condicao": WEATHER_CONDITIONS.get(weather_code, "N/D")
+        if isinstance(weather_code, int) and not isinstance(weather_code, bool)
+        else "N/D",
     }
 
 

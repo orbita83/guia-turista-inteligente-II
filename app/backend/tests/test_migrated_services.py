@@ -186,6 +186,29 @@ async def test_weather_and_route_retain_legacy_output_shapes() -> None:
 
 
 @pytest.mark.asyncio
+async def test_clima_parcial_preserva_medicoes_validas() -> None:
+    payload = {
+        "current": {
+            "temperature_2m": 25,
+            "relative_humidity_2m": 101,
+            "wind_speed_10m": 12,
+            "weather_code": 999,
+        }
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=payload))
+    ) as client:
+        weather = await get_weather(client, -8.05, -34.9)
+    assert weather == {
+        "temperatura": "25.0 °C",
+        "sensacao_termica": "N/D",
+        "umidade": "N/D",
+        "vento": "12.0 km/h",
+        "condicao": "N/D",
+    }
+
+
+@pytest.mark.asyncio
 async def test_route_requests_full_geojson_geometry_and_real_alternatives() -> None:
     def response(request: httpx.Request) -> httpx.Response:
         assert request.url.params["overview"] == "full"
