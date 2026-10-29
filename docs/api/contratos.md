@@ -41,6 +41,34 @@ Solicitações iguais da mesma identidade têm bloqueio de concorrência e coold
 quatro segundos, respondendo `409`. Falhas HTTP não tratadas pelos fallbacks dos
 provedores respondem `502`.
 
+### Validação de cidades e UFs
+
+A entrada é validada pelo schema Pydantic `TripCreateRequest` antes de qualquer
+integração; violações retornam `422` com a lista de erros em `detail`.
+
+| Campo | Tipo | Obrigatório | Regra |
+| --- | --- | --- | --- |
+| `origem_cidade`, `destino_cidade` | string | sim | espaços externos removidos; não vazio após `strip`; 1 a 80 caracteres; acentos preservados |
+| `origem_uf`, `destino_uf` | string | não (default `""`) | normalizado para maiúsculas sem espaços externos; deve pertencer às 27 siglas oficiais |
+
+Política aplicada:
+
+- **UF válida:** uma das 27 siglas (`AC`, `AL`, ..., `TO`). `pe`, `Pe` e `" ba "`
+  são normalizadas para `PE` e `BA`.
+- **UF inválida:** qualquer valor não vazio que não seja uma sigla oficial (`XX`,
+  `ZZ`, `SAO`, `P`) retorna `422` apontando o campo (`origem_uf`/`destino_uf`).
+- **UF ausente ou vazia:** `""` é aceita e mantida como `""` para preservar o
+  consumidor legado do frontend, que não exige UF para o visitante. Não há inferência
+  a partir da cidade.
+- **Cidade vazia/só espaços ou acima de 80 caracteres:** `422`.
+- **Compatibilidade legada:** a leitura de viagens históricas mantém os campos
+  originais, inclusive desconhecidos, sem inventar valores nem descartar dados.
+
+Os schemas estruturados de altimetria, veículos, paradas e custos
+(`app/backend/app/schemas/roteiros.py`) ficam disponíveis para integração futura nos
+endpoints; ainda não são referenciados por rotas registradas e, por isso, não aparecem
+em `/openapi.json`.
+
 `viagem.clima` mantém `temperatura`, `umidade` e `vento`, e também retorna
 `sensacao_termica` e `condicao`, consultadas no Open-Meteo. `condicao` traduz códigos
 WMO suportados para descrições em português; campos ausentes, inválidos ou códigos
@@ -254,5 +282,10 @@ correspondente no frontend monolítico atual; ficam fora desta migração:
 | método pendente `/api/v1/roteiros/exportar/gpx` | exportação no servidor | futuro; download atual é local no navegador |
 | método pendente `/api/v1/roteiros/compartilhar` | compartilhamento | futuro |
 | `/api/v1/telemetria` | diagnóstico de provedores/circuit breakers | futuro |
+
+O serviço de domínio de custos (`app/backend/app/services/custos_service.py`) existe
+desde a Issue #29, mas o endpoint `/api/v1/roteiros/custos` continua futuro e não
+está registrado no FastAPI. O contrato detalhado do serviço está em
+[`custos.md`](./custos.md); a orquestração no planejamento pertence à Issue #23.
 
 O schema executável completo também está publicado pelo FastAPI em `/openapi.json`.
