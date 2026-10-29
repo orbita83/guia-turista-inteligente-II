@@ -60,6 +60,19 @@ describe('TelemetriaCard', () => {
     );
   });
 
+  it('mostra uptime e quantidade global reais quando o contrato está disponível', () => {
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture()}
+        apiHealthStatus="online"
+        operationalTelemetry={{ uptimeSeconds: 3661, totalPersistedTrips: 12 }}
+        onCopyRequestId={vi.fn(async () => true)}
+      />,
+    );
+    expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent('1h 1min 1s');
+    expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent('12');
+  });
+
   it('usa fallback para medição ausente e não declara provedor desconhecido como disponível', () => {
     const snapshot = telemetrySnapshotFixture({
       apiTimeMs: unavailable('missing'),
