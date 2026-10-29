@@ -42,15 +42,17 @@ provedores respondem `502`.
 
 `viagem.clima` mantém `temperatura`, `umidade` e `vento`, e também retorna
 `sensacao_termica` e `condicao`, consultadas no Open-Meteo. `condicao` traduz códigos
-WMO suportados para descrições em português; dados incompletos ou códigos
-desconhecidos retornam todos os campos como `"N/D"`.
+WMO suportados para descrições em português; campos ausentes, inválidos ou códigos
+desconhecidos são retornados como `"N/D"`, preservando as demais medições válidas.
 
 `viagem.telemetria.duracoes_etapas_ms` contém durações em milissegundos para
 geocodificação de origem/destino, clima, roteamento, guia e total dos serviços
 integrados. `viagem.telemetria.provedores` sinaliza `disponivel`, `indisponivel` ou
 `nao_consultado`; Open-Elevation permanece `nao_integrado` até o serviço do Aluno 3
-ser entregue. O cabeçalho `X-Process-Time` continua sendo a duração total da requisição
-HTTP e inclui etapas fora do total de serviços.
+ser entregue. A duração de uma etapa inclui o tratamento local mesmo quando o
+provedor não é consultado; tempos de etapas concorrentes se sobrepõem. O cabeçalho
+`X-Process-Time` mede o tempo até o início da resposta HTTP e inclui etapas fora
+do total de serviços; não representa o RTT nem o tempo total percebido pelo cliente.
 
 Exemplo dos campos de clima e telemetria:
 
@@ -149,6 +151,8 @@ Exemplo de indisponibilidade sem linha reta substituta:
 Os motivos atuais incluem `coordenadas_invalidas`, `sem_rota`, `timeout`,
 `falha_http`, `falha_rede`, `resposta_malformada`, `resposta_invalida` e
 `geometria_invalida`.
+Para falhas de consulta e respostas inválidas, a distância é apresentada como
+`Rota indisponível`; `Sem rota direta` é reservado à resposta `sem_rota` do OSRM.
 
 ### Sessão e isolamento
 
@@ -168,6 +172,12 @@ visitante válida e o vínculo não expirado, restaura somente a identidade Goog
 descarta os dados temporários do visitante sem mesclá-los. Login em outra conta,
 logout e expiração removem a possibilidade de restauração. O vínculo dura no máximo
 duas horas.
+
+Cada cookie é associado a uma sessão ativa registrada no processo do Backend.
+Troca de identidade, logout e restauração revogam o identificador anterior, de
+modo que sua reapresentação seja recusada. O registro é mantido em memória:
+reiniciar a API encerra as sessões, e uma implantação com múltiplos processos
+precisa de um armazenamento compartilhado e atômico para sessões e revogações.
 
 `PATCH /api/v1/roteiros/{roteiro_id}/visitas` recebe `{ "atrativo_id": "...",
 "visitado": true }` e retorna `roteiro_id`, `atrativo_id`, `visitado` e
