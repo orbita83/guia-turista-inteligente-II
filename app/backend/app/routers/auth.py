@@ -112,13 +112,17 @@ def get_session(
     session_started_at, session_duration_ms = (
         _session_timing(request) if isinstance(user, dict) else (None, None)
     )
+    operational = None
+    if isinstance(user, dict):
+        try:
+            operational = operational_snapshot(storage, request.app.state.started_at)
+        except (OSError, ValueError, TypeError, AttributeError):
+            # Falha nas métricas não deve impedir o usuário de restaurar a sessão.
+            logger.warning("Telemetria operacional indisponível ao consultar sessão.")
     return SessionResponse(
         usuario=_user_response(user) if isinstance(user, dict) else None,
         google_client_id=settings.google_client_id,
-        telemetria_operacional=(
-            operational_snapshot(storage, request.app.state.started_at)
-            if isinstance(user, dict) else None
-        ),
+        telemetria_operacional=operational,
         ufs=sorted(settings.states),
         session_started_at=session_started_at,
         session_duration_ms=session_duration_ms,
