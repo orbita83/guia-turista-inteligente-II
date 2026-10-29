@@ -5,6 +5,7 @@ import type {
   AtrativoTuristico,
   GuiaStreamingStatus,
   RoteiroFormData,
+  StreamTelemetryUpdate,
   Viagem,
 } from '../types/domain';
 
@@ -166,6 +167,7 @@ export function RoteiroResult({
     streamAbortControllerRef.current = controller;
 
     setStreamText('');
+    setStreamMessage('');
     setStreamStatus('streaming');
     setStreamMode('connecting');
 
@@ -181,16 +183,30 @@ export function RoteiroResult({
       {
         onMode: setStreamMode,
         onChunk: (chunk) => {
-          setStreamText((atual) => atual + chunk);
+          if (!controller.signal.aborted) setStreamText((atual) => atual + chunk);
+        },
+        onReplace: (text) => {
+          if (!controller.signal.aborted) setStreamText(text);
         },
         onDone: (full) => {
+          if (controller.signal.aborted) return;
           setStreamText(full);
           setStreamStatus('completed');
         },
-        onError: () => {
-          // Em caso de falha de conexão, garante que o dicas_destino padrão seja exibido
-          setStreamText(viagem.dicas_destino || 'Guia indisponível temporariamente.');
+        onError: (error) => {
+          if (controller.signal.aborted) return;
+          setStreamMessage(error.message);
           setStreamStatus('error');
+        },
+        onTelemetry: (update) => {
+          if (!controller.signal.aborted) {
+            onStreamTelemetry?.(update);
+            window.dispatchEvent(
+              new CustomEvent('guia:stream-telemetry', {
+                detail: { trip: viagem, update },
+              }),
+            );
+          }
         },
       },
       {
@@ -213,6 +229,13 @@ export function RoteiroResult({
       }
     };
   }, [viagem.id]);
+
+  const cancelarStreaming = () => {
+    streamAbortControllerRef.current?.abort();
+    setStreamText('');
+    setStreamStatus('idle');
+    setStreamMessage('Transmissão cancelada.');
+  };
 
   const copiarTextoGuia = async () => {
     try {
@@ -398,6 +421,11 @@ export function RoteiroResult({
                 {streamMode === 'sse' ? '✓ Transmissão concluída' : '✓ Conteúdo existente exibido'}
               </span>
             )}
+            {streamStatus === 'idle' && streamMessage && (
+              <span className="guide-status-badge" role="status">
+                {streamMessage}
+              </span>
+            )}
             {streamStatus === 'error' && (
               <span className="guide-status-badge is-error" role="status">
                 ⚠️ Falha na transmissão
@@ -406,8 +434,10 @@ export function RoteiroResult({
           </div>
         </div>
 
+        {streamStatus === 'error' && <p role="alert">{streamMessage}</p>}
+
         {/* Área de Texto em Streaming */}
-        <div className="guide-content-area" role="region" aria-live="polite">
+        <div className="guide-content-area" role="region" aria-label="Conteúdo do guia">
           {secoesParsed.length >= 2 ? (
             <div className="guide-parsed-sections">
               {secoesParsed.map((secao) => (
@@ -435,6 +465,11 @@ export function RoteiroResult({
 
         {/* Ações Rápidas do Guia */}
         <div className="guide-actions-bar">
+          {streamStatus === 'streaming' && (
+            <button type="button" className="btn-guide-action" onClick={cancelarStreaming}>
+              Cancelar transmissão
+            </button>
+          )}
           <button
             type="button"
             className="btn-guide-action"

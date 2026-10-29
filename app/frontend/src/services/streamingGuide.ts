@@ -1,16 +1,20 @@
-import type { GuiaStreamPayload } from '../types/domain';
-
-// TODO(backend): expor endpoint POST /api/v1/roteiros/stream-guia transmitindo eventos text/event-stream (SSE) com frames data: {"chunk": string, "done": boolean}\n\n.
-// TODO(backend): incluir tratamento de timeout e cancelamento precoce no servidor via request.is_disconnected().
+import type { GuiaStreamPayload, StreamTelemetryUpdate } from '../types/domain';
+import { API_BASE_URL } from '../config';
+import { parseProcessTime, parseRequestId } from './api';
+import { formatSessionStartedAt, unavailableValue } from './telemetry';
 
 export interface StreamingCallbacks {
   onMode?: (mode: 'sse' | 'fallback') => void;
   /** Chamado a cada fragmento textual recebido (RN-GUI-007) */
   onChunk: (chunk: string) => void;
+  /** Substitui o texto parcial pelo conteúdo definitivo de contingência. */
+  onReplace?: (text: string) => void;
   /** Chamado quando a transmissão conclui com sucesso (RN-GUI-006, CA-GUI-002) */
   onDone: (fullText: string) => void;
   /** Chamado em caso de erro terminal não recuperável */
   onError: (error: Error) => void;
+  /** Atualização de telemetria em tempo real pelo canal SSE */
+  onTelemetry?: (update: StreamTelemetryUpdate) => void;
 }
 
 export interface StreamingOptions {
@@ -24,35 +28,69 @@ export interface StreamingOptions {
   fallbackTokenDelayMs?: number;
 }
 
-const API_BASE_URL = '/api/v1';
+export type GuideEvent =
+  | { type: 'chunk'; chunk: string; done: boolean }
+  | { type: 'replace'; text: string }
+  | { type: 'done'; diagnosticoIa?: Record<string, unknown> }
+  | { type: 'telemetry'; data: Record<string, unknown> }
+  | { type: 'error'; message: string };
 
-/**
- * Faz o parsing de um bloco de evento SSE no formato `data: {"chunk": "...", "done": boolean}`.
- */
-export function parseSseBlock(block: string): { chunk: string; done: boolean } | null {
-  const trimmed = block.trim();
-  if (!trimmed) return null;
+export function parseGuideEvent(block: string): GuideEvent | null {
+  let event = '';
+  const data: string[] = [];
+  for (const line of block.split(/\r?\n/)) {
+    if (line.startsWith('event:')) event = line.slice(6).trim();
+    if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
+  }
+  if (data.length === 0) return null;
 
-  for (const line of trimmed.split('\n')) {
-    const cleanLine = line.trim();
-    if (cleanLine.startsWith('data:')) {
-      const jsonStr = cleanLine.slice(5).trim();
-      try {
-        const parsed = JSON.parse(jsonStr) as { chunk?: string; done?: boolean };
-        return {
-          chunk: typeof parsed.chunk === 'string' ? parsed.chunk : '',
-          done: Boolean(parsed.done),
-        };
-      } catch {
-        // Se não for JSON válido, tenta ler como texto puro do frame
-        return {
-          chunk: jsonStr,
-          done: false,
-        };
-      }
-    }
+  let payload: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(data.join('\n'));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+    payload = parsed as Record<string, unknown>;
+  } catch {
+    throw new Error('Evento SSE com JSON inválido.');
   }
 
+  if (event === 'error') {
+    return {
+      type: 'error',
+      message: typeof payload.message === 'string' ? payload.message : 'Falha ao gerar o guia.',
+    };
+  }
+  if (event === 'telemetry') {
+    return { type: 'telemetry', data: payload };
+  }
+  if (event === 'replace') {
+    if (typeof payload.text !== 'string') throw new Error('Evento replace sem texto válido.');
+    return { type: 'replace', text: payload.text };
+  }
+  if (event === 'done') {
+    const diag =
+      typeof payload.diagnostico_ia === 'object' &&
+      payload.diagnostico_ia !== null &&
+      !Array.isArray(payload.diagnostico_ia)
+        ? (payload.diagnostico_ia as Record<string, unknown>)
+        : undefined;
+    return { type: 'done', diagnosticoIa: diag };
+  }
+  if (event && event !== 'chunk' && event !== 'message') return null;
+  if (payload.chunk !== undefined && typeof payload.chunk !== 'string') {
+    throw new Error('Evento SSE com fragmento inválido.');
+  }
+  return {
+    type: 'chunk',
+    chunk: typeof payload.chunk === 'string' ? payload.chunk : '',
+    done: payload.done === true,
+  };
+}
+
+/** Compatibilidade com os frames data: {"chunk": "...", "done": boolean}. */
+export function parseSseBlock(block: string): { chunk: string; done: boolean } | null {
+  const parsed = parseGuideEvent(block);
+  if (parsed?.type === 'chunk') return { chunk: parsed.chunk, done: parsed.done };
+  if (parsed?.type === 'done') return { chunk: '', done: true };
   return null;
 }
 
@@ -83,7 +121,6 @@ function waitWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
  * Executa o streaming progressivo de fallback a partir de um texto base existente
  * (ex.: viagem.dicas_destino), particionando em tokens para conferir feedback visual em tempo real.
  */
-// TODO(backend): quando o endpoint /stream-guia for concluído no backend, os fragmentos gerados pelo Gemini AI substituirão a leitura de fallback de dicas_destino.
 async function executarFallbackProgressivo(
   texto: string,
   callbacks: StreamingCallbacks,
@@ -120,9 +157,8 @@ async function executarFallbackProgressivo(
 }
 
 /**
- * Inicia o consumo do guia turístico em streaming (SSE) via POST /stream-guia.
- * Caso o endpoint retorne 404/501 ou falhe antes de iniciar, ativa o fallback inteligente
- * com animação progressiva do texto pré-existente sem quebrar a tela.
+ * Consome SSE com confirmação explícita de término. A animação legada só é usada
+ * em 404/501 ou falha de rede antes de receber uma resposta HTTP.
  */
 export async function streamGuiaTuristico(
   payload: GuiaStreamPayload,
@@ -133,17 +169,25 @@ export async function streamGuiaTuristico(
   if (signal?.aborted) return;
   let emittedSseChunk = false;
 
+  const startedAt = performance.now();
+  let response: Response;
   try {
-    const response = await fetch(`${API_BASE_URL}/roteiros/stream-guia`, {
+    response = await fetch(`${API_BASE_URL}/roteiros/stream-guia`, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-      },
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
       body: JSON.stringify(payload),
       signal,
     });
+  } catch (err: unknown) {
+    if (signal?.aborted || (err instanceof Error && err.name === 'AbortError')) return;
+    if (options?.fallbackText) {
+      await executarFallbackProgressivo(options.fallbackText, callbacks, options);
+    } else {
+      callbacks.onError(err instanceof Error ? err : new Error(String(err)));
+    }
+    return;
+  }
 
     // Se o endpoint estiver disponível e retornar text/event-stream com sucesso
     const contentType = response.headers.get('content-type') || '';
@@ -204,11 +248,28 @@ export async function streamGuiaTuristico(
       return;
     }
 
-    throw new Error(`Endpoint /stream-guia indisponível (HTTP ${response.status}).`);
-  } catch (err: unknown) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      return;
-    }
+      let separator: RegExpExecArray | null;
+      while ((separator = /\r?\n\r?\n/.exec(buffer))) {
+        if (signal?.aborted) return;
+        const block = buffer.slice(0, separator.index);
+        buffer = buffer.slice(separator.index + separator[0].length);
+        const event = parseGuideEvent(block);
+        if (!event) continue;
+        if (event.type === 'error') throw new Error(event.message);
+        if (event.type === 'telemetry') {
+          const sessionPayload = event.data.session as Record<string, unknown> | undefined;
+          const remoteReqId =
+            typeof event.data.requestId === 'string' && event.data.requestId.trim() !== ''
+              ? parseRequestId(event.data.requestId)
+              : requestIdHeader;
+          const sessionStarted = sessionPayload?.sessionStartedAt;
+          const sessionDur = sessionPayload?.sessionDurationMs;
+          const diag =
+            typeof event.data.diagnostico_ia === 'object' &&
+            event.data.diagnostico_ia !== null &&
+            !Array.isArray(event.data.diagnostico_ia)
+              ? (event.data.diagnostico_ia as Record<string, unknown>)
+              : undefined;
 
     // Em falha de rede/conexão, ativa fallback progressivo se disponível
     if (options?.fallbackText && !emittedSseChunk && !signal?.aborted) {
@@ -216,7 +277,11 @@ export async function streamGuiaTuristico(
       await executarFallbackProgressivo(options.fallbackText, callbacks, options);
       return;
     }
-
-    callbacks.onError(err instanceof Error ? err : new Error(String(err)));
+  } catch (err: unknown) {
+    if (!signal?.aborted) callbacks.onError(err instanceof Error ? err : new Error(String(err)));
+  } finally {
+    signal?.removeEventListener('abort', onAbort);
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
 }

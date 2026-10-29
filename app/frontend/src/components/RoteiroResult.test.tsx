@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Viagem } from '../types/domain';
@@ -168,5 +168,89 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
 
     await user.click(copyButton);
     expect(writeTextMock).toHaveBeenCalled();
+  });
+});
+
+describe('RoteiroResult: estados reais da transmissão', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function prepararStream() {
+    let source!: ReadableStreamDefaultController<Uint8Array>;
+    const cancel = vi.fn();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        source = controller;
+      },
+      cancel,
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }),
+      );
+    const enviar = async (evento: string, dados: object) => {
+      await act(async () => {
+        source.enqueue(
+          new TextEncoder().encode(`event: ${evento}\ndata: ${JSON.stringify(dados)}\n\n`),
+        );
+      });
+    };
+    return { source, cancel, fetchMock, enviar };
+  }
+
+  it('mostra fragmentos antes de done e habilita retransmissão após concluir', async () => {
+    const { enviar } = prepararStream();
+    render(<RoteiroResult viagem={mockViagem} />);
+    expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Transmitindo ao vivo');
+    await enviar('chunk', { chunk: 'Conteúdo que chegou primeiro', done: false });
+    expect(screen.getByText('Conteúdo que chegou primeiro')).toBeInTheDocument();
+    expect(screen.queryByText(/✓ Guia completo/i)).not.toBeInTheDocument();
+    await enviar('done', { done: true });
+    expect(await screen.findByText(/✓ Guia completo/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeEnabled();
+  });
+
+  it('substitui o conteúdo parcial após um evento replace', async () => {
+    const { enviar } = prepararStream();
+    render(<RoteiroResult viagem={mockViagem} />);
+    await enviar('chunk', { chunk: 'Resposta interrompida', done: false });
+    expect(screen.getByText('Resposta interrompida')).toBeInTheDocument();
+    await enviar('replace', { text: 'Conteúdo completo de contingência' });
+    expect(screen.getByText('Conteúdo completo de contingência')).toBeInTheDocument();
+    expect(screen.queryByText('Resposta interrompida')).not.toBeInTheDocument();
+    await enviar('done', { done: true });
+    expect(await screen.findByText(/✓ Guia completo/i)).toBeInTheDocument();
+  });
+
+  it('apresenta conflito 409 como erro sem declarar sucesso com o guia antigo', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Conflito', { status: 409 }));
+    render(<RoteiroResult viagem={mockViagem} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('HTTP 409');
+    expect(screen.queryByText(/✓ Guia completo/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pelourinho e Farol da Barra/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeEnabled();
+  });
+
+  it('permite cancelar durante a leitura e remove o texto parcial', async () => {
+    const user = userEvent.setup();
+    const { enviar, cancel, fetchMock } = prepararStream();
+    render(<RoteiroResult viagem={mockViagem} />);
+    await enviar('chunk', { chunk: 'Conteúdo parcial', done: false });
+    await user.click(screen.getByRole('button', { name: /Cancelar transmissão/i }));
+    expect(screen.queryByText('Conteúdo parcial')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Transmissão cancelada');
+    expect(screen.queryByText(/✓ Guia completo/i)).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
+    await waitFor(() => expect(cancel).toHaveBeenCalledTimes(1));
+  });
+
+  it('aborta a requisição quando o componente sai da tela', async () => {
+    const { cancel, fetchMock, enviar } = prepararStream();
+    const { unmount } = render(<RoteiroResult viagem={mockViagem} />);
+    await enviar('chunk', { chunk: 'Texto', done: false });
+    unmount();
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
+    await waitFor(() => expect(cancel).toHaveBeenCalledTimes(1));
   });
 });

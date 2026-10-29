@@ -247,6 +247,26 @@ export interface TelemetrySnapshot {
   connectivity: ConnectivityCondition;
 }
 
+export interface StreamSessionTelemetry {
+  userId?: string;
+  displayName: string;
+  kind: TipoUsuario;
+  persistence: 'permanente' | 'temporaria';
+  sessionStartedAt: AvailableValue<string>;
+  sessionDuration: AvailableValue<number>;
+  userTripCount?: number;
+}
+
+export interface StreamTelemetryUpdate {
+  stage: 'connected' | 'streaming' | 'completed' | 'error';
+  requestId: AvailableValue<string>;
+  rttMs: AvailableValue<number>;
+  networkType: AvailableValue<string>;
+  elapsedStreamMs: AvailableValue<number>;
+  session?: StreamSessionTelemetry;
+  diagnosticoIa?: Record<string, unknown>;
+}
+
 export type TelemetryPanelState =
   | { kind: 'hidden' }
   | {
@@ -254,6 +274,7 @@ export type TelemetryPanelState =
       attemptId: number;
       route: RouteSummary;
       previous?: TelemetrySnapshot;
+      session?: SessionSummary;
     }
   | { kind: 'settled'; snapshot: TelemetrySnapshot }
   | {
@@ -261,4 +282,5 @@ export type TelemetryPanelState =
       attemptId: number;
       route: RouteSummary;
       previous?: TelemetrySnapshot;
+      session?: SessionSummary;
     };
