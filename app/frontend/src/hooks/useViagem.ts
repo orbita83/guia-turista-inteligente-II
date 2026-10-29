@@ -162,6 +162,7 @@ export function useViagem() {
   const { toasts, addToast, dismissToast } = useToasts();
   const [telemetryState, setTelemetryState] = useState<TelemetryPanelState>({ kind: 'hidden' });
   const [operationalTelemetry, setOperationalTelemetry] = useState<{ uptimeSeconds: number; totalPersistedTrips: number } | null>(null);
+  const [operationalError, setOperationalError] = useState<string | null>(null);
   const [apiHealthStatus, setApiHealthStatus] = useState<'checking' | 'online' | 'unavailable'>(
     'checking',
   );
@@ -204,6 +205,8 @@ export function useViagem() {
         viagens: [],
       };
       setData(base);
+      setOperationalTelemetry(session.operationalTelemetry ?? null);
+      setOperationalError(null);
       setPersistenceById({});
       persistenceRef.current = {};
 
@@ -264,14 +267,28 @@ export function useViagem() {
     if (!data.usuario?.id) {
       setApiHealthStatus('checking');
       setOperationalTelemetry(null);
+      setOperationalError(null);
       return;
     }
     const controller = new AbortController();
     setApiHealthStatus('checking');
-    setOperationalTelemetry(null);
+    setOperationalError(null);
     obterTelemetriaOperacional(controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setOperationalTelemetry(data); })
-      .catch(() => { if (!controller.signal.aborted) setOperationalTelemetry(null); });
+      .then((metrics) => {
+        if (!controller.signal.aborted) {
+          setOperationalTelemetry(metrics);
+          setOperationalError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        const code = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
+        setOperationalError(
+          code
+            ? `Não foi possível atualizar a telemetria operacional (HTTP ${code}).`
+            : 'Não foi possível atualizar a telemetria operacional. Confira o console e a aba Rede.',
+        );
+      });
     verificarSaudeApi(controller.signal)
       .then((healthy) => {
         if (!controller.signal.aborted) setApiHealthStatus(healthy ? 'online' : 'unavailable');
@@ -454,7 +471,10 @@ export function useViagem() {
             if (generation === sessionGeneration.current && mountedRef.current)
               setOperationalTelemetry(metrics);
           })
-          .catch(() => {});
+          .catch(() => {
+            if (generation === sessionGeneration.current && mountedRef.current)
+              setOperationalError('Falha ao atualizar os indicadores operacionais após o planejamento.');
+          });
         setActiveTrip(result.viagem);
         setActiveTripForm(form);
         formByTripId.current[result.viagem.id] = form;
@@ -527,7 +547,10 @@ export function useViagem() {
             if (generation === sessionGeneration.current && mountedRef.current)
               setOperationalTelemetry(metrics);
           })
-          .catch(() => {});
+          .catch(() => {
+            if (generation === sessionGeneration.current && mountedRef.current)
+              setOperationalError('Falha ao atualizar os indicadores operacionais após a exclusão.');
+          });
       } catch {
         if (generation === sessionGeneration.current) {
           addToast('Não foi possível excluir o roteiro. Tente novamente.');
@@ -765,6 +788,7 @@ export function useViagem() {
     telemetryState,
     apiHealthStatus,
     operationalTelemetry,
+    operationalError,
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
