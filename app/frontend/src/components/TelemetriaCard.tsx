@@ -320,7 +320,7 @@ export function TelemetriaCard({
                 }
               />
               <Metric
-                label="Roteiros persistidos"
+                label="Roteiros totais"
                 value={
                   operationalTelemetry
                     ? String(operationalTelemetry.totalPersistedTrips)
@@ -335,7 +335,7 @@ export function TelemetriaCard({
               </p>
             ) : null}
             <p className="telemetry-health-note">
-              Status da API: última verificação de /healthz; não é monitoramento contínuo.
+              Status da API: última verificação de /healthz; não é monitoramento contínuo. Roteiros totais contam apenas viagens persistidas (não incluem sessões de visitantes).
             </p>
             <p className="telemetry-provider-summary">
               Provedores concorrentes:{' '}
