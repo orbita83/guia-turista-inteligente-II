@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from app.core.config import get_settings
 from app.core.dependencies import VISITOR_TTL_SECONDS, get_http_client, get_storage
+from app.core.operational import operational_snapshot
 from app.schemas.auth import GoogleLoginRequest, SessionResponse, User, UserResponse
 from app.services.integrations import verify_google_token
 
@@ -114,6 +115,10 @@ def get_session(
     return SessionResponse(
         usuario=_user_response(user) if isinstance(user, dict) else None,
         google_client_id=settings.google_client_id,
+        telemetria_operacional=(
+            operational_snapshot(storage, request.app.state.started_at)
+            if isinstance(user, dict) else None
+        ),
         ufs=sorted(settings.states),
         session_started_at=session_started_at,
         session_duration_ms=session_duration_ms,
