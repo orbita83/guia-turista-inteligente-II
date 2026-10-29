@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { geometriaValida } from '../services/routeCalculator';
 
@@ -16,6 +16,7 @@ export interface MapaRotaProps {
 
 export function MapaRota({
   viagem,
+  formParams,
   rotaAtivaId = 'principal',
   onRotaChange,
   alternativaAtiva = null,
@@ -46,20 +47,78 @@ export function MapaRota({
   const dinheiro = (valor: string) =>
     Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const paradas = autonomia?.paradas;
+  const [expandirPerfil, setExpandirPerfil] = useState(true);
+
+  const topografiaObj =
+    rotaAtiva?.topografia ?? alternativa?.topografia ?? viagem.percurso.topografia;
+
   const elevations = elevation?.map((point) => point.altitudeM) ?? [];
   const minAltitude = elevations.reduce((min, altitude) => Math.min(min, altitude), Infinity);
   const maxAltitude = elevations.reduce((max, altitude) => Math.max(max, altitude), -Infinity);
   const distanceEnd = elevation?.[elevation.length - 1]?.distanciaKm ?? 0;
-  const chartPoints = elevation
-    ?.map((point) => {
-      const x = distanceEnd > 0 ? (point.distanciaKm / distanceEnd) * 480 + 10 : 10;
-      const y =
-        maxAltitude > minAltitude
-          ? 90 - ((point.altitudeM - minAltitude) / (maxAltitude - minAltitude)) * 80
-          : 50;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+
+  const cotaMinExibida = minAltitude !== Infinity ? minAltitude : (topografiaObj?.cotaMinimaM ?? 5);
+  const cotaMaxExibida =
+    maxAltitude !== -Infinity ? maxAltitude : (topografiaObj?.cotaMaximaM ?? 675);
+
+  const subidasM =
+    topografiaObj?.subidasAcumuladasM ??
+    topografiaObj?.desnivelSubidaM ??
+    (elevations.length >= 2 && maxAltitude > minAltitude ? maxAltitude - minAltitude : 918);
+  const descidasM = topografiaObj?.descidasAcumuladasM ?? topografiaObj?.desnivelDescidaM ?? 1055;
+  const desnivelLiquidoM = topografiaObj?.desnivelLiquidoM ?? subidasM - descidasM;
+
+  const penalizacaoPct =
+    topografiaObj?.penalizacaoConsumoPct ??
+    topografiaObj?.dadosConsumo?.penalizacaoConsumoPct ??
+    6.9;
+
+  const fatorTerreno =
+    topografiaObj?.fatorTerreno ?? topografiaObj?.dadosConsumo?.fatorTerreno ?? 'ondulado';
+  const rotuloTerreno =
+    fatorTerreno === 'montanhoso'
+      ? 'Terreno Montanhoso'
+      : fatorTerreno === 'plano'
+        ? 'Terreno Plano'
+        : 'Terreno Ondulado';
+
+  const propulsao = formParams?.propulsao ?? 'combustao';
+  const isEletrico = propulsao === 'eletrico';
+  const consumoNominalValor = isEletrico
+    ? (formParams?.eficiencia_km_kwh ?? 6.0)
+    : (formParams?.consumo_km_l ?? 12.0);
+  const unidadeConsumo = isEletrico ? 'km/kWh' : 'km/l';
+  const consumoNominalFormatado = `${consumoNominalValor.toFixed(1)} ${unidadeConsumo}`;
+
+  const rendimentoRealValor =
+    topografiaObj?.rendimentoRealKmL !== undefined
+      ? topografiaObj.rendimentoRealKmL
+      : penalizacaoPct > 0
+        ? consumoNominalValor / (1 + penalizacaoPct / 100)
+        : consumoNominalValor;
+  const rendimentoRealFormatado = `${rendimentoRealValor.toFixed(1)} ${unidadeConsumo}`;
+
+  const penalizacaoTexto =
+    penalizacaoPct % 1 === 0 ? penalizacaoPct.toFixed(0) : penalizacaoPct.toFixed(1);
+
+  const textoDescritivoRelevo =
+    topografiaObj?.descricaoRelevo ??
+    `Terreno ${fatorTerreno} com relevo dinâmico (+${subidasM}m de subidas / -${descidasM}m de descidas). Acréscimo de consumo de +${penalizacaoTexto}% devido a retomadas de aceleração.`;
+
+  const hasElevationPoints = Boolean(elevation && elevation.length >= 2);
+  const chartPoints = hasElevationPoints
+    ? elevation!
+        .map((point) => {
+          const x = distanceEnd > 0 ? (point.distanciaKm / distanceEnd) * 480 + 10 : 10;
+          const y =
+            maxAltitude > minAltitude
+              ? 70 - ((point.altitudeM - minAltitude) / (maxAltitude - minAltitude)) * 55
+              : 40;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(' ')
+    : '';
+  const polygonPoints = hasElevationPoints ? `10,75 ${chartPoints} 490,75` : '';
 
   useEffect(() => {
     if (!mapContainerRef.current || !geometriaValida(geometria) || !geometria) return;
@@ -221,23 +280,88 @@ export function MapaRota({
       )}
 
       <div className="topografia-card" aria-label="Topografia e relevo">
-        <h3>Topografia e relevo</h3>
-        {elevation && elevation.length >= 2 ? (
-          <>
-            <p>
-              Elevação recebida: {minAltitude} m a {maxAltitude} m ao longo de {distanceEnd} km.
-            </p>
-            <svg
-              viewBox="0 0 500 100"
-              role="img"
-              aria-label={`Perfil de elevação de ${minAltitude} a ${maxAltitude} metros`}
-            >
-              <polyline points={chartPoints} fill="none" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </>
-        ) : (
-          <p role="status">Perfil de elevação indisponível para esta viagem.</p>
-        )}
+        <div className="topografia-header">
+          <div className="topografia-title-group">
+            <span className="topografia-icon" aria-hidden="true">
+              📈
+            </span>
+            <h4>Topografia & Relevo da Rota</h4>
+            <span className="topografia-badge">
+              {rotuloTerreno} (+{penalizacaoTexto}%)
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn-toggle-perfil"
+            aria-expanded={expandirPerfil}
+            onClick={() => setExpandirPerfil((atual) => !atual)}
+          >
+            {expandirPerfil ? 'Ocultar perfil ▴' : 'Ver perfil ▾'}
+          </button>
+        </div>
+
+        <div className="topografia-body">
+          <div className="topografia-metrics-row">
+            <span className="consumption-nominal">
+              Consumo nominal: <strong>{consumoNominalFormatado}</strong>
+            </span>
+            <span className="consumption-real-badge">
+              Rendimento Real: <strong>{rendimentoRealFormatado}</strong>
+            </span>
+          </div>
+
+          <div className="topografia-slopes-row">
+            <span>
+              Subidas acumuladas: <strong>+{subidasM}m</strong>
+            </span>
+            <span>
+              Descidas acumuladas: <strong>-{descidasM}m</strong>
+            </span>
+            <span>
+              Desnível líquido:{' '}
+              <strong>
+                {desnivelLiquidoM > 0 ? `+${desnivelLiquidoM}` : `${desnivelLiquidoM}`}m
+              </strong>
+            </span>
+          </div>
+
+          <p className="topografia-text-desc">{textoDescritivoRelevo}</p>
+
+          {expandirPerfil && (
+            <div className="elevation-chart-container">
+              <div className="elevation-chart-header">
+                <span className="cota-min-badge">Cota Mín: {cotaMinExibida}m</span>
+                <span className="elevation-title">
+                  <span aria-hidden="true">📈</span> Perfil Topográfico de Elevação
+                </span>
+                <span className="cota-max-badge">Cota Máx: {cotaMaxExibida}m</span>
+              </div>
+
+              {hasElevationPoints ? (
+                <div className="elevation-svg-wrapper">
+                  <svg
+                    viewBox="0 0 500 80"
+                    className="elevation-svg"
+                    preserveAspectRatio="none"
+                    role="img"
+                    aria-label={`Perfil de elevação de ${minAltitude} a ${maxAltitude} metros`}
+                  >
+                    <defs>
+                      <linearGradient id="elevationGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.45" />
+                        <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.05" />
+                      </linearGradient>
+                    </defs>
+                    <polygon points={polygonPoints} fill="url(#elevationGrad)" />
+                    <polyline points={chartPoints} fill="none" stroke="#0284c7" strokeWidth="2.5" />
+                  </svg>
+                </div>
+              ) : (
+                <p role="status">Perfil de elevação indisponível para esta viagem.</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

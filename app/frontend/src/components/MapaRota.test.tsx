@@ -232,4 +232,84 @@ describe('F02 — geometria confirmada', () => {
       screen.getByText('Perfil de elevação indisponível para esta viagem.'),
     ).toBeInTheDocument();
   });
+
+  it('renderiza a seção Topografia & Relevo da Rota conforme o wireframe da seção 3.3', async () => {
+    const user = userEvent.setup();
+    const viagemComAltimetria: Viagem = {
+      ...trip,
+      percurso: {
+        ...trip.percurso,
+        geometria: principal.coordenadas,
+        topografia: {
+          altitudeMaximaM: 675,
+          cotaMinimaM: 5,
+          cotaMaximaM: 675,
+          desnivelSubidaM: 918,
+          desnivelDescidaM: 1055,
+          desnivelLiquidoM: -137,
+          subidasAcumuladasM: 918,
+          descidasAcumuladasM: 1055,
+          penalizacaoConsumoPct: 6.9,
+          fatorTerreno: 'ondulado',
+          rendimentoRealKmL: 11.2,
+        },
+        perfilElevacao: [
+          { distanciaKm: 0, altitudeM: 5 },
+          { distanciaKm: 4, altitudeM: 675 },
+          { distanciaKm: 8, altitudeM: 50 },
+        ],
+      },
+    };
+
+    render(
+      <MapaRota
+        viagem={viagemComAltimetria}
+        formParams={{
+          origem_cidade: 'Recife',
+          origem_uf: 'PE',
+          destino_cidade: 'Olinda',
+          destino_uf: 'PE',
+          propulsao: 'combustao',
+          consumo_km_l: 12.0,
+        }}
+      />,
+    );
+
+    // Cabeçalho e badge da topografia
+    expect(screen.getByText('Topografia & Relevo da Rota')).toBeInTheDocument();
+    expect(screen.getByText(/Terreno Ondulado \(\+6\.9%\)/)).toBeInTheDocument();
+
+    // Métricas de consumo
+    expect(screen.getByText('Consumo nominal:')).toBeInTheDocument();
+    expect(screen.getByText('12.0 km/l')).toBeInTheDocument();
+    expect(screen.getByText(/Rendimento Real:/)).toBeInTheDocument();
+
+    // Desníveis e inclinações
+    expect(screen.getByText(/Subidas acumuladas:/)).toHaveTextContent('+918m');
+    expect(screen.getByText(/Descidas acumuladas:/)).toHaveTextContent('-1055m');
+    expect(screen.getByText(/Desnível líquido:/)).toHaveTextContent('-137m');
+
+    // Badges do perfil topográfico
+    expect(screen.getByText('Cota Mín: 5m')).toBeInTheDocument();
+    expect(screen.getByText(/Perfil Topográfico de Elevação/)).toBeInTheDocument();
+    expect(screen.getByText('Cota Máx: 675m')).toBeInTheDocument();
+
+    // Toggle de exibição do gráfico
+    const toggleButton = screen.getByRole('button', { name: 'Ocultar perfil ▴' });
+    expect(toggleButton).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /Perfil de elevação de 5 a 675 metros/ }),
+    ).toBeInTheDocument();
+
+    // Clica para ocultar
+    await user.click(toggleButton);
+    expect(screen.getByRole('button', { name: 'Ver perfil ▾' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Perfil de elevação/ })).not.toBeInTheDocument();
+
+    // Clica para expandir novamente
+    await user.click(screen.getByRole('button', { name: 'Ver perfil ▾' }));
+    expect(
+      screen.getByRole('img', { name: /Perfil de elevação de 5 a 675 metros/ }),
+    ).toBeInTheDocument();
+  });
 });

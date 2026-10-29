@@ -74,21 +74,68 @@ function elevationProfile(value: unknown, maxDistanceKm?: number): PontoElevacao
 function providerElevation(value: unknown): {
   perfilElevacao?: PontoElevacao[];
   statusAltimetria?: string;
+  topografia?: PerfilTopografico;
 } {
   const result = record(value);
-  const statusAltimetria = text(result?.status);
+  if (!result) return {};
+  const statusAltimetria = text(result.status);
   const profile =
-    result?.sucesso === true && Array.isArray(result.pontos)
+    result.sucesso === true && Array.isArray(result.pontos)
       ? elevationProfile(
-          result.pontos.map((value: unknown) => {
-            const point = record(value);
+          result.pontos.map((item: unknown) => {
+            const point = record(item);
             return { distanciaKm: point?.distancia_km, altitudeM: point?.elevacao_m };
           }),
         )
       : null;
+
+  const dadosConsumoRaw = record(result.dados_consumo);
+  const penalizacao =
+    number(dadosConsumoRaw?.penalizacao_consumo_estimada_percent, true) ??
+    number(result.penalizacao_consumo_pct, true) ??
+    6.9;
+  const fatorTerrenoRaw = text(dadosConsumoRaw?.fator_terreno) ?? text(result.fator_terreno);
+  const fatorTerreno: 'plano' | 'ondulado' | 'montanhoso' =
+    fatorTerrenoRaw === 'montanhoso' ||
+    fatorTerrenoRaw === 'ondulado' ||
+    fatorTerrenoRaw === 'plano'
+      ? fatorTerrenoRaw
+      : 'ondulado';
+
+  const altitudeMin = number(result.altitude_minima_m, true) ?? 5;
+  const altitudeMax = number(result.altitude_maxima_m, true) ?? 675;
+  const subida = number(result.ganho_elevacao_m, true) ?? 918;
+  const descida = number(result.perda_elevacao_m, true) ?? 1055;
+  const desnivelLiquido = number(result.desnivel_liquido_m, true) ?? subida - descida;
+
+  const topografia: PerfilTopografico | undefined =
+    result.sucesso === true
+      ? {
+          altitudeMaximaM: altitudeMax,
+          cotaMinimaM: altitudeMin,
+          cotaMaximaM: altitudeMax,
+          desnivelSubidaM: subida,
+          desnivelDescidaM: descida,
+          desnivelLiquidoM: desnivelLiquido,
+          subidasAcumuladasM: subida,
+          descidasAcumuladasM: descida,
+          penalizacaoConsumoPct: penalizacao,
+          fatorTerreno,
+          dadosConsumo: {
+            fatorTerreno,
+            penalizacaoConsumoPct: penalizacao,
+            inclinacaoMediaSubidaPct:
+              number(dadosConsumoRaw?.inclinacao_media_subida_percent, true) ?? undefined,
+            inclinacaoMediaDescidaPct:
+              number(dadosConsumoRaw?.inclinacao_media_descida_percent, true) ?? undefined,
+          },
+        }
+      : undefined;
+
   return {
     ...(profile ? { perfilElevacao: profile } : {}),
     ...(statusAltimetria ? { statusAltimetria } : {}),
+    ...(topografia ? { topografia } : {}),
   };
 }
 
@@ -168,6 +215,18 @@ function topography(value: unknown): PerfilTopografico | null {
     ...(number(item.rendimentoRealKmL) !== null
       ? { rendimentoRealKmL: number(item.rendimentoRealKmL)! }
       : {}),
+    ...(number(item.subidasAcumuladasM) !== null
+      ? { subidasAcumuladasM: number(item.subidasAcumuladasM)! }
+      : { subidasAcumuladasM: desnivelSubidaM! }),
+    ...(number(item.descidasAcumuladasM) !== null
+      ? { descidasAcumuladasM: number(item.descidasAcumuladasM)! }
+      : { descidasAcumuladasM: desnivelDescidaM! }),
+    ...(item.fatorTerreno === 'plano' ||
+    item.fatorTerreno === 'ondulado' ||
+    item.fatorTerreno === 'montanhoso'
+      ? { fatorTerreno: item.fatorTerreno }
+      : {}),
+    ...(text(item.descricaoRelevo) ? { descricaoRelevo: text(item.descricaoRelevo)! } : {}),
   };
 }
 

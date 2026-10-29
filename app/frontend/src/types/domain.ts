@@ -25,6 +25,7 @@ export interface PercursoViagem {
   geometria?: CoordenadaGPS[];
   perfilElevacao?: PontoElevacao[];
   statusAltimetria?: string;
+  topografia?: PerfilTopografico;
   alternativas?: PercursoAlternativo[];
   autonomia?: AutonomiaRota;
   custos?: CustosRota;
@@ -36,6 +37,7 @@ export interface PercursoAlternativo {
   geometria: CoordenadaGPS[];
   perfilElevacao?: PontoElevacao[];
   statusAltimetria?: string;
+  topografia?: PerfilTopografico;
   autonomia?: AutonomiaRota;
   custos?: CustosRota;
 }
@@ -189,6 +191,13 @@ export interface ParadaEstrategica {
   origem?: 'projetado' | 'verificado';
 }
 
+export interface DadosConsumoTopografia {
+  inclinacaoMediaSubidaPct?: number;
+  inclinacaoMediaDescidaPct?: number;
+  fatorTerreno: 'plano' | 'ondulado' | 'montanhoso';
+  penalizacaoConsumoPct: number;
+}
+
 export interface PerfilTopografico {
   altitudeMaximaM: number;
   desnivelSubidaM: number;
@@ -198,6 +207,11 @@ export interface PerfilTopografico {
   cotaMaximaM: number;
   rendimentoRealKmL?: number;
   penalizacaoConsumoPct: number;
+  subidasAcumuladasM?: number;
+  descidasAcumuladasM?: number;
+  fatorTerreno?: 'plano' | 'ondulado' | 'montanhoso';
+  descricaoRelevo?: string;
+  dadosConsumo?: DadosConsumoTopografia;
 }
 
 export interface CalculoCustosViagem {

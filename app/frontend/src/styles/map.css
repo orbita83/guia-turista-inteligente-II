@@ -491,6 +491,7 @@
 
 .consumption-real-badge {
   background: #fee2e2;
+  border: 1px solid #fca5a5;
   color: #b91c1c;
   padding: 0.28rem 0.75rem;
   border-radius: 8px;
@@ -501,6 +502,7 @@
 [data-theme='dark'] .consumption-real-badge {
   background: rgba(220, 38, 38, 0.2);
   color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .topografia-slopes-row {
@@ -549,6 +551,37 @@
 
 .elevation-title {
   color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cota-min-badge {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+[data-theme='dark'] .cota-min-badge {
+  background: rgba(2, 132, 199, 0.2);
+  color: #38bdf8;
+}
+
+.cota-max-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+[data-theme='dark'] .cota-max-badge {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
 }
 
 .elevation-svg-wrapper {
