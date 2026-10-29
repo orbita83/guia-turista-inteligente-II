@@ -23,6 +23,12 @@ export interface PercursoViagem {
   distancia: string;
   tempo: string;
   geometria?: CoordenadaGPS[];
+  perfilElevacao?: PontoElevacao[];
+}
+
+export interface PontoElevacao {
+  distanciaKm: number;
+  altitudeM: number;
 }
 
 export interface Viagem {
@@ -160,6 +166,7 @@ export interface RotaAlternativa {
   topografia: PerfilTopografico;
   paradas: ParadaEstrategica[];
   coordenadas: CoordenadaGPS[];
+  perfilElevacao?: PontoElevacao[];
   custos: CalculoCustosViagem;
 }
 

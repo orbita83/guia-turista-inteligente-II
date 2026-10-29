@@ -1,5 +1,21 @@
 # Plano de entrega do frontend
 
+As correções incrementais do frontend começam pela validação de campos opcionais
+da API. O fornecimento desses campos continua dependente dos contratos do backend.
+Sem geometria validada, o mapa apresenta indisponibilidade e mantém o resumo textual
+da viagem. Alternativas só aparecem quando foram recebidas na resposta.
+O formulário mostra erros HTTP 422 por campo e valida os números do veículo ativo
+antes de enviar o planejamento.
+A marcação de visitas diferencia confirmação no servidor e salvamento local;
+falhas revertem a marcação e alterações locais pendentes podem ser sincronizadas.
+O guia identifica transmissão SSE e reprodução do conteúdo já recebido; somente
+o evento `done` confirma a conclusão de uma transmissão SSE.
+Mapa e exportação GPX usam a rota ativa da aplicação. Sem geometria válida, o
+download fica indisponível; o XML preserva caracteres especiais e não inventa
+elevação.
+A árvore principal possui uma barreira de erros com mensagem acessível e ação de
+nova tentativa para falhas inesperadas de renderização.
+
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão
 aprovada**, **Proposto** e **Questão em aberto** seguem a legenda do [índice](./README.md).

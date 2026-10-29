@@ -58,11 +58,13 @@ describe('streamingGuide service', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
 
       const chunksRecebidos: string[] = [];
+      const onMode = vi.fn();
       let finalizou = false;
 
       await streamGuiaTuristico(
         { destino: 'Recife' },
         {
+          onMode,
           onChunk: (chunk) => chunksRecebidos.push(chunk),
           onDone: (fullText) => {
             finalizou = true;
@@ -73,6 +75,7 @@ describe('streamingGuide service', () => {
       );
 
       expect(chunksRecebidos).toEqual(['Recife é a ', 'Veneza Brasileira. ']);
+      expect(onMode).toHaveBeenCalledWith('sse');
       expect(finalizou).toBe(true);
     });
 
@@ -81,6 +84,7 @@ describe('streamingGuide service', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
 
       const chunksRecebidos: string[] = [];
+      const onMode = vi.fn();
       let textoConcluido = '';
 
       const fallbackText = '📍 Pontos turísticos: Marco Zero e Olinda.';
@@ -88,6 +92,7 @@ describe('streamingGuide service', () => {
       await streamGuiaTuristico(
         { destino: 'Recife' },
         {
+          onMode,
           onChunk: (chunk) => chunksRecebidos.push(chunk),
           onDone: (full) => {
             textoConcluido = full;
@@ -101,7 +106,37 @@ describe('streamingGuide service', () => {
       );
 
       expect(chunksRecebidos.join('')).toBe(fallbackText);
+      expect(onMode).toHaveBeenCalledWith('fallback');
       expect(textoConcluido).toBe(fallbackText);
+    });
+
+    it('trata encerramento SSE sem done como falha, sem afirmar conclusão', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                new TextEncoder().encode('data: {"chunk":"Parcial","done":false}\n\n'),
+              );
+              controller.close();
+            },
+          }),
+          { headers: { 'Content-Type': 'text/event-stream' } },
+        ),
+      );
+      const onDone = vi.fn();
+      const onError = vi.fn();
+      await streamGuiaTuristico(
+        { destino: 'Recife' },
+        {
+          onChunk: vi.fn(),
+          onDone,
+          onError,
+        },
+        { fallbackText: 'Conteúdo anterior' },
+      );
+      expect(onDone).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledOnce();
     });
 
     it('interrompe imediatamente sem erro quando o sinal de cancelamento é acionado', async () => {
