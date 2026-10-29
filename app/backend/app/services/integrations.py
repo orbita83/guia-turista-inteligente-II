@@ -167,7 +167,7 @@ def _route_geometry(route: dict[str, Any]) -> list[list[float]] | None:
         if (
             longitude is None
             or latitude is None
-            or not -180 <= longitude <= 180
+            or not -180 <= longitude < 180
             or not -90 <= latitude <= 90
         ):
             return None

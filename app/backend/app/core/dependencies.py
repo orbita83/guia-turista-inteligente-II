@@ -1,3 +1,4 @@
+import logging
 import math
 import time
 from typing import Annotated, Any
@@ -8,6 +9,7 @@ from fastapi import Depends, HTTPException, Request
 from app.core.circuit_breaker import CircuitBreaker
 
 VISITOR_TTL_SECONDS = 2 * 60 * 60
+logger = logging.getLogger(__name__)
 
 
 def get_http_client(request: Request) -> httpx.AsyncClient:
@@ -24,6 +26,13 @@ def get_storage(request: Request) -> Any:
     return storage
 
 
+def get_session_storage(request: Request) -> Any:
+    user = request.session.get("usuario")
+    if not isinstance(user, dict) or not user.get("id"):
+        return None
+    return get_storage(request)
+
+
 def get_circuit_breakers(request: Request) -> dict[str, CircuitBreaker]:
     breakers = getattr(request.app.state, "circuit_breakers", None)
     if not isinstance(breakers, dict) or any(
@@ -38,7 +47,7 @@ def get_circuit_breakers(request: Request) -> dict[str, CircuitBreaker]:
 
 
 def get_current_user(
-    request: Request, storage: Annotated[Any, Depends(get_storage)]
+    request: Request, storage: Annotated[Any, Depends(get_session_storage)]
 ) -> dict[str, Any]:
     user = request.session.get("usuario")
     if not isinstance(user, dict) or not user.get("id"):
@@ -64,7 +73,10 @@ def get_current_user(
                 expires_at = 0
         if not math.isfinite(expires_at) or time.time() >= expires_at:
             storage.revoke_session(session_id)
-            storage.forget_visitor(str(user["id"]))
+            try:
+                storage.forget_visitor(str(user["id"]))
+            except Exception as error:  # noqa: BLE001 - revogação deve prevalecer sobre falha de limpeza
+                logger.warning("Falha ao limpar sessão visitante expirada: %s", type(error).__name__)
             request.session.clear()
             raise HTTPException(
                 status_code=401, detail="A sessão de visitante expirou."

@@ -1,4 +1,4 @@
-﻿import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../config';
 import type {
   AvailableValue,
   PlanningResponseMetadata,
@@ -12,6 +12,8 @@ export interface SessionResponse {
   usuario: Usuario | null;
   google_client_id: string;
   ufs: string[];
+  session_started_at?: string | null;
+  session_duration_ms?: number | null;
 }
 
 export interface TripsResponse {

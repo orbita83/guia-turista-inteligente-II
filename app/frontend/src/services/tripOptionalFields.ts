@@ -39,7 +39,7 @@ function coordinate(value: unknown): CoordenadaGPS | null {
     typeof longitude === 'number' &&
     Number.isFinite(longitude) &&
     longitude >= -180 &&
-    longitude <= 180
+    longitude < 180
     ? [latitude, longitude]
     : null;
 }

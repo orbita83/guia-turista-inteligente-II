@@ -127,6 +127,26 @@ class TripStorage:
             trips = user.get("roteiros", [])
             return list(trips) if isinstance(trips, list) else []
 
+    def count_for_user(self, user_id: str) -> int:
+        """Contagem somente-leitura de viagens sem criar ou gravar arquivos em disco."""
+        with self._lock:
+            if user_id in self._visitor_trips or self._is_visitor(user_id):
+                return len(self._visitor_trips.get(user_id, []))
+            if not self.path.exists():
+                return 0
+            try:
+                with self.path.open("r", encoding="utf-8") as file:
+                    data = json.load(file)
+            except (json.JSONDecodeError, OSError):
+                return 0
+            if not isinstance(data, dict):
+                return 0
+            user = data.get("usuarios", {}).get(user_id)
+            if not isinstance(user, dict):
+                return 0
+            trips = user.get("roteiros", [])
+            return len(trips) if isinstance(trips, list) else 0
+
     def add_for_user(
         self,
         user_id: str,

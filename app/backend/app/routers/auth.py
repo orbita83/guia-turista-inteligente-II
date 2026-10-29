@@ -2,6 +2,7 @@ import logging
 import math
 import time
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import httpx
@@ -58,6 +59,27 @@ def _start_session(request: Request, storage: Any, user: dict[str, Any]) -> None
     storage.register_session(session_id, str(user["id"]), str(user["tipo"]))
     request.session["session_id"] = session_id
     request.session["usuario"] = user
+    request.session["session_started_at"] = time.time()
+
+
+def _session_timing(request: Request) -> tuple[str | None, float | None]:
+    started_at = request.session.get("session_started_at")
+    now = time.time()
+    if started_at is None:
+        if request.session.get("usuario"):
+            started_at = now
+            request.session["session_started_at"] = started_at
+        else:
+            return None, None
+    try:
+        started_at_f = float(started_at)
+    except (TypeError, ValueError):
+        started_at_f = now
+        request.session["session_started_at"] = started_at_f
+
+    iso = datetime.fromtimestamp(started_at_f, tz=UTC).isoformat()
+    duration_ms = max(0.0, round((now - started_at_f) * 1000, 2))
+    return iso, duration_ms
 
 
 def _user_response(data: dict[str, Any]) -> User:
@@ -86,10 +108,15 @@ def get_session(
             request.session.clear()
             user = None
     settings = get_settings()
+    session_started_at, session_duration_ms = (
+        _session_timing(request) if isinstance(user, dict) else (None, None)
+    )
     return SessionResponse(
         usuario=_user_response(user) if isinstance(user, dict) else None,
         google_client_id=settings.google_client_id,
         ufs=sorted(settings.states),
+        session_started_at=session_started_at,
+        session_duration_ms=session_duration_ms,
     )
 
 
@@ -132,7 +159,8 @@ async def login_google(
     _revoke_session(request, storage)
     request.session.clear()
     _start_session(request, storage, user)
-    return UserResponse(usuario=_user_response(user))
+    started, _ = _session_timing(request)
+    return UserResponse(usuario=_user_response(user), session_started_at=started, session_duration_ms=0.0)
 
 
 @router.post("/visitor", response_model=UserResponse)
@@ -174,6 +202,7 @@ def login_visitor(
         "foto": "https://lh3.googleusercontent.com/a/default-user=s96-c",
         "tipo": "visitante",
     }
+    now = time.time()
     storage.ensure_visitor(visitor_id)
     _revoke_session(request, storage)
     request.session.clear()
@@ -182,7 +211,8 @@ def login_visitor(
     if preserved_user is not None and preserved_expiration is not None:
         request.session[PRESERVED_GOOGLE_USER] = preserved_user
         request.session[PRESERVED_GOOGLE_EXPIRATION] = preserved_expiration
-    return UserResponse(usuario=_user_response(user))
+    started, _ = _session_timing(request)
+    return UserResponse(usuario=_user_response(user), session_started_at=started, session_duration_ms=0.0)
 
 
 @router.post("/restore-google", response_model=UserResponse)
@@ -236,7 +266,8 @@ def restore_google_user(
     storage.forget_visitor(str(visitor.get("id", "")))
     request.session.clear()
     _start_session(request, storage, google_user)
-    return UserResponse(usuario=_user_response(google_user))
+    started, _ = _session_timing(request)
+    return UserResponse(usuario=_user_response(google_user), session_started_at=started, session_duration_ms=0.0)
 
 
 @router.post("/logout", status_code=204)

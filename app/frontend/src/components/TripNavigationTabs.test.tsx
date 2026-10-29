@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { Viagem } from '../types/domain';
 import { TripNavigationTabs } from './TripNavigationTabs';
@@ -26,6 +26,8 @@ const MOCK_VIAGEM: Viagem = {
 };
 
 describe('TripNavigationTabs (Issue #11: Abas e Ações da Viagem)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -138,7 +140,7 @@ describe('TripNavigationTabs (Issue #11: Abas e Ações da Viagem)', () => {
       />,
     );
     await user.click(screen.getByRole('button', { name: /Baixar GPX/i }));
-    expect(screen.getByRole('status')).toHaveTextContent('Não foi possível exportar');
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível exportar');
   });
 
   it('impede exportar GPX quando a viagem não tem geometria', () => {
@@ -150,5 +152,94 @@ describe('TripNavigationTabs (Issue #11: Abas e Ações da Viagem)', () => {
       />,
     );
     expect(screen.getByRole('button', { name: /Baixar GPX/i })).toBeDisabled();
+  });
+});
+
+describe('TripNavigationTabs: download GPX e falha', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const viagemComGeometria: Viagem = {
+    ...MOCK_VIAGEM,
+    percurso: {
+      ...MOCK_VIAGEM.percurso,
+      geometria: [
+        [-8.0476, -34.877],
+        [-7.9986, -34.8459],
+      ],
+    },
+  };
+
+  it('aciona o download GPX local pelo botão e remove os recursos temporários', async () => {
+    const user = userEvent.setup();
+    const criar = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:viagem');
+    const revogar = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    let arquivo = '';
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      arquivo = this.download;
+    });
+    render(
+      <TripNavigationTabs viagem={viagemComGeometria} abaAtiva="mapa" onAbaChange={vi.fn()} />,
+    );
+    await user.click(screen.getByRole('button', { name: /Baixar GPX/i }));
+    expect(criar.mock.calls[0][0]).toBeInstanceOf(Blob);
+    const xml = new DOMParser().parseFromString(
+      await (criar.mock.calls[0][0] as Blob).text(),
+      'application/xml',
+    );
+    expect(
+      Array.from(xml.querySelectorAll('trkpt'), (ponto) => [
+        ponto.getAttribute('lat'),
+        ponto.getAttribute('lon'),
+      ]),
+    ).toEqual([
+      ['-8.0476', '-34.877'],
+      ['-7.9986', '-34.8459'],
+    ]);
+    expect(arquivo).toBe('rota-recife-pe-para-salvador-ba.gpx');
+    expect(document.querySelector('a[download]')).toBeNull();
+    expect(revogar).toHaveBeenCalledWith('blob:viagem');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('apresenta um erro de download sem derrubar a navegação', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
+      throw new Error('Download indisponível');
+    });
+    render(
+      <TripNavigationTabs viagem={viagemComGeometria} abaAtiva="mapa" onAbaChange={vi.fn()} />,
+    );
+    await user.click(screen.getByRole('button', { name: /Baixar GPX/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível exportar o GPX');
+    expect(screen.getByRole('tab', { name: /Mapa & Paradas/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('recusa exportação local sem geometria em vez de baixar o trajeto simulado', async () => {
+    const criar = vi.spyOn(URL, 'createObjectURL');
+    render(<TripNavigationTabs viagem={{ ...MOCK_VIAGEM, percurso: { distancia: '800 km', tempo: '11h' } }} abaAtiva="mapa" onAbaChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /Baixar GPX/i })).toBeDisabled();
+    expect(criar).not.toHaveBeenCalled();
+  });
+
+  it('recusa geometria inválida antes de criar arquivo para download', async () => {
+    const criar = vi.spyOn(URL, 'createObjectURL');
+    const viagemInvalida: Viagem = {
+      ...viagemComGeometria,
+      percurso: {
+        ...viagemComGeometria.percurso,
+        geometria: [
+          [NaN, -34],
+          [-8, -35],
+        ],
+      },
+    };
+    render(<TripNavigationTabs viagem={viagemInvalida} abaAtiva="mapa" onAbaChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /Baixar GPX/i })).toBeDisabled();
+    expect(criar).not.toHaveBeenCalled();
   });
 });

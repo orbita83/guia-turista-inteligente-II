@@ -46,7 +46,7 @@ export function geometriaValida(geometria?: CoordenadaGPS[]): boolean {
           (coordinate) => typeof coordinate === 'number' && Number.isFinite(coordinate),
         ) &&
         Math.abs(point[0]) <= 90 &&
-        Math.abs(point[1]) <= 180,
+        point[1] >= -180 && point[1] < 180,
     ),
   );
 }
@@ -62,25 +62,36 @@ function escapeXml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => entities[character]);
 }
 
+function decimalGpx(value: number): string {
+  const [mantissa, exponent] = String(value).split('e-');
+  if (!exponent) return mantissa;
+  const sign = mantissa.startsWith('-') ? '-' : '';
+  const digits = mantissa.replace('-', '').replace('.', '');
+  return `${sign}0.${'0'.repeat(Number(exponent) - 1)}${digits}`;
+}
+
 export function gerarConteudoGpx(origem: string, destino: string, rota: GpxRoute): string {
   if (!geometriaValida(rota.coordenadas)) {
-    throw new Error('Geometria indisponível para exportação GPX.');
+    throw new Error('Geometria indisponível: informe pelo menos dois pontos e coordenadas válidas para GPX.');
+  }
+  if (rota.paradas.some((parada) => !geometriaValida([parada.coordenadas, parada.coordenadas]))) {
+    throw new Error('Não é possível exportar GPX com coordenadas inválidas.');
   }
   const [coordOrigem] = rota.coordenadas;
   const coordDestino = rota.coordenadas[rota.coordenadas.length - 1];
-  const waypoints = [
+  const waypoints: { coordenadas: CoordenadaGPS; nome: string; descricao?: string }[] = [
     { coordenadas: coordOrigem, nome: `Origem: ${origem}` },
     { coordenadas: coordDestino, nome: `Destino: ${destino}` },
-    ...rota.paradas.map((parada) => ({ coordenadas: parada.coordenadas, nome: parada.nome })),
+    ...rota.paradas.map((parada) => ({ coordenadas: parada.coordenadas, nome: parada.nome, descricao: parada.descricao })),
   ];
   const waypointsXml = waypoints
     .map(
-      ({ coordenadas: [lat, lon], nome }) =>
-        `  <wpt lat="${lat}" lon="${lon}"><name>${escapeXml(nome)}</name></wpt>`,
+      ({ coordenadas: [lat, lon], nome, descricao }) =>
+        `  <wpt lat="${decimalGpx(lat)}" lon="${decimalGpx(lon)}"><name>${escapeXml(nome)}</name>${descricao ? `<desc>${escapeXml(descricao)}</desc>` : ''}</wpt>`,
     )
     .join('\n');
   const pointsXml = rota.coordenadas
-    .map(([lat, lon]) => `      <trkpt lat="${lat}" lon="${lon}" />`)
+    .map(([lat, lon]) => `      <trkpt lat="${decimalGpx(lat)}" lon="${decimalGpx(lon)}" />`)
     .join('\n');
   const summary = `${rota.titulo}${rota.distanciaKm === undefined ? '' : ` - ${rota.distanciaKm} km`}${rota.tempoFormatado ? ` (${rota.tempoFormatado})` : ''}`;
   return `<?xml version="1.0" encoding="UTF-8"?>

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterator
+from collections.abc import Iterator, MutableMapping
 from typing import Any
 
 import httpx
@@ -25,6 +25,7 @@ def storage(tmp_path) -> TripStorage:
 def client(storage: TripStorage) -> Iterator[TestClient]:
     app.dependency_overrides[get_storage] = lambda: storage
     with TestClient(app) as test_client:
+        test_client.app.state.trip_storage = storage  # type: ignore[attr-defined]
         yield test_client
     app.dependency_overrides.clear()
 
@@ -115,9 +116,18 @@ def test_visitor_session_create_list_delete_and_logout(
 
     login = client.post("/api/v1/auth/visitor")
     assert login.status_code == 200
-    user = login.json()["usuario"]
+    login_payload = login.json()
+    user = login_payload["usuario"]
     assert user["tipo"] == "visitante"
+    assert login_payload["session_started_at"] is not None
+    assert isinstance(login_payload["session_duration_ms"], (int, float))
     assert client.cookies
+
+    sess = client.get("/api/v1/auth/session")
+    assert sess.status_code == 200
+    sess_payload = sess.json()
+    assert sess_payload["session_started_at"] == login_payload["session_started_at"]
+    assert isinstance(sess_payload["session_duration_ms"], (int, float))
 
     trip: dict[str, Any] = {
         "id": "trip-1",
@@ -370,8 +380,8 @@ async def test_client_disconnect_through_asgi_middleware_cancels_planning(
     async def receive() -> dict[str, Any]:
         return await incoming_messages.get()
 
-    async def send(message: dict[str, Any]) -> None:
-        sent_messages.append(message)
+    async def send(message: MutableMapping[str, Any]) -> None:
+        sent_messages.append(dict(message))
 
     async def blocked_plan_trip(form, user, **kwargs):
         started.set()
