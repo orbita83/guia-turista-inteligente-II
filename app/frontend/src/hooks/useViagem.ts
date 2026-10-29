@@ -28,6 +28,7 @@ import type {
   TelemetryPanelState,
   TelemetrySnapshot,
   Viagem,
+  StreamTelemetryUpdate,
 } from '../types/domain';
 import { useConnectivity } from './useConnectivity';
 import { useAuth } from './useAuth';
@@ -70,10 +71,17 @@ function readSavedVisitas(userId?: string | null): Record<string, string[]> {
   try {
     const raw = localStorage.getItem(getVisitasStorageKey(userId));
     if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return typeof parsed === 'object' && parsed !== null
-      ? (parsed as Record<string, string[]>)
-      : {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([tripId, ids]) =>
+        tripId.trim() &&
+        Array.isArray(ids) &&
+        ids.every((id) => typeof id === 'string' && id.trim())
+          ? [[tripId, [...new Set(ids.map((id: string) => id.trim()))]]]
+          : [],
+      ),
+    );
   } catch {
     return {};
   }
@@ -85,6 +93,48 @@ function saveVisitas(userId: string | null | undefined, visitas: Record<string, 
   } catch {
     // Continua utilizável em memória caso o armazenamento local esteja bloqueado.
   }
+}
+
+type PendingVisits = Record<string, Record<string, boolean>>;
+
+function pendingKey(userId: string): string {
+  return `guia_turista_visitas_pendentes_${userId}`;
+}
+
+function readPendingVisits(userId: string): PendingVisits {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(pendingKey(userId)) ?? '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const result: PendingVisits = {};
+    for (const [tripId, changes] of Object.entries(parsed)) {
+      if (!changes || typeof changes !== 'object' || Array.isArray(changes)) continue;
+      const valid = Object.entries(changes).filter(
+        ([id, value]) => id.trim() && typeof value === 'boolean',
+      );
+      if (valid.length) result[tripId] = Object.fromEntries(valid) as Record<string, boolean>;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function savePendingVisits(userId: string | undefined, changes: PendingVisits): void {
+  if (!userId) return;
+  try {
+    localStorage.setItem(pendingKey(userId), JSON.stringify(changes));
+  } catch {
+    // Mantém as alterações pendentes em memória quando o armazenamento está bloqueado.
+  }
+}
+
+function applyVisitChanges(ids: string[], changes: Record<string, boolean> = {}): string[] {
+  const result = new Set(ids);
+  for (const [id, visited] of Object.entries(changes)) {
+    if (visited) result.add(id);
+    else result.delete(id);
+  }
+  return [...result];
 }
 
 export function useViagem() {
@@ -121,6 +171,9 @@ export function useViagem() {
   >({});
   const visitasRef = useRef<Record<string, string[]>>({});
   const pendingVisitRequests = useRef(new Set<string>());
+  const overlappingVisits = useRef(new Set<string>());
+  const syncingVisits = useRef(new Set<string>());
+  const visitRevision = useRef<Record<string, number>>({});
   const pendingVisitChanges = useRef<Record<string, Record<string, boolean>>>({});
   const attemptSequence = useRef(0);
   const sessionGeneration = useRef(0);
@@ -226,10 +279,40 @@ export function useViagem() {
     const saved = readSavedVisitas(data.usuario?.id);
     visitasRef.current = saved;
     setVisitasPorViagem(saved);
-    setVisitPersistenceByTrip({});
+    const pending = data.usuario?.id ? readPendingVisits(data.usuario.id) : {};
+    setVisitPersistenceByTrip(Object.fromEntries(Object.keys(pending).map((id) => [id, 'local'])));
     pendingVisitRequests.current.clear();
-    pendingVisitChanges.current = {};
+    overlappingVisits.current.clear();
+    syncingVisits.current.clear();
+    visitRevision.current = {};
+    pendingVisitChanges.current = pending;
   }, [data.usuario?.id]);
+
+  useEffect(() => {
+    if (!data.usuario?.id) return;
+    const next = { ...visitasRef.current };
+    let changed = false;
+    for (const trip of data.viagens) {
+      if (
+        !trip.atrativosVisitadosIds ||
+        [...pendingVisitRequests.current].some((key) => key.startsWith(`${trip.id}:`))
+      )
+        continue;
+      const ids = applyVisitChanges(
+        trip.atrativosVisitadosIds,
+        pendingVisitChanges.current[trip.id],
+      );
+      if (JSON.stringify(ids) !== JSON.stringify(next[trip.id])) {
+        next[trip.id] = ids;
+        changed = true;
+      }
+    }
+    if (changed) {
+      visitasRef.current = next;
+      setVisitasPorViagem(next);
+      saveVisitas(data.usuario.id, next);
+    }
+  }, [data.usuario?.id, data.viagens]);
 
   const runSessionAction = useCallback(
     async (action: () => Promise<unknown>): Promise<boolean> => {
@@ -237,6 +320,8 @@ export function useViagem() {
       sessionGeneration.current += 1;
       setTelemetryState({ kind: 'hidden' });
       setIsSubmitting(false);
+      deletingRef.current.clear();
+      setDeletingIds([]);
       setPendingRoute(null);
       resetSelectedTrip();
       setHistoryStatus('loading');
@@ -269,7 +354,12 @@ export function useViagem() {
     [addToast, reload, resetSelectedTrip, updatePersistence],
   );
 
-  const auth = useAuth({ usuario: data.usuario, runSessionAction, addToast });
+  const auth = useAuth({
+    usuario: data.usuario,
+    visitorRemainingMs: data.visitor_remaining_ms,
+    runSessionAction,
+    addToast,
+  });
 
   const reconcilePersistence = useCallback(
     async (tripId: string, expectedUserId: string, generation: number) => {
@@ -342,11 +432,12 @@ export function useViagem() {
           recordedAt: new Date().toISOString(),
           route,
           ...result.metadata,
-          // TODO(integracao): carregar diagnósticos e tempos reais do payload de planejamento.
           providers: providerDiagnostics(result.viagem),
-          // TODO(integracao): propagar session_started_at e session_duration_ms da sessão
-          // ao painel e conciliar atualizações SSE sem confundir duração com expiração.
-          session: sessionSummary(usuario, data.viagens.length + 1),
+          etapas: result.viagem.telemetria?.duracoes_etapas_ms,
+          session: sessionSummary(usuario, data.viagens.length + 1, {
+            sessionStartedAt: data.session_started_at,
+            sessionDurationMs: data.session_duration_ms,
+          }),
           service: serviceCondition(true),
           connectivity,
         };
@@ -386,6 +477,8 @@ export function useViagem() {
       addToast,
       data.usuario,
       data.viagens.length,
+      data.session_started_at,
+      data.session_duration_ms,
       networkStatus,
       connectivity,
       reconcilePersistence,
@@ -421,17 +514,21 @@ export function useViagem() {
           addToast('Não foi possível excluir o roteiro. Tente novamente.');
         }
       } finally {
-        deletingRef.current.delete(tripId);
-        setDeletingIds((current) => current.filter((id) => id !== tripId));
+        if (generation === sessionGeneration.current) {
+          deletingRef.current.delete(tripId);
+          setDeletingIds((current) => current.filter((id) => id !== tripId));
+        }
       }
     },
     [addToast, data.usuario?.id, updatePersistence],
   );
 
   const solicitarSugestoesGps = useCallback(async () => {
+    const generation = sessionGeneration.current;
     setSuggestionStatus('loading');
     try {
       const coords = await obterCoordenadasNavegador();
+      if (generation !== sessionGeneration.current || !mountedRef.current) return;
       const recomendacoes = obterSugestoesDestino(coords.latitude, coords.longitude);
       setSugestoes(recomendacoes);
       setSuggestionStatus('available');
@@ -440,6 +537,7 @@ export function useViagem() {
         'sucesso',
       );
     } catch (error) {
+      if (generation !== sessionGeneration.current || !mountedRef.current) return;
       setSuggestionStatus('unavailable');
       const mensagem =
         error instanceof Error
@@ -449,10 +547,47 @@ export function useViagem() {
     }
   }, [addToast]);
 
+  const updateStreamSession = useCallback(
+    (update: StreamTelemetryUpdate) => {
+      if (!update.session || update.session.userId !== data.usuario?.id) return;
+      setTelemetryState((current) => {
+        if (
+          current.kind !== 'settled' ||
+          current.snapshot.sessionIdentityId !== update.session?.userId
+        )
+          return current;
+        const session = update.session;
+        return {
+          ...current,
+          snapshot: {
+            ...current.snapshot,
+            session: {
+              ...current.snapshot.session,
+              ...(session.sessionStartedAt.available
+                ? { sessionStartedAt: session.sessionStartedAt }
+                : {}),
+              ...(session.sessionDuration.available
+                ? { sessionDuration: session.sessionDuration }
+                : {}),
+              ...(session.userTripCount !== undefined
+                ? { userTripCount: session.userTripCount }
+                : {}),
+            },
+          },
+        };
+      });
+    },
+    [data.usuario?.id],
+  );
+
   const toggleVisitaAtrativo = useCallback(
     async (viagemId: string, atrativoId: string) => {
       const requestKey = `${viagemId}:${atrativoId}`;
-      if (pendingVisitRequests.current.has(requestKey)) return;
+      if (syncingVisits.current.has(viagemId) || pendingVisitRequests.current.has(requestKey))
+        return;
+      if ([...pendingVisitRequests.current].some((key) => key.startsWith(`${viagemId}:`)))
+        overlappingVisits.current.add(viagemId);
+      visitRevision.current[viagemId] = (visitRevision.current[viagemId] ?? 0) + 1;
       pendingVisitRequests.current.add(requestKey);
       const generation = sessionGeneration.current;
       const atuais = visitasRef.current[viagemId] ?? [];
@@ -465,12 +600,10 @@ export function useViagem() {
       saveVisitas(data.usuario?.id, proximo);
       setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
 
-      // TODO(integracao): hidratar visitas do histórico e reconciliar mudanças locais
-      // pendentes sem sobrescrevê-las ao recarregar ou sincronizar.
       try {
         const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
         if (generation !== sessionGeneration.current) return;
-        if (!confirmed) {
+        if (confirmed === null) {
           pendingVisitChanges.current[viagemId] = {
             ...pendingVisitChanges.current[viagemId],
             [atrativoId]: novoStatus,
@@ -478,6 +611,21 @@ export function useViagem() {
           addToast('Visita salva apenas neste dispositivo; servidor indisponível.', 'info');
         } else if (pendingVisitChanges.current[viagemId]) {
           delete pendingVisitChanges.current[viagemId][atrativoId];
+          if (Object.keys(pendingVisitChanges.current[viagemId]).length === 0)
+            delete pendingVisitChanges.current[viagemId];
+        }
+        savePendingVisits(data.usuario?.id, pendingVisitChanges.current);
+        const otherRequest = [...pendingVisitRequests.current].some(
+          (key) => key !== requestKey && key.startsWith(`${viagemId}:`),
+        );
+        if (confirmed !== null && !otherRequest && !overlappingVisits.current.has(viagemId)) {
+          const reconciled = {
+            ...visitasRef.current,
+            [viagemId]: applyVisitChanges(confirmed, pendingVisitChanges.current[viagemId]),
+          };
+          visitasRef.current = reconciled;
+          setVisitasPorViagem(reconciled);
+          saveVisitas(data.usuario?.id, reconciled);
         }
         const hasPending = Object.keys(pendingVisitChanges.current[viagemId] ?? {}).length > 0;
         setVisitPersistenceByTrip((current) => ({
@@ -497,7 +645,40 @@ export function useViagem() {
         setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'error' }));
         addToast('Não foi possível salvar a visita. Tente novamente.');
       } finally {
-        pendingVisitRequests.current.delete(requestKey);
+        if (generation === sessionGeneration.current)
+          pendingVisitRequests.current.delete(requestKey);
+        if (
+          generation === sessionGeneration.current &&
+          overlappingVisits.current.has(viagemId) &&
+          ![...pendingVisitRequests.current].some((key) => key.startsWith(`${viagemId}:`))
+        ) {
+          overlappingVisits.current.delete(viagemId);
+          const revision = visitRevision.current[viagemId];
+          try {
+            const response = await listarViagens();
+            const isCurrent =
+              generation === sessionGeneration.current &&
+              visitRevision.current[viagemId] === revision &&
+              ![...pendingVisitRequests.current].some((key) => key.startsWith(`${viagemId}:`));
+            const trip = isCurrent
+              ? response.viagens.find((item) => item.id === viagemId)
+              : undefined;
+            if (trip?.atrativosVisitadosIds) {
+              const reconciled = {
+                ...visitasRef.current,
+                [viagemId]: applyVisitChanges(
+                  trip.atrativosVisitadosIds,
+                  pendingVisitChanges.current[viagemId],
+                ),
+              };
+              visitasRef.current = reconciled;
+              setVisitasPorViagem(reconciled);
+              saveVisitas(data.usuario?.id, reconciled);
+            }
+          } catch {
+            // Mantém as confirmações já recebidas até a próxima atualização do histórico.
+          }
+        }
       }
     },
     [addToast, data.usuario?.id],
@@ -507,17 +688,32 @@ export function useViagem() {
     async (viagemId: string) => {
       const generation = sessionGeneration.current;
       const pending = pendingVisitChanges.current[viagemId];
-      if (!pending) return;
+      if (
+        !pending ||
+        syncingVisits.current.has(viagemId) ||
+        [...pendingVisitRequests.current].some((key) => key.startsWith(`${viagemId}:`))
+      )
+        return;
+      syncingVisits.current.add(viagemId);
       setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
       try {
         for (const [atrativoId, visitado] of Object.entries(pending)) {
           const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, visitado);
           if (generation !== sessionGeneration.current) return;
-          if (!confirmed) {
+          if (confirmed === null) {
             setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'local' }));
             return;
           }
           delete pending[atrativoId];
+          if (Object.keys(pending).length === 0) delete pendingVisitChanges.current[viagemId];
+          savePendingVisits(data.usuario?.id, pendingVisitChanges.current);
+          const reconciled = {
+            ...visitasRef.current,
+            [viagemId]: applyVisitChanges(confirmed, pending),
+          };
+          visitasRef.current = reconciled;
+          setVisitasPorViagem(reconciled);
+          saveVisitas(data.usuario?.id, reconciled);
         }
         setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'confirmed' }));
         addToast('Visitas sincronizadas com o servidor.', 'sucesso');
@@ -525,9 +721,11 @@ export function useViagem() {
         if (generation !== sessionGeneration.current) return;
         setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'local' }));
         addToast('Ainda não foi possível sincronizar as visitas.');
+      } finally {
+        if (generation === sessionGeneration.current) syncingVisits.current.delete(viagemId);
       }
     },
-    [addToast],
+    [addToast, data.usuario?.id],
   );
 
   return {
@@ -564,5 +762,6 @@ export function useViagem() {
     selectTrip,
     toggleVisitaAtrativo,
     retryLocalVisits,
+    updateStreamSession,
   };
 }

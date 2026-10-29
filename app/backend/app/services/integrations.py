@@ -279,8 +279,6 @@ async def get_weather(
     humidity = _finite_number(current.get("relative_humidity_2m"))
     wind = _finite_number(current.get("wind_speed_10m"))
     weather_code = current.get("weather_code")
-    # TODO(integracao): alinhar `sensacao_termica` com o campo `sensacao` do
-    # Frontend ao integrar o contrato meteorológico da issue #25.
     return {
         "temperatura": f"{temperature} °C" if temperature is not None else "N/D",
         "sensacao_termica": f"{apparent_temperature} °C"
@@ -364,11 +362,13 @@ async def get_route(
                 "geometria": alternative_geometry,
                 "distancia": alternative_metrics[0],
                 "tempo": alternative_metrics[1],
+                "distancia_km": route["distance"] / 1000,
             }
         )
 
     return {
         "distancia": metrics[0],
+        "distancia_km": primary["distance"] / 1000,
         "tempo": metrics[1],
         "modal": "carro",
         "status": "disponivel",

@@ -156,16 +156,38 @@ export function TelemetriaCard({
                 value={displayDuration(snapshot?.totalTimeMs ?? missing)}
                 tone="total"
               />
-              {/* TODO(integracao): exibir tempos de origem e destino sem somá-los como tempo sequencial. */}
-              <Metric label="Geocoding" value="Aguardando dados" />
-              {/* TODO(integracao): apresentar as etapas reais sem somar tempos executados em paralelo. */}
-              <Metric label="APIs + IA Gemini" value="Aguardando dados" />
+              {(
+                [
+                  ['Geocodificação da origem', 'geocodificacao_origem_ms'],
+                  ['Geocodificação do destino', 'geocodificacao_destino_ms'],
+                  ['Clima', 'clima_ms'],
+                  ['Roteamento', 'roteamento_ms'],
+                  ['Guia', 'guia_ms'],
+                  ['Altimetria', 'altimetria_ms'],
+                  ['Total dos serviços', 'total_servicos_ms'],
+                ] as const
+              ).map(([label, key]) => {
+                const duration = snapshot?.etapas?.[key];
+                return (
+                  <Metric
+                    key={key}
+                    label={label}
+                    value={displayDuration(
+                      duration === undefined ? missing : { available: true, value: duration },
+                    )}
+                  />
+                );
+              })}
               <Metric
                 label="Servidor local (Tempo da API)"
                 value={displayDuration(snapshot?.apiTimeMs ?? missing)}
                 tone="server"
               />
             </dl>
+            <p>
+              O tempo total inclui a requisição e a leitura da resposta; não inclui a renderização
+              da tela.
+            </p>
             <div className="telemetry-api-detail">
               <strong>Detalhamento por API:</strong>
               {snapshot ? (
@@ -174,7 +196,6 @@ export function TelemetriaCard({
                     <li key={provider.provider}>
                       {providerNames[provider.provider]}:{' '}
                       <span>{providerStates[provider.state]}</span>
-                      {/* TODO(integracao): preencher duração e estado com os diagnósticos recebidos. */}
                       {' · Tempo: '}
                       {displayDuration(provider.durationMs)}
                     </li>

@@ -13,6 +13,7 @@ from typing import Any
 
 import httpx
 import pytest
+
 from app.schemas.roteiros import (
     AltimetriaInfo,
     Coordenada,

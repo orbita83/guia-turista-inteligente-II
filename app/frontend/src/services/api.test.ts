@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { ApiContractError, criarViagem, listarViagens, parseTrip, verificarSaudeApi } from './api';
+import {
+  ApiContractError,
+  atualizarVisitaAtrativo,
+  criarViagem,
+  listarViagens,
+  parseTrip,
+  verificarSaudeApi,
+} from './api';
 
 describe('saúde da API', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -13,6 +20,32 @@ describe('saúde da API', () => {
 
     fetchMock.mockResolvedValueOnce(Response.json({ status: 'degraded' }));
     await expect(verificarSaudeApi()).resolves.toBe(false);
+  });
+});
+
+describe('visitas persistidas', () => {
+  afterEach(() => vi.restoreAllMocks());
+  it('valida a confirmação e trata 404 como roteiro inexistente', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      Response.json({
+        roteiro_id: 't',
+        atrativo_id: 'a',
+        visitado: true,
+        atrativos_visitados_ids: ['a', 'b'],
+      }),
+    );
+    await expect(atualizarVisitaAtrativo('t', 'a', true)).resolves.toEqual(['a', 'b']);
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    await expect(atualizarVisitaAtrativo('t', 'a', true)).rejects.toMatchObject({ status: 404 });
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        roteiro_id: 'outro',
+        atrativo_id: 'a',
+        visitado: true,
+        atrativos_visitados_ids: [],
+      }),
+    );
+    await expect(atualizarVisitaAtrativo('t', 'a', true)).rejects.toBeInstanceOf(ApiContractError);
   });
 });
 
@@ -33,6 +66,58 @@ const trip = {
 };
 
 describe('F01 — campos opcionais da viagem', () => {
+  it('preserva a origem do catálogo de atrativos retornado pelo backend', () => {
+    expect(parseTrip({ ...trip, atrativos: [], atrativos_fonte: 'catalogo_local' })).toMatchObject({
+      atrativos: [],
+      atrativosFonte: 'catalogo_local',
+    });
+  });
+  it('recupera parâmetros válidos de um roteiro persistido', () => {
+    const parametros = {
+      ...form,
+      duracao_dias: 3,
+      perfis: ['cultural'],
+      propulsao: 'combustao',
+      consumo_km_l: 12,
+      capacidade_tanque_l: 50,
+    };
+    expect(parseTrip({ ...trip, parametros })?.parametros).toEqual(parametros);
+    expect(
+      parseTrip({ ...trip, parametros: { ...parametros, duracao_dias: -1, perfis: ['inválido'] } })
+        ?.parametros,
+    ).not.toHaveProperty('duracao_dias');
+  });
+  it('lê visitas persistidas no formato do backend', () => {
+    expect(
+      parseTrip({ ...trip, atrativos_visitados_ids: ['poi-1'] })?.atrativosVisitadosIds,
+    ).toEqual(['poi-1']);
+    expect(parseTrip({ ...trip, atrativos_visitados_ids: [] })?.atrativosVisitadosIds).toEqual([]);
+    expect(
+      parseTrip({ ...trip, atrativos_visitados_ids: [1] })?.atrativosVisitadosIds,
+    ).toBeUndefined();
+  });
+  it('valida a telemetria do backend por campo', () => {
+    const parsed = parseTrip({
+      ...trip,
+      telemetria: {
+        duracoes_etapas_ms: { geocodificacao_origem_ms: 10, clima_ms: -1, guia_ms: '20' },
+        provedores: { osrm: 'disponivel', gemini: 'inventado' },
+      },
+    });
+    expect(parsed?.telemetria).toEqual({
+      duracoes_etapas_ms: { geocodificacao_origem_ms: 10 },
+      provedores: { osrm: 'disponivel' },
+    });
+  });
+  it('normaliza a sensação térmica do backend e preserva o formato antigo', () => {
+    expect(parseTrip({ ...trip, clima: { sensacao_termica: ' 29 °C ' } })?.clima.sensacao).toBe(
+      '29 °C',
+    );
+    expect(
+      parseTrip({ ...trip, clima: { sensacao_termica: 'N/D', sensacao: '28 °C' } })?.clima.sensacao,
+    ).toBe('28 °C');
+    expect(parseTrip({ ...trip, clima: { sensacao_termica: 29 } })?.clima.sensacao).toBeUndefined();
+  });
   const route = {
     id: 'principal',
     titulo: 'Rota principal',

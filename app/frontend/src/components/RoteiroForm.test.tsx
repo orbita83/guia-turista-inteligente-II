@@ -7,6 +7,24 @@ import { ApiError } from '../services/api';
 import { RoteiroForm } from './RoteiroForm';
 
 describe('RoteiroForm', () => {
+  it('sincroniza UF de município inequívoco e mantém escolha para homônimos', () => {
+    render(
+      <RoteiroForm
+        ufs={['PE', 'SP', 'RJ']}
+        isSubmitting={false}
+        onSubmit={vi.fn()}
+        municipios={[
+          { nome: 'Recife', uf: 'PE' },
+          { nome: 'Bom Jesus', uf: 'SP' },
+          { nome: 'Bom Jesus', uf: 'RJ' },
+        ]}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Cidade de origem'), { target: { value: 'Recife' } });
+    expect(screen.getByLabelText('UF de origem')).toHaveValue('PE');
+    fireEvent.change(screen.getByLabelText('Cidade de origem'), { target: { value: 'Bom Jesus' } });
+    expect(screen.getByLabelText('UF de origem')).toHaveValue('PE');
+  });
   it('alterna para parâmetros elétricos e envia toda a parametrização', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn<(data: RoteiroFormData) => void>();

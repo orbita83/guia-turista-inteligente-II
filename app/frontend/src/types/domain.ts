@@ -14,7 +14,6 @@ export interface ClimaViagem {
   temperatura: string;
   umidade: string;
   vento: string;
-  // TODO: mapear sensacao_termica retornada pela API para este campo.
   sensacao?: string;
   condicao?: string;
   icone?: string;
@@ -25,6 +24,34 @@ export interface PercursoViagem {
   tempo: string;
   geometria?: CoordenadaGPS[];
   perfilElevacao?: PontoElevacao[];
+  statusAltimetria?: string;
+  alternativas?: PercursoAlternativo[];
+  autonomia?: AutonomiaRota;
+  custos?: CustosRota;
+}
+
+export interface PercursoAlternativo {
+  distancia: string;
+  tempo: string;
+  geometria: CoordenadaGPS[];
+  perfilElevacao?: PontoElevacao[];
+  statusAltimetria?: string;
+  autonomia?: AutonomiaRota;
+  custos?: CustosRota;
+}
+
+export interface CustosRota {
+  custoPropulsao: string;
+  custoTotal: string;
+  totalCompleto: boolean;
+  cotas: { passageiro: number; valor: string }[];
+}
+
+export interface AutonomiaRota {
+  sucesso: boolean;
+  solucaoSegura: boolean;
+  autonomiaMaximaKm?: number;
+  paradas: ParadaEstrategica[];
 }
 
 export interface PontoElevacao {
@@ -41,10 +68,36 @@ export interface Viagem {
   percurso: PercursoViagem;
   dicas_destino: string;
   diagnostico_ia?: Record<string, unknown>;
-  // TODO: tipar e mapear a telemetria por etapa e os provedores retornados pela API.
+  parametros?: RoteiroFormData;
+  telemetria?: TelemetriaViagem;
   rotas?: RotaAlternativa[];
   atrativos?: AtrativoTuristico[];
+  atrativosFonte?: 'catalogo_local';
   atrativosVisitadosIds?: string[];
+}
+
+export type EtapaPlanejamento =
+  | 'geocodificacao_origem_ms'
+  | 'geocodificacao_destino_ms'
+  | 'clima_ms'
+  | 'roteamento_ms'
+  | 'guia_ms'
+  | 'altimetria_ms'
+  | 'total_servicos_ms';
+export type ProvedorPlanejamento =
+  | 'open_meteo_geocoding'
+  | 'open_meteo_weather'
+  | 'osrm'
+  | 'gemini'
+  | 'open_elevation';
+export type EstadoProvedorPlanejamento =
+  | 'disponivel'
+  | 'indisponivel'
+  | 'nao_consultado'
+  | 'nao_integrado';
+export interface TelemetriaViagem {
+  duracoes_etapas_ms: Partial<Record<EtapaPlanejamento, number>>;
+  provedores: Partial<Record<ProvedorPlanejamento, EstadoProvedorPlanejamento>>;
 }
 
 export type CategoriaAtrativo =
@@ -97,6 +150,7 @@ export interface RoteiroFormData {
   eficiencia_km_kwh?: number;
   capacidade_bateria_kwh?: number;
   preco_energia_kwh?: number;
+  passageiros?: number;
 }
 
 export type TipoPropulsao = 'combustao' | 'eletrico';
@@ -112,6 +166,7 @@ export interface MunicipioOption {
   nome: string;
   uf: string;
 }
+export type MunicipioCatalogStatus = 'loading' | 'available' | 'unavailable';
 
 export interface SugestaoDestino extends MunicipioOption {
   distanciaKm: number;
@@ -131,6 +186,7 @@ export interface ParadaEstrategica {
   nivelBateriaOuTanquePct: number;
   coordenadas: CoordenadaGPS;
   descricao?: string;
+  origem?: 'projetado' | 'verificado';
 }
 
 export interface PerfilTopografico {
@@ -244,6 +300,7 @@ export interface TelemetrySnapshot {
   totalTimeMs: AvailableValue<number>;
   requestId: AvailableValue<string>;
   providers: ProviderDiagnostic[];
+  etapas?: TelemetriaViagem['duracoes_etapas_ms'];
   session: SessionSummary;
   service: ServiceCondition;
   connectivity: ConnectivityCondition;

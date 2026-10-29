@@ -12,6 +12,9 @@ import httpx
 
 from app.core.circuit_breaker import CircuitBreaker
 from app.core.storage import TripStorage
+from app.services.altimetria_service import obter_perfil_topografico
+from app.services.atrativos import atrativos_por_destino, enriquecer_viagem_legada
+from app.services.custos_service import calcular_custos_viagem
 from app.services.guide import (
     fallback_guide_with_diagnostics,
     get_guide_with_diagnostics,
@@ -23,6 +26,7 @@ from app.services.integrations import (
     get_weather,
     weather_result_is_failure,
 )
+from app.services.postos_service import projetar_paradas_rota
 
 
 class InvalidTripInput(ValueError):
@@ -55,7 +59,7 @@ def sanitize_input(text: str, max_length: int = 80) -> str:
 
 
 async def plan_trip(
-    form: dict[str, str],
+    form: dict[str, Any],
     user: dict[str, Any],
     *,
     client: httpx.AsyncClient,
@@ -148,23 +152,47 @@ async def plan_trip(
         weather = weather_result
     if route_result:
         route = route_result
+    attractions = atrativos_por_destino(destination_city, destination_state)
 
-    # TODO(integracao): encaminhar duração e perfis ao guia quando o schema #30
-    # e o serviço do Aluno 4 aceitarem esses campos (issue #20); incluir atrativos
-    # e gastronomia somente após definição da fonte e contrato da issue #25.
     guide_called = False
 
     async def measured_guide() -> tuple[str, dict[str, Any]]:
         nonlocal guide_called
         guide_called = bool(gemini_api_key.strip())
+        context: dict[str, Any] = {key: form[key] for key in ("duracao_dias", "perfis") if key in form}
+        if context:
+            context["clima"] = weather
+            context["atrativos"] = [item["nome"] for item in attractions if item.get("categoria") != "gastronomia"]
+            context["gastronomia"] = [item["nome"] for item in attractions if item.get("categoria") == "gastronomia"]
         return await get_guide_with_diagnostics(
             destination_name,
             api_key=gemini_api_key,
             timeout_seconds=gemini_timeout_seconds,
+            **({"context": context} if context else {}),
         )
 
-    (guide, diagnostics), guide_ms = await _measure(
-        circuit_breakers["guide"].call(
+    async def measured_elevations() -> tuple[dict[str, Any] | None, float | None]:
+        if route.get("status") != "disponivel":
+            return None, None
+        alternatives = route.get("alternativas")
+        candidates = [route, *(alternatives if isinstance(alternatives, list) else [])]
+        semaphore = asyncio.Semaphore(3)
+
+        async def measure_candidate(candidate: Any) -> tuple[dict[str, Any] | None, float | None]:
+            geometry = candidate.get("geometria") if isinstance(candidate, dict) else None
+            if not isinstance(geometry, list) or len(geometry) < 2:
+                return None, None
+            async with semaphore:
+                profile, elapsed = await _measure(obter_perfil_topografico(geometry, client=client))
+            result = profile.model_dump(mode="json")
+            candidate["altimetria"] = result
+            return result, elapsed
+
+        results = await asyncio.gather(*(measure_candidate(candidate) for candidate in candidates))
+        return results[0]
+
+    ((guide, diagnostics), guide_ms), (elevation, elevation_ms) = await asyncio.gather(
+        _measure(circuit_breakers["guide"].call(
             measured_guide,
             fallback=lambda: fallback_guide_with_diagnostics(
                 destination_name, "circuito_aberto"
@@ -179,8 +207,38 @@ async def plan_trip(
                     "requisicao_ou_chave_invalida",
                 }
             ),
-        ),
+        )),
+        measured_elevations(),
     )
+    if elevation is not None:
+        route["altimetria"] = elevation
+    if form.get("propulsao") and route.get("status") == "disponivel":
+        vehicle_fields = (
+            "propulsao", "consumo_km_l", "capacidade_tanque_l", "preco_combustivel_l",
+            "eficiencia_km_kwh", "capacidade_bateria_kwh", "preco_energia_kwh",
+        )
+        vehicle = {key: form[key] for key in vehicle_fields if key in form}
+        candidates = [route, *route.get("alternativas", [])]
+        for candidate in candidates:
+            geometry = candidate.get("geometria") if isinstance(candidate, dict) else None
+            if not isinstance(geometry, list) or len(geometry) < 2:
+                continue
+            result = await asyncio.to_thread(
+                projetar_paradas_rota, geometry, vehicle, formato_geometria="latlon"
+            )
+            candidate["autonomia"] = result.model_dump(mode="json")
+            distance = candidate.get("distancia_km")
+            if isinstance(distance, (int, float)) and not isinstance(distance, bool):
+                costs = calcular_custos_viagem(
+                    distancia_km=distance,
+                    propulsao=vehicle["propulsao"],
+                    consumo_km_por_litro=vehicle.get("consumo_km_l"),
+                    preco_combustivel_por_litro=vehicle.get("preco_combustivel_l"),
+                    eficiencia_km_por_kwh=vehicle.get("eficiencia_km_kwh"),
+                    preco_energia_por_kwh=vehicle.get("preco_energia_kwh"),
+                    passageiros=form.get("passageiros", 1),
+                )
+                candidate["custos"] = costs.model_dump(mode="json")
     geocoding_available = _coordinates_available(origin_coords) and (
         _coordinates_available(destination_coords)
     )
@@ -219,11 +277,15 @@ async def plan_trip(
     stage_durations["total_servicos_ms"] = round(
         (perf_counter() - planning_started_at) * 1000, 3
     )
+    if elevation_ms is not None:
+        stage_durations["altimetria_ms"] = elevation_ms
     trip = {
         "id": str(uuid.uuid4()),
         "criado_em": datetime.now(UTC).isoformat(),
         "origem": origin_name,
         "destino": destination_name,
+        "atrativos": attractions,
+        "atrativos_fonte": "catalogo_local",
         "clima": weather,
         "percurso": route,
         "dicas_destino": guide,
@@ -237,19 +299,21 @@ async def plan_trip(
                 "open_meteo_weather": weather_status,
                 "osrm": route_status,
                 "gemini": guide_status,
-                # TODO(aluno-3): integrar elevação, autonomia, postos e custos
-                # com geometria real e parâmetros validados quando os serviços e
-                # schemas das issues #27 a #30 estiverem disponíveis (issue #23).
-                "open_elevation": "nao_integrado",
+                "open_elevation": (
+                    "nao_consultado" if elevation is None else
+                    "disponivel" if elevation.get("sucesso") is True else "indisponivel"
+                ),
             },
         },
     }
+    if any(key in form for key in ('duracao_dias', 'perfis', 'propulsao')):
+        trip['parametros'] = form.copy()
     await asyncio.to_thread(storage.add_for_user, user_id, trip, user)
     return trip
 
 
 def list_trips(storage: TripStorage, user_id: str) -> list[dict[str, Any]]:
-    return storage.list_for_user(user_id)
+    return [enriquecer_viagem_legada(trip) for trip in storage.list_for_user(user_id)]
 
 
 def delete_trip(storage: TripStorage, user_id: str, trip_id: str) -> bool:

@@ -10,22 +10,42 @@ export interface MapaRotaProps {
   passageirosIniciais?: number;
   rotaAtivaId?: RotaAlternativa['id'];
   onRotaChange?: (rota: RotaAlternativa) => void;
+  alternativaAtiva?: number | null;
+  onAlternativaChange?: (index: number | null) => void;
 }
 
-export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: MapaRotaProps) {
+export function MapaRota({
+  viagem,
+  rotaAtivaId = 'principal',
+  onRotaChange,
+  alternativaAtiva = null,
+  onAlternativaChange,
+}: MapaRotaProps) {
   const titleId = useId();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const rotas = useMemo(
-    // TODO(integracao): exibir alternativas de percurso.alternativas após adaptar o contrato real.
     () => (viagem.rotas ?? []).filter((rota) => geometriaValida(rota.coordenadas)),
     [viagem.rotas],
   );
   const rotaAtiva = rotas.find((rota) => rota.id === rotaAtivaId) ?? rotas[0];
+  const alternativas = viagem.percurso.alternativas ?? [];
+  const alternativa = rotas.length ? undefined : alternativas[alternativaAtiva ?? -1];
   const geometria: CoordenadaGPS[] | undefined =
-    rotaAtiva?.coordenadas ?? viagem.percurso.geometria;
-  // TODO(integracao): consumir perfil de elevação real quando o backend disponibilizá-lo;
-  // a geometria OSRM atual não contém altitude, custos, autonomia nem pontos de parada.
-  const elevation = rotaAtiva ? rotaAtiva.perfilElevacao : viagem.percurso.perfilElevacao;
+    rotaAtiva?.coordenadas ?? alternativa?.geometria ?? viagem.percurso.geometria;
+  const elevation = rotaAtiva
+    ? rotaAtiva.perfilElevacao
+    : alternativa
+      ? alternativa.perfilElevacao
+      : viagem.percurso.perfilElevacao;
+  const autonomia = rotaAtiva
+    ? undefined
+    : alternativa
+      ? alternativa.autonomia
+      : viagem.percurso.autonomia;
+  const custos = rotaAtiva ? undefined : alternativa ? alternativa.custos : viagem.percurso.custos;
+  const dinheiro = (valor: string) =>
+    Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const paradas = autonomia?.paradas;
   const elevations = elevation?.map((point) => point.altitudeM) ?? [];
   const minAltitude = elevations.reduce((min, altitude) => Math.min(min, altitude), Infinity);
   const maxAltitude = elevations.reduce((max, altitude) => Math.max(max, altitude), -Infinity);
@@ -41,9 +61,6 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
     })
     .join(' ');
 
-  // TODO(integracao): exibir marcadores de paradas da rota ativa e atualizá-los ao trocar
-  // de rota; distinguir pontos projetados de postos ou eletropostos verificados usando
-  // procedência e estado fornecidos pelo backend, sem inventar estabelecimentos.
   useEffect(() => {
     if (!mapContainerRef.current || !geometriaValida(geometria) || !geometria) return;
     const map = L.map(mapContainerRef.current, { scrollWheelZoom: false });
@@ -52,11 +69,18 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
       maxZoom: 19,
     }).addTo(map);
     const line = L.polyline(geometria, { color: '#0284c7', weight: 5 }).addTo(map);
+    for (const parada of paradas ?? []) {
+      const tooltip = document.createElement('span');
+      tooltip.textContent = `${parada.nome} — ${parada.origem === 'verificado' ? 'estabelecimento verificado' : 'ponto projetado, não confirmado'}`;
+      L.circleMarker(parada.coordenadas, { radius: 7, color: '#b45309' })
+        .bindTooltip(tooltip)
+        .addTo(map);
+    }
     map.fitBounds(line.getBounds(), { padding: [30, 30] });
     return () => {
       map.remove();
     };
-  }, [geometria]);
+  }, [geometria, paradas]);
 
   return (
     <section className="mapa-card" aria-labelledby={titleId}>
@@ -87,6 +111,29 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
               ))}
             </div>
           )}
+          {rotas.length === 0 && alternativas.length > 0 && (
+            <div className="control-button-group" role="group" aria-label="Rotas disponíveis">
+              <button
+                type="button"
+                className={`btn-pill-control${alternativaAtiva === null ? ' is-active' : ''}`}
+                aria-pressed={alternativaAtiva === null}
+                onClick={() => onAlternativaChange?.(null)}
+              >
+                Rota principal
+              </button>
+              {alternativas.map((rota, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className={`btn-pill-control${alternativaAtiva === index ? ' is-active' : ''}`}
+                  aria-pressed={alternativaAtiva === index}
+                  onClick={() => onAlternativaChange?.(index)}
+                >
+                  Alternativa {index + 1} ({rota.distancia})
+                </button>
+              ))}
+            </div>
+          )}
           <div className="map-container-wrapper">
             <div
               ref={mapContainerRef}
@@ -97,14 +144,15 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
           </div>
           <div role="region" aria-label="Descrição textual da rota">
             <p>
-              {rotaAtiva?.titulo ?? 'Traçado principal'}: {viagem.origem} até {viagem.destino}.
-              Distância: {rotaAtiva ? `${rotaAtiva.distanciaKm} km` : viagem.percurso.distancia}.
-              Duração: {rotaAtiva?.tempoFormatado ?? viagem.percurso.tempo}.
+              {rotaAtiva?.titulo ??
+                (alternativa ? `Alternativa ${(alternativaAtiva ?? 0) + 1}` : 'Traçado principal')}
+              : {viagem.origem} até {viagem.destino}. Distância:{' '}
+              {rotaAtiva
+                ? `${rotaAtiva.distanciaKm} km`
+                : (alternativa?.distancia ?? viagem.percurso.distancia)}
+              . Duração: {rotaAtiva?.tempoFormatado ?? alternativa?.tempo ?? viagem.percurso.tempo}.
             </p>
           </div>
-          {/* TODO(integracao): apresentar custos e rateio da rota ativa conforme o contrato;
-              distinguir estimativas, valores confirmados e indisponíveis sem converter
-              ausências em zero. Exibir ESG apenas com unidades, fontes e fatores definidos. */}
           {rotaAtiva && (
             <div className="metrics-grid" aria-label="Métricas da rota ativa">
               <p>Autonomia: {rotaAtiva.autonomiaKm} km</p>
@@ -114,6 +162,51 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
               {rotaAtiva.paradas.map((parada) => (
                 <p key={parada.id}>
                   {parada.nome}: km {parada.km}
+                </p>
+              ))}
+            </div>
+          )}
+          {autonomia && (
+            <div className="metrics-grid" aria-label="Autonomia e paradas da rota">
+              {autonomia.autonomiaMaximaKm !== undefined && (
+                <p>
+                  Autonomia nominal estimada: {autonomia.autonomiaMaximaKm} km, considerando tanque
+                  ou bateria cheios e sem ajuste de relevo.
+                </p>
+              )}
+              {!autonomia.sucesso || !autonomia.solucaoSegura ? (
+                <p role="status">Não foi possível confirmar um plano de paradas seguro.</p>
+              ) : null}
+              <p>
+                Paradas informadas: {autonomia.paradas.length}. Confirme postos e disponibilidade
+                antes da viagem.
+              </p>
+              {autonomia.paradas.map((parada) => (
+                <p key={parada.id}>
+                  {parada.nome}: km {parada.km} —{' '}
+                  {parada.origem === 'verificado'
+                    ? 'estabelecimento verificado'
+                    : 'ponto projetado, não confirmado'}
+                </p>
+              ))}
+            </div>
+          )}
+          {custos && (
+            <div className="metrics-grid" aria-label="Custos estimados da rota">
+              <p>Combustível ou energia: {dinheiro(custos.custoPropulsao)}</p>
+              <p>
+                {custos.totalCompleto
+                  ? 'Total estimado'
+                  : 'Total parcial, pedágios incompletos ou indisponíveis'}
+                : {dinheiro(custos.custoTotal)}
+              </p>
+              {!custos.totalCompleto && (
+                <p>Os pedágios não estão completos; o valor não é o custo final da viagem.</p>
+              )}
+              <p>Rateio {custos.totalCompleto ? 'estimado' : 'parcial'}:</p>
+              {custos.cotas.map((cota) => (
+                <p key={cota.passageiro}>
+                  Passageiro {cota.passageiro}: {dinheiro(cota.valor)}
                 </p>
               ))}
             </div>

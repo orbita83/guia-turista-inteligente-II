@@ -19,6 +19,15 @@ Esta matriz conecta necessidades de produto, regras, atributos de qualidade, cas
 | Concorrência e resiliência | `RF-PLN-005`–`007` | `RN-DES-001`–`005` | `RNF-DES-001`–`009` | `UC-PLN-001` | `API-PLN-001` | `CA-PLN-002`, `CA-DES-001`–`003` | Fase 2, Fase 3 e Fase 7 |
 | Operação e qualidade | `RF-TEL-004`–`005` | — | `RNF-OPS-003`–`009`, `RNF-UX-001`–`006` | — | `API-OPS-001`–`002` | `CA-OPS-001`–`004`, `CA-PLN-004` | Fase 1 e Fase 7 |
 
+Na integração atual, `API-PLN-001` fornece geometria e alternativas, altimetria,
+autonomia, paradas projetadas e custos parciais por rota; `API-HIS-003` persiste
+visitas para a identidade ativa. `CA-MAP-001` e a exibição de `CA-PLN-003` são
+cobertos pelos testes de mapa e contrato; `CA-CST-001` permanece parcial enquanto
+não houver fonte de pedágios. Pontos projetados não são postos confirmados e não
+há fator validado para efeito do relevo no consumo (`CA-MAP-003`). Verificações em
+`test_http_api.py`, `apiGeometry.test.ts` e `MapaRota.test.tsx` usam provedores
+controlados; elas não substituem validação visual da SPA em execução.
+
 ## Documentos de evidência
 
 | Evidência | Documento |

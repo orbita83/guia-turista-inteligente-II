@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { obterAtrativosPorDestino } from '../services/atrativosService';
 import { streamGuiaTuristico } from '../services/streamingGuide';
 import type {
   AtrativoTuristico,
@@ -124,14 +123,7 @@ export function RoteiroResult({
   const [filtroAtrativo, setFiltroAtrativo] = useState<FiltroAtrativo>('todos');
 
   // Atrativos do destino
-  const todosAtrativos = useMemo(() => {
-    // TODO(integracao): consumir atrativos estruturados quando houver contrato; o backend
-    // atual retorna guia textual, e o catálogo local cobre apenas alguns destinos.
-    if (viagem.atrativos && viagem.atrativos.length > 0) {
-      return viagem.atrativos;
-    }
-    return obterAtrativosPorDestino(viagem.destino, formParams?.perfis);
-  }, [viagem.destino, viagem.atrativos, formParams?.perfis]);
+  const todosAtrativos = useMemo(() => viagem.atrativos ?? [], [viagem.atrativos]);
 
   // Estatísticas de visita
   const totalAtrativos = todosAtrativos.length;
@@ -170,8 +162,6 @@ export function RoteiroResult({
     const controller = new AbortController();
     streamAbortControllerRef.current = controller;
 
-    // TODO(frontend): manter visível o guia já recebido em dicas_destino enquanto o SSE
-    // conecta ou falha, identificando a contingência sem ocultar o erro da transmissão.
     setStreamText('');
     setStreamMessage('');
     setStreamStatus('streaming');
@@ -180,8 +170,16 @@ export function RoteiroResult({
     const payload = {
       destino: viagem.destino,
       ...(formParams?.duracao_dias ? { dias_estadia: formParams.duracao_dias } : {}),
-      ...(formParams?.perfis?.[0] ? { estilo_viagem: formParams.perfis[0] } : {}),
+      ...(formParams?.perfis?.length ? { estilo_viagem: formParams.perfis.join(', ') } : {}),
       clima_info: viagem.clima,
+      atrativos: todosAtrativos
+        .filter((item) => item.categoria !== 'gastronomia')
+        .map((item) => item.nome)
+        .slice(0, 30),
+      gastronomia: todosAtrativos
+        .filter((item) => item.categoria === 'gastronomia')
+        .map((item) => item.nome)
+        .slice(0, 30),
     };
 
     void streamGuiaTuristico(
@@ -207,11 +205,6 @@ export function RoteiroResult({
         onTelemetry: (update) => {
           if (!controller.signal.aborted) {
             onStreamTelemetry?.(update);
-            window.dispatchEvent(
-              new CustomEvent('guia:stream-telemetry', {
-                detail: { trip: viagem, update },
-              }),
-            );
           }
         },
       },
@@ -243,9 +236,11 @@ export function RoteiroResult({
     setStreamMessage('Transmissão cancelada.');
   };
 
+  const textoGuia = streamStatus === 'error' || !streamText ? viagem.dicas_destino : streamText;
+
   const copiarTextoGuia = async () => {
     try {
-      await navigator.clipboard.writeText(streamText || viagem.dicas_destino);
+      await navigator.clipboard.writeText(textoGuia);
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2500);
     } catch {
@@ -253,7 +248,7 @@ export function RoteiroResult({
     }
   };
 
-  const secoesParsed = useMemo(() => extrairSecoesGuia(streamText), [streamText]);
+  const secoesParsed = useMemo(() => extrairSecoesGuia(textoGuia), [textoGuia]);
 
   const duracao = formParams?.duracao_dias;
   const duracaoLabel = duracao
@@ -306,6 +301,7 @@ export function RoteiroResult({
           type="button"
           className={`btn-toggle-visit${isVisitado ? ' is-visited' : ''}`}
           aria-pressed={isVisitado}
+          disabled={visitPersistenceStatus === 'pending'}
           onClick={() => onToggleVisita?.(item.id)}
         >
           <span aria-hidden="true">{isVisitado ? '✓' : '○'}</span>
@@ -344,7 +340,6 @@ export function RoteiroResult({
           2. Banner Meteorológico (Open-Meteo) - Conforme Wireframe Seção 3.3
           ------------------------------------------------------------------ */}
       <section className="weather-banner" aria-labelledby="weather-title">
-        {/* TODO(integracao): exibir sensacao_termica após normalização; condição já vem do backend. */}
         <div className="weather-banner-header">
           <div className="weather-destination-group">
             <span className="weather-icon" aria-hidden="true">
@@ -441,6 +436,10 @@ export function RoteiroResult({
         </div>
 
         {streamStatus === 'error' && <p role="alert">{streamMessage}</p>}
+        {textoGuia &&
+          (streamStatus === 'error' || (streamStatus === 'streaming' && !streamText)) && (
+            <p role="status">Exibindo o guia recebido no planejamento.</p>
+          )}
 
         {/* Área de Texto em Streaming */}
         <div className="guide-content-area" role="region" aria-label="Conteúdo do guia">
@@ -461,7 +460,7 @@ export function RoteiroResult({
             </div>
           ) : (
             <p>
-              {streamText || 'Aguardando transmissão do roteiro…'}
+              {textoGuia || 'Aguardando transmissão do roteiro…'}
               {streamStatus === 'streaming' && (
                 <span className="streaming-cursor" aria-hidden="true" />
               )}
@@ -491,7 +490,7 @@ export function RoteiroResult({
             type="button"
             className="btn-guide-action"
             onClick={copiarTextoGuia}
-            disabled={!streamText}
+            disabled={!textoGuia}
             title="Copiar texto do guia para a área de transferência"
           >
             <span aria-hidden="true">{copiado ? '✓' : '📋'}</span>
@@ -509,6 +508,9 @@ export function RoteiroResult({
           <div className="attractions-title-box">
             <h3 id="attractions-title">Atrativos & Gastronomia</h3>
             <p>Descubra e marque os locais e pratos que você já conheceu.</p>
+            {viagem.atrativosFonte === 'catalogo_local' && (
+              <p>Catálogo local limitado; confirme as informações antes da visita.</p>
+            )}
           </div>
         </div>
 

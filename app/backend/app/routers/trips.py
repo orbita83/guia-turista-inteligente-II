@@ -15,6 +15,7 @@ from app.core.dependencies import (
     get_http_client,
     get_storage,
 )
+from app.core.storage import UnknownAttractionError
 from app.schemas.trips import (
     TripCreateRequest,
     TripCreateResponse,
@@ -117,7 +118,7 @@ async def create_trip(
         _recent_requests[key] = now
 
     try:
-        form = payload.model_dump()
+        form = payload.model_dump(exclude_none=True)
         planning = asyncio.create_task(
             plan_trip(
                 form,
@@ -184,19 +185,18 @@ async def update_attraction_visit(
     user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> dict[str, Any]:
-    # TODO(integracao): validar se o ID pertence aos atrativos do roteiro quando
-    # a coleção estruturada e seus IDs estáveis da issue #25 estiverem disponíveis.
-    visited_ids = await run_in_threadpool(
-        storage.update_attraction_visit,
-        str(user["id"]),
-        trip_id,
-        payload.atrativo_id,
-        payload.visitado,
-    )
+    try:
+        visited_ids = await run_in_threadpool(
+            storage.update_attraction_visit,
+            str(user["id"]),
+            trip_id,
+            payload.atrativo_id,
+            payload.visitado,
+        )
+    except UnknownAttractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if visited_ids is None:
         raise HTTPException(status_code=404, detail="Roteiro não encontrado.")
-    # TODO(frontend): mapear atrativos_visitados_ids no histórico e na resposta
-    # para hidratar as visitas confirmadas após recarga (issue #26).
     return {
         "roteiro_id": trip_id,
         "atrativo_id": payload.atrativo_id,

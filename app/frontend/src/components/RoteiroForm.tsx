@@ -3,6 +3,7 @@ import { ApiError } from '../services/api';
 
 import type {
   MunicipioOption,
+  MunicipioCatalogStatus,
   PerfilViajante,
   RoteiroFormData,
   SugestaoDestino,
@@ -26,6 +27,7 @@ const FORMULARIO_INICIAL: Required<RoteiroFormData> = {
   eficiencia_km_kwh: 6,
   capacidade_bateria_kwh: 60,
   preco_energia_kwh: 0.95,
+  passageiros: 1,
 };
 
 const PERFIS: readonly { valor: PerfilViajante; rotulo: string; icone: string }[] = [
@@ -51,6 +53,7 @@ export interface RoteiroFormProps {
   ufs: readonly string[];
   isSubmitting: boolean;
   municipios?: readonly MunicipioOption[];
+  municipioCatalogStatus?: MunicipioCatalogStatus;
   sugestoes?: readonly SugestaoDestino[];
   suggestionStatus?: SuggestionStatus;
   onRequestSuggestions?: () => void | Promise<void>;
@@ -79,6 +82,7 @@ export function RoteiroForm({
   ufs,
   isSubmitting,
   municipios = [],
+  municipioCatalogStatus,
   sugestoes = [],
   suggestionStatus = 'unavailable',
   onRequestSuggestions,
@@ -125,9 +129,20 @@ export function RoteiroForm({
     campo: 'origem_cidade' | 'origem_uf' | 'destino_cidade' | 'destino_uf',
     valor: string,
   ) => {
-    // TODO(frontend): ao selecionar município inequívoco, sincronizar a UF correspondente;
-    // preservar escolha explícita quando houver homônimos e não depender do geocoding pós-envio.
-    setFormData((atual) => ({ ...atual, [campo]: valor }));
+    setFormData((atual) => {
+      if (campo !== 'origem_cidade' && campo !== 'destino_cidade')
+        return { ...atual, [campo]: valor };
+      const matches = municipios.filter(
+        (municipio) => normalizar(municipio.nome) === normalizar(valor),
+      );
+      const ufsEncontradas = [...new Set(matches.map((municipio) => municipio.uf))];
+      const ufCampo = campo === 'origem_cidade' ? 'origem_uf' : 'destino_uf';
+      return {
+        ...atual,
+        [campo]: valor,
+        ...(ufsEncontradas.length === 1 ? { [ufCampo]: ufsEncontradas[0] } : {}),
+      };
+    });
     setErros((atuais) => ({
       ...atuais,
       [campo.startsWith('origem') ? 'origem' : 'destino']: undefined,
@@ -384,13 +399,16 @@ export function RoteiroForm({
             </p>
           ) : null}
 
-          {/* TODO(frontend): mostrar o catálogo real quando houver fonte de municípios;
-              a lista de UFs da sessão, sozinha, não preenche o datalist de cidades. */}
           <p
             className={`catalog-status${catalogoDisponivel ? '' : ' is-unavailable'}`}
             role="status"
           >
-            Catálogo nacional: {catalogoDisponivel ? 'Disponível' : 'Inacessível'}
+            Catálogo nacional:{' '}
+            {municipioCatalogStatus === 'loading'
+              ? 'Carregando'
+              : catalogoDisponivel
+                ? 'Disponível'
+                : 'Inacessível'}
           </p>
 
           <section className="suggestions-block" aria-labelledby="suggestions-title">
@@ -544,6 +562,25 @@ export function RoteiroForm({
           </details>
 
           <div className="trip-preferences">
+            <label htmlFor="passageiros">
+              Passageiros
+              <select
+                id="passageiros"
+                value={formData.passageiros}
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    passageiros: Number(event.target.value),
+                  }))
+                }
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </label>
             <fieldset className="choice-group">
               <legend>Duração da viagem</legend>
               <div className="duration-options">

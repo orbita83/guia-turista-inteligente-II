@@ -9,9 +9,7 @@ export function useTripSelection() {
 
   const selectTrip = useCallback((trip: Viagem) => {
     setActiveTrip(trip);
-    // TODO(integracao): recuperar parâmetros e resultados avançados persistidos por roteiro
-    // e rota, preservando a seleção correta após recarga e viagens antigas sem esses campos.
-    setActiveTripForm(formByTripId.current[trip.id] ?? null);
+    setActiveTripForm(trip.parametros ?? formByTripId.current[trip.id] ?? null);
   }, []);
 
   const reset = useCallback(() => {

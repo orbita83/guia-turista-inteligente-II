@@ -13,16 +13,37 @@ const baseTrip: Viagem = {
 };
 
 describe('providerDiagnostics', () => {
-  it('uses operation data as evidence for Open-Meteo and OSRM', () => {
+  it('keeps providers unknown when historical trips lack diagnostics', () => {
     const providers = providerDiagnostics(baseTrip);
     expect(providers).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ provider: 'open-meteo', state: 'available' }),
-        expect.objectContaining({ provider: 'osrm', state: 'available' }),
+        expect.objectContaining({ provider: 'open-meteo', state: 'unknown' }),
+        expect.objectContaining({ provider: 'osrm', state: 'unknown' }),
         expect.objectContaining({ provider: 'open-elevation', state: 'unknown' }),
       ]),
     );
     expect(providers.every(({ durationMs }) => durationMs.available === false)).toBe(true);
+  });
+
+  it('uses explicit provider diagnostics and measured durations', () => {
+    const providers = providerDiagnostics({
+      ...baseTrip,
+      telemetria: {
+        provedores: {
+          open_meteo_geocoding: 'disponivel',
+          open_meteo_weather: 'indisponivel',
+          osrm: 'disponivel',
+          open_elevation: 'nao_integrado',
+        },
+        duracoes_etapas_ms: { roteamento_ms: 24, guia_ms: 15 },
+      },
+    });
+    expect(providers.find(({ provider }) => provider === 'open-meteo')?.state).toBe('unavailable');
+    expect(providers.find(({ provider }) => provider === 'osrm')).toMatchObject({
+      state: 'available',
+      durationMs: { available: true, value: 24 },
+    });
+    expect(providers.find(({ provider }) => provider === 'open-elevation')?.state).toBe('unknown');
   });
 
   it('accepts only an explicit successful Gemini diagnostic as available', () => {

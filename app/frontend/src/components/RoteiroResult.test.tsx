@@ -19,6 +19,16 @@ const mockViagem: Viagem = {
     distancia: '800 km',
     tempo: '11h 30min',
   },
+  atrativos: [
+    { id: 'atrativo-1', nome: 'Pelourinho', categoria: 'historico', descricao: 'Centro histórico' },
+    {
+      id: 'gastro-1',
+      nome: 'Acarajé Completo com Vatapá',
+      categoria: 'gastronomia',
+      descricao: 'Prato regional',
+    },
+  ],
+  atrativosFonte: 'catalogo_local',
   dicas_destino:
     '📍 Pontos turísticos\nPelourinho e Farol da Barra com pôr do sol clássico.\n\n' +
     '🍽️ Culinária\nAcarajé tradicional no Rio Vermelho e moqueca de peixe.\n\n' +
@@ -128,11 +138,22 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
   });
 
   it('mostra estado vazio para destino sem atrativos confirmados', async () => {
-    render(<RoteiroResult viagem={{ ...mockViagem, destino: 'Piripiri - PI' }} />);
+    render(<RoteiroResult viagem={{ ...mockViagem, destino: 'Piripiri - PI', atrativos: [] }} />);
     expect(
       screen.getByText('Ainda não há atrativos confirmados para este destino.'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Filtrar atrativos' })).not.toBeInTheDocument();
+    await screen.findByText(/Conteúdo existente exibido/);
+  });
+
+  it('respeita uma lista vazia explícita do backend mesmo para cidade conhecida', async () => {
+    render(
+      <RoteiroResult viagem={{ ...mockViagem, atrativos: [], atrativosFonte: 'catalogo_local' }} />,
+    );
+    expect(
+      screen.getByText('Ainda não há atrativos confirmados para este destino.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Acarajé Completo com Vatapá/i)).not.toBeInTheDocument();
     await screen.findByText(/Conteúdo existente exibido/);
   });
 
@@ -202,7 +223,7 @@ describe('RoteiroResult: estados reais da transmissão', () => {
     const { enviar } = prepararStream();
     render(<RoteiroResult viagem={mockViagem} />);
     expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeDisabled();
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Transmitindo ao vivo'));
+    await screen.findByText(/Transmitindo ao vivo/);
     await enviar('chunk', { chunk: 'Conteúdo que chegou primeiro', done: false });
     expect(screen.getByText('Conteúdo que chegou primeiro')).toBeInTheDocument();
     expect(screen.queryByText(/✓ Guia completo/i)).not.toBeInTheDocument();
@@ -228,7 +249,8 @@ describe('RoteiroResult: estados reais da transmissão', () => {
     render(<RoteiroResult viagem={mockViagem} />);
     expect(await screen.findByRole('alert')).toHaveTextContent('HTTP 409');
     expect(screen.queryByText(/✓ Guia completo/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Pelourinho e Farol da Barra/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Pelourinho e Farol da Barra/i)).toBeInTheDocument();
+    expect(screen.getByText('Exibindo o guia recebido no planejamento.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeEnabled();
   });
 

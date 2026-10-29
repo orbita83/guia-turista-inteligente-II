@@ -2,6 +2,9 @@
 
 As correções incrementais do frontend começam pela validação de campos opcionais
 da API. O fornecimento desses campos continua dependente dos contratos do backend.
+O formulário consulta o catálogo público do IBGE e mantém preenchimento manual
+quando a consulta falha; nomes inequívocos sincronizam a UF. As sugestões GPS usam
+distância geodésica em linha reta e aplicam o limite antes do arredondamento.
 Sem geometria validada, o mapa apresenta indisponibilidade e mantém o resumo textual
 da viagem. Alternativas só aparecem quando foram recebidas na resposta.
 O formulário mostra erros HTTP 422 por campo e valida os números do veículo ativo
@@ -34,10 +37,10 @@ disponíveis. Ela cobre `RF-TEL-001`–`003`, diferencia tempo do servidor e tem
 cliente, apresenta correlação mascarada, quatro provedores e isolamento por sessão.
 Não altera o backend e não promove `API-TEL-001` a contrato atual.
 
-Os sinais ausentes no contrato vigente — processamento interno, rede externa, RTT,
-uptime, conexões, totais sistêmicos, elevação e duração por provedor — permanecem
-indisponíveis. A disponibilidade mostrada é sempre relativa à última operação, e
-não monitoramento em tempo real.
+O painel recebe estados e tempos das etapas do planejamento, incluindo altimetria
+da rota principal. Uptime, conexões e totais sistêmicos não estão no contrato atual;
+RTT não é inferido de outros tempos. A disponibilidade mostrada é relativa à última
+operação, e não monitoramento contínuo.
 
 Na tela autenticada, o formulário fica à esquerda e o `aside` fica à direita a
 partir de 1024 px. O histórico ocupa o `aside` desde o carregamento da identidade; a
@@ -72,11 +75,10 @@ Google em `guia_turista_saved_google_user`. As viagens continuam carregadas
 pela sessão assinada ativa e são limpas ao trocar de identidade.
 
 `RF-AUT-003` e a parte visual de `RF-AUT-004` estão cobertos. A restauração em
-um clique funciona enquanto a credencial Google mantida em memória pela SPA
-continuar válida. Após recarregar a página ou expirar a credencial, o perfil
-salvo não autentica: `CA-AUT-002` depende de um contrato de restauração segura
-no backend. O `TODO(backend)` está no fluxo de restauração do frontend.
-Nenhum endpoint ou arquivo do backend é alterado neste incremento.
+um clique usa `POST /auth/restore-google` e depende da sessão visitante assinada
+e do vínculo Google preservado no servidor. O perfil salvo no navegador não autentica
+por si só; se o vínculo expirar, é necessária uma nova entrada com Google. O contador
+visitante usa o prazo restante informado pela sessão do servidor.
 
 O tema claro/escuro agora usa tokens semânticos para superfícies, texto,
 controles e estados de sucesso, aviso e erro. A preferência é guardada no

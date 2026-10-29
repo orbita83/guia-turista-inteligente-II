@@ -169,6 +169,7 @@ async def test_weather_and_route_retain_legacy_output_shapes() -> None:
     }
     assert route == {
         "distancia": "1674.6 km",
+        "distancia_km": 1674.6,
         "tempo": "21h 38min de carro",
         "modal": "carro",
         "status": "disponivel",
@@ -245,6 +246,7 @@ async def test_route_requests_full_geojson_geometry_and_real_alternatives() -> N
 
     assert route == {
         "distancia": "1.0 km",
+        "distancia_km": 1.0,
         "tempo": "0h 1min de carro",
         "modal": "carro",
         "status": "disponivel",
@@ -254,6 +256,7 @@ async def test_route_requests_full_geojson_geometry_and_real_alternatives() -> N
             {
                 "geometria": [[-8.05, -34.9], [-9.1, -35.2]],
                 "distancia": "1.2 km",
+                "distancia_km": 1.2,
                 "tempo": "0h 2min de carro",
             }
         ],
@@ -528,7 +531,7 @@ async def test_plan_trip_keeps_trip_fields_and_persists_result(monkeypatch) -> N
     assert all(
         duration >= 0 for duration in trip["telemetria"]["duracoes_etapas_ms"].values()
     )
-    assert trip["telemetria"]["provedores"]["open_elevation"] == "nao_integrado"
+    assert trip["telemetria"]["provedores"]["open_elevation"] == "nao_consultado"
     assert storage.trips == [trip]
 
 

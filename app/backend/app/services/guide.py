@@ -71,7 +71,7 @@ def fallback_guide_with_diagnostics(
     }
 
 
-def _request_guide(destination: str, api_key: str, timeout_seconds: float) -> str:
+def _request_guide(destination: str, api_key: str, timeout_seconds: float, context: dict[str, Any] | None = None) -> str:
     with genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
@@ -81,7 +81,7 @@ def _request_guide(destination: str, api_key: str, timeout_seconds: float) -> st
     ) as client:
         response = client.models.generate_content(
             model=MODEL,
-            contents=json.dumps({"destino": destination}, ensure_ascii=False),
+            contents=json.dumps({**(context or {}), "destino": destination}, ensure_ascii=False),
             config=types.GenerateContentConfig(
                 system_instruction=GUIDE_INSTRUCTIONS,
                 thinking_config=types.ThinkingConfig(
@@ -229,7 +229,7 @@ async def stream_guide_with_diagnostics(
 
 
 async def get_guide_with_diagnostics(
-    destination: str, *, api_key: str, timeout_seconds: float
+    destination: str, *, api_key: str, timeout_seconds: float, context: dict[str, Any] | None = None
 ) -> tuple[str, dict[str, Any]]:
     diagnostics: dict[str, Any] = {
         "status": "fallback",
@@ -241,13 +241,10 @@ async def get_guide_with_diagnostics(
 
     task: asyncio.Future[str] | None = None
     try:
-        task = asyncio.get_running_loop().run_in_executor(
-            None,
-            _request_guide,
-            destination,
-            api_key,
-            timeout_seconds,
-        )
+        arguments: tuple[Any, ...] = (destination, api_key, timeout_seconds)
+        if context:
+            arguments += (context,)
+        task = asyncio.get_running_loop().run_in_executor(None, _request_guide, *arguments)
         text = await asyncio.wait_for(
             task,
             timeout=timeout_seconds,

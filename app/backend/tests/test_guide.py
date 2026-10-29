@@ -15,6 +15,24 @@ VALID_GUIDE = (
 
 
 @pytest.mark.asyncio
+async def test_guide_receives_planning_preferences(monkeypatch) -> None:
+    captured = {}
+
+    def request(destination, api_key, timeout_seconds, context):
+        captured.update(context)
+        return VALID_GUIDE
+
+    monkeypatch.setattr(guide, "_request_guide", request)
+    text, diagnostics = await guide.get_guide_with_diagnostics(
+        "Recife", api_key="test-key", timeout_seconds=1,
+        context={"duracao_dias": 3, "perfis": ["cultural", "familia"]},
+    )
+    assert text == VALID_GUIDE
+    assert diagnostics["status"] == "sucesso"
+    assert captured == {"duracao_dias": 3, "perfis": ["cultural", "familia"]}
+
+
+@pytest.mark.asyncio
 async def test_guide_wait_does_not_block_other_coroutines(monkeypatch) -> None:
     started = threading.Event()
     release = threading.Event()

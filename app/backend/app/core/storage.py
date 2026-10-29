@@ -9,6 +9,10 @@ from typing import Any
 from uuid import uuid4
 
 
+class UnknownAttractionError(ValueError):
+    """Atrativo não pertence à lista persistida da viagem."""
+
+
 def default_trips_data() -> dict[str, Any]:
     return {
         "versao_schema": "1.0",
@@ -229,6 +233,13 @@ class TripStorage:
             )
             if trip is None:
                 return None
+
+            attractions = trip.get("atrativos")
+            if isinstance(attractions, list) and not any(
+                isinstance(item, dict) and item.get("id") == attraction_id
+                for item in attractions
+            ):
+                raise UnknownAttractionError("Atrativo não pertence ao roteiro.")
 
             ids = trip.get("atrativos_visitados_ids")
             visited_ids = (

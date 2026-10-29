@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
+
+from app.schemas.roteiros import ParametrosVeiculo
 
 UFS_BRASIL: frozenset[str] = frozenset(
     {
@@ -66,10 +75,6 @@ def _normalizar_cidade(valor: object) -> object:
 class TripCreateRequest(BaseModel):
     """Entrada do planejamento, preservando UFs opcionais por compatibilidade."""
 
-    # TODO(aluno-3): integrar os schemas validados da issue #30 para duração,
-    # perfis e veículo; coordenar compatibilidade com o Frontend na issue #20.
-
-
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
@@ -105,6 +110,25 @@ class TripCreateRequest(BaseModel):
         max_length=2,
         description="Sigla da UF de destino; vazio mantém compatibilidade legada",
     )
+    duracao_dias: int | None = Field(default=None, ge=1, le=365, strict=True)
+    perfis: list[Literal['cultural', 'gastronomico', 'ecoturismo-aventura', 'familia', 'economico']] | None = Field(default=None, min_length=1, max_length=5)
+    propulsao: Literal['combustao', 'eletrico'] | None = None
+    consumo_km_l: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    capacidade_tanque_l: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    preco_combustivel_l: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    eficiencia_km_kwh: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    capacidade_bateria_kwh: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    preco_energia_kwh: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    passageiros: int | None = Field(default=None, ge=1, le=8, strict=True)
+
+    @model_validator(mode='after')
+    def validar_veiculo(self) -> TripCreateRequest:
+        names = ('propulsao', 'consumo_km_l', 'capacidade_tanque_l', 'preco_combustivel_l', 'eficiencia_km_kwh', 'capacidade_bateria_kwh', 'preco_energia_kwh')
+        if any(getattr(self, name) is not None for name in names):
+            if self.propulsao is None:
+                raise ValueError('Informe a propulsão do veículo.')
+            ParametrosVeiculo.model_validate({name: getattr(self, name) for name in names})
+        return self
 
     @field_validator("origem_uf", "destino_uf", mode="before")
     @classmethod

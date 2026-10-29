@@ -21,6 +21,7 @@ class SessionResponse(BaseModel):
     ufs: list[str]
     session_started_at: str | None = None
     session_duration_ms: float | None = None
+    visitor_remaining_ms: float | None = None
 
 
 class UserResponse(BaseModel):

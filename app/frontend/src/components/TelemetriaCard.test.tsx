@@ -33,8 +33,10 @@ describe('TelemetriaCard', () => {
   it('organiza as métricas e seções como no wireframe sem inventar valores', () => {
     renderPanel();
     expect(screen.getByText('Tempo total').nextElementSibling).toHaveTextContent('620 ms');
-    expect(screen.getByText('Geocoding').nextElementSibling).toHaveTextContent('Aguardando dados');
-    expect(screen.getByText('APIs + IA Gemini').nextElementSibling).toHaveTextContent(
+    expect(screen.getByText('Geocodificação da origem').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
+    );
+    expect(screen.getByText('Total dos serviços').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
     expect(screen.getByText('Servidor local (Tempo da API)').nextElementSibling).toHaveTextContent(

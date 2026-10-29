@@ -23,7 +23,10 @@ def test_history_and_deletion_remain_scoped_to_active_identity(tmp_path, monkeyp
             assert client.post("/api/v1/auth/google", json={"credential": "alice"}).status_code == 200
             history = client.get("/api/v1/roteiros/minhas-viagens")
             assert history.status_code == 200
-            assert history.json() == {"viagens": [{"id": "trip-a", "destino": "Recife"}]}
+            assert len(history.json()["viagens"]) == 1
+            assert history.json()["viagens"][0]["id"] == "trip-a"
+            assert history.json()["viagens"][0]["destino"] == "Recife"
+            assert history.json()["viagens"][0]["atrativos_fonte"] == "catalogo_local"
             assert "trip-private" not in history.text
             assert client.delete("/api/v1/roteiros/trip-private").status_code == 204
             assert storage.list_for_user("bob") == [{"id": "trip-private", "destino": "Olinda"}]

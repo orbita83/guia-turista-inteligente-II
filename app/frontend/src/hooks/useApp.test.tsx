@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   listarViagens: vi.fn(),
   criarViagem: vi.fn(),
   autenticarComGoogle: vi.fn(),
+  restaurarGoogle: vi.fn(),
   entrarComoVisitante: vi.fn(),
   encerrarSessao: vi.fn(),
   excluirViagem: vi.fn(),
@@ -77,6 +78,17 @@ describe('useApp telemetry lifecycle', () => {
     api.verificarSaudeApi.mockResolvedValue(true);
   });
 
+  it('usa o tempo restante da sessão recebido do servidor', async () => {
+    api.carregarSessao.mockResolvedValue({
+      usuario,
+      google_client_id: '',
+      ufs: ['PE'],
+      visitor_remaining_ms: 5_400_000,
+    });
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.sessionTimerLabel).toBe('1h 30min'));
+  });
+
   it('não reutiliza parâmetros de outra viagem ao selecionar histórico', async () => {
     api.criarViagem.mockResolvedValue(response(100));
     const { result } = renderHook(() => useApp());
@@ -92,7 +104,17 @@ describe('useApp telemetry lifecycle', () => {
     expect(result.current.activeTripForm).toEqual(form);
   });
 
-  it('preserva o perfil Google, isola o histórico visitante e restaura com a credencial em memória', async () => {
+  it('recupera parâmetros persistidos ao selecionar uma viagem do histórico', async () => {
+    const parametros = { ...form, duracao_dias: 3, perfis: ['cultural' as const] };
+    const historical = { ...viagem, parametros };
+    api.listarViagens.mockResolvedValue({ viagens: [historical] });
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.data.viagens).toHaveLength(1));
+    act(() => result.current.selectTrip(result.current.data.viagens[0]));
+    expect(result.current.activeTripForm).toEqual(parametros);
+  });
+
+  it('preserva o perfil Google, isola o histórico visitante e restaura pela sessão', async () => {
     const google = { ...usuario, id: 'google-1', nome: 'Maykol Sampaio', tipo: 'google' as const };
     const guest = { ...usuario, id: 'visitor-1' };
     let active: typeof google | typeof guest = google;
@@ -105,6 +127,10 @@ describe('useApp telemetry lifecycle', () => {
       viagens: active.tipo === 'google' ? [viagem] : [],
     }));
     api.autenticarComGoogle.mockImplementation(async () => {
+      active = google;
+      return { usuario: google };
+    });
+    api.restaurarGoogle.mockImplementation(async () => {
       active = google;
       return { usuario: google };
     });
@@ -124,7 +150,7 @@ describe('useApp telemetry lifecycle', () => {
     expect(result.current.savedGoogleUser).toEqual(google);
 
     await act(async () => result.current.restoreGoogleUser());
-    expect(api.autenticarComGoogle).toHaveBeenLastCalledWith('temporary-credential');
+    expect(api.restaurarGoogle).toHaveBeenCalledOnce();
     expect(result.current.data.usuario).toEqual(google);
     expect(result.current.data.viagens).toEqual([viagem]);
     expect(localStorage.getItem(SAVED_GOOGLE_USER_KEY)).toBeNull();
@@ -132,12 +158,14 @@ describe('useApp telemetry lifecycle', () => {
 
   it('não trata o perfil salvo como autenticação após recarregar a página', async () => {
     const google = { ...usuario, id: 'google-1', tipo: 'google' as const };
+    api.restaurarGoogle.mockRejectedValueOnce(new Error('Sessão expirada'));
     localStorage.setItem(SAVED_GOOGLE_USER_KEY, JSON.stringify(google));
     const { result } = renderHook(() => useApp());
     await waitFor(() => expect(result.current.initialLoading).toBe(false));
 
     await act(async () => result.current.restoreGoogleUser());
     expect(api.autenticarComGoogle).not.toHaveBeenCalled();
+    expect(api.restaurarGoogle).toHaveBeenCalledOnce();
     expect(result.current.savedGoogleUser).toEqual(google);
   });
 
@@ -174,6 +202,46 @@ describe('useApp telemetry lifecycle', () => {
     pending.resolve(response(650));
     await act(async () => submission);
     expect(result.current.telemetryState.kind).toBe('settled');
+  });
+
+  it('atualiza apenas a sessão autenticada com telemetria SSE', async () => {
+    api.criarViagem.mockResolvedValue(response(650));
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    await act(async () => result.current.submitTrip(form));
+    const update = {
+      stage: 'streaming' as const,
+      requestId: available('stream-id'),
+      rttMs: unavailable<number>(),
+      networkType: unavailable<string>(),
+      elapsedStreamMs: available(100),
+      session: {
+        userId: 'outra-pessoa',
+        displayName: 'Outra',
+        kind: 'visitante' as const,
+        persistence: 'temporaria' as const,
+        sessionStartedAt: unavailable<string>(),
+        sessionDuration: available(12000),
+        userTripCount: 10,
+      },
+    };
+    act(() => result.current.updateStreamSession(update));
+    expect(
+      result.current.telemetryState.kind === 'settled' &&
+        result.current.telemetryState.snapshot.session.userTripCount,
+    ).toBe(1);
+    act(() =>
+      result.current.updateStreamSession({
+        ...update,
+        session: { ...update.session, userId: usuario.id },
+      }),
+    );
+    if (result.current.telemetryState.kind !== 'settled') throw new Error('Telemetria ausente');
+    expect(result.current.telemetryState.snapshot.session.sessionDuration).toEqual(
+      available(12000),
+    );
+    expect(result.current.telemetryState.snapshot.session.userTripCount).toBe(10);
+    expect(result.current.telemetryState.snapshot.requestId).toEqual(unavailable('missing'));
   });
 
   it('ignores an older response after a newer attempt starts', async () => {
@@ -380,8 +448,66 @@ describe('useApp GPS suggestions', () => {
     expect(result.current.toasts.at(-1)?.mensagem).toMatch(/Permissão de localização negada/);
   });
 
+  it('hidrata histórico do servidor e aplica alterações locais pendentes', async () => {
+    localStorage.setItem(
+      'guia_turista_visitas_pendentes_user-1',
+      JSON.stringify({ 'trip-1': { antigo: false, novo: true } }),
+    );
+    api.listarViagens.mockResolvedValue({
+      viagens: [{ ...viagem, atrativosVisitadosIds: ['antigo', 'servidor'] }],
+    });
+    const { result } = renderHook(() => useApp());
+    await waitFor(() =>
+      expect(result.current.visitasPorViagem['trip-1']).toEqual(['servidor', 'novo']),
+    );
+    expect(result.current.visitPersistenceByTrip['trip-1']).toBe('local');
+  });
+
+  it('descarta valores inválidos nas visitas armazenadas sem impedir marcações', async () => {
+    localStorage.setItem(
+      'guia_turista_visitas_user-1',
+      JSON.stringify({ 'trip-1': 7, 'trip-2': ['a', null], 'trip-3': [' b ', 'b'] }),
+    );
+    api.atualizarVisitaAtrativo.mockResolvedValue(['a']);
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    expect(result.current.visitasPorViagem).toEqual({ 'trip-3': ['b'] });
+    await act(async () => result.current.toggleVisitaAtrativo('trip-1', 'a'));
+    expect(result.current.visitasPorViagem['trip-1']).toEqual(['a']);
+  });
+
+  it('descarta resposta de GPS após troca de sessão', async () => {
+    let resolvePosition!: PositionCallback;
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition: vi.fn((success: PositionCallback) => {
+          resolvePosition = success;
+        }),
+      },
+    });
+    api.entrarComoVisitante.mockResolvedValue({ usuario });
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    let gps!: Promise<void>;
+    act(() => {
+      gps = result.current.solicitarSugestoesGps();
+    });
+    await act(async () => result.current.loginAsVisitor());
+    await act(async () => {
+      resolvePosition({
+        coords: { latitude: -23.5505, longitude: -46.6333 },
+      } as GeolocationPosition);
+      await gps;
+    });
+    expect(result.current.sugestoes).toEqual([]);
+    expect(result.current.suggestionStatus).toBe('idle');
+  });
+
   it('permite alternar visita a atrativo com persistência local otimista e chamada à API', async () => {
-    api.atualizarVisitaAtrativo.mockResolvedValue(true);
+    api.atualizarVisitaAtrativo.mockImplementation(
+      async (_tripId: string, id: string, visited: boolean) => (visited ? [id] : []),
+    );
 
     const { result } = renderHook(() => useApp());
     await waitFor(() => expect(result.current.initialLoading).toBe(false));
@@ -409,7 +535,7 @@ describe('useApp GPS suggestions', () => {
   });
 
   it('identifica persistência apenas local quando o endpoint está indisponível', async () => {
-    api.atualizarVisitaAtrativo.mockResolvedValue(false);
+    api.atualizarVisitaAtrativo.mockResolvedValue(null);
     const { result } = renderHook(() => useApp());
     await waitFor(() => expect(result.current.initialLoading).toBe(false));
     await act(async () => {
@@ -421,7 +547,9 @@ describe('useApp GPS suggestions', () => {
   });
 
   it('sincroniza alterações locais pendentes quando a API se recupera', async () => {
-    api.atualizarVisitaAtrativo.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    api.atualizarVisitaAtrativo
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(['atrativo-marco-zero']);
     const { result } = renderHook(() => useApp());
     await waitFor(() => expect(result.current.initialLoading).toBe(false));
     await act(async () => {
@@ -432,6 +560,28 @@ describe('useApp GPS suggestions', () => {
       await result.current.retryLocalVisits('trip-1');
     });
     expect(api.atualizarVisitaAtrativo).toHaveBeenCalledTimes(2);
+    expect(result.current.visitPersistenceByTrip['trip-1']).toBe('confirmed');
+  });
+
+  it('não aceita outra alteração enquanto sincroniza visitas locais', async () => {
+    const confirmation = deferred<string[] | null>();
+    api.atualizarVisitaAtrativo
+      .mockResolvedValueOnce(null)
+      .mockReturnValueOnce(confirmation.promise);
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    await act(async () => result.current.toggleVisitaAtrativo('trip-1', 'a'));
+    let retry!: Promise<void>;
+    act(() => {
+      retry = result.current.retryLocalVisits('trip-1');
+    });
+    await act(async () => result.current.toggleVisitaAtrativo('trip-1', 'a'));
+    expect(api.atualizarVisitaAtrativo).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      confirmation.resolve(['a']);
+      await retry;
+    });
+    expect(result.current.visitasPorViagem['trip-1']).toEqual(['a']);
     expect(result.current.visitPersistenceByTrip['trip-1']).toBe('confirmed');
   });
 
@@ -448,8 +598,8 @@ describe('useApp GPS suggestions', () => {
   });
 
   it('não desfaz outra visita confirmada quando uma gravação concorrente falha', async () => {
-    const failed = deferred<boolean>();
-    const confirmed = deferred<boolean>();
+    const failed = deferred<string[] | null>();
+    const confirmed = deferred<string[] | null>();
     api.atualizarVisitaAtrativo.mockImplementation((_tripId: string, attrId: string) =>
       attrId === 'a' ? failed.promise : confirmed.promise,
     );
@@ -462,7 +612,7 @@ describe('useApp GPS suggestions', () => {
       second = result.current.toggleVisitaAtrativo('trip-1', 'b');
     });
     await act(async () => {
-      confirmed.resolve(true);
+      confirmed.resolve(['b']);
       await second;
     });
     await act(async () => {
@@ -470,5 +620,68 @@ describe('useApp GPS suggestions', () => {
       await first;
     });
     expect(result.current.visitasPorViagem['trip-1']).toEqual(['b']);
+  });
+
+  it('recarrega estado do servidor após confirmações concorrentes fora de ordem', async () => {
+    const firstResponse = deferred<string[] | null>();
+    const secondResponse = deferred<string[] | null>();
+    api.atualizarVisitaAtrativo.mockImplementation((_tripId: string, id: string) =>
+      id === 'a' ? firstResponse.promise : secondResponse.promise,
+    );
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    api.listarViagens.mockResolvedValue({
+      viagens: [{ ...viagem, atrativosVisitadosIds: ['a', 'b'] }],
+    });
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = result.current.toggleVisitaAtrativo('trip-1', 'a');
+      second = result.current.toggleVisitaAtrativo('trip-1', 'b');
+    });
+    await act(async () => {
+      secondResponse.resolve(['a', 'b']);
+      await second;
+    });
+    await act(async () => {
+      firstResponse.resolve(['a']);
+      await first;
+    });
+    expect(result.current.visitasPorViagem['trip-1']).toEqual(['a', 'b']);
+  });
+
+  it('não libera a gravação da nova sessão quando uma requisição antiga termina', async () => {
+    const oldRequest = deferred<string[] | null>();
+    const newRequest = deferred<string[] | null>();
+    const otherUser = { ...usuario, id: 'user-2' };
+    api.carregarSessao
+      .mockResolvedValueOnce({ usuario, google_client_id: '', ufs: ['PE'] })
+      .mockResolvedValueOnce({ usuario: otherUser, google_client_id: '', ufs: ['PE'] });
+    api.entrarComoVisitante.mockResolvedValue({ usuario: otherUser });
+    api.atualizarVisitaAtrativo
+      .mockReturnValueOnce(oldRequest.promise)
+      .mockReturnValueOnce(newRequest.promise);
+    const { result } = renderHook(() => useApp());
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    let old!: Promise<void>;
+    act(() => {
+      old = result.current.toggleVisitaAtrativo('trip-1', 'a');
+    });
+    await act(async () => result.current.loginAsVisitor());
+    let current!: Promise<void>;
+    act(() => {
+      current = result.current.toggleVisitaAtrativo('trip-1', 'a');
+    });
+    await act(async () => {
+      oldRequest.resolve(['a']);
+      await old;
+    });
+    await act(async () => result.current.toggleVisitaAtrativo('trip-1', 'a'));
+    expect(api.atualizarVisitaAtrativo).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      newRequest.resolve(['a']);
+      await current;
+    });
+    expect(result.current.visitasPorViagem['trip-1']).toEqual(['a']);
   });
 });

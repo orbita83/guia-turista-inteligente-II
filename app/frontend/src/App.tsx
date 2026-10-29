@@ -12,10 +12,12 @@ import {
 import { SessionHeader } from './components/SessionHeader';
 import type { AbaViagem, RotaAlternativa } from './types/domain';
 import { useViagem } from './hooks/useViagem';
+import { useMunicipios } from './hooks/useMunicipios';
 
 export function App() {
   const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
   const [rotaAtivaId, setRotaAtivaId] = useState<RotaAlternativa['id']>('principal');
+  const [alternativaAtiva, setAlternativaAtiva] = useState<number | null>(null);
 
   const {
     data,
@@ -51,10 +53,13 @@ export function App() {
     selectTrip,
     toggleVisitaAtrativo,
     retryLocalVisits,
+    updateStreamSession,
   } = useViagem();
+  const { municipios, status: municipioCatalogStatus } = useMunicipios(Boolean(data.usuario));
 
   useEffect(() => {
     setRotaAtivaId('principal');
+    setAlternativaAtiva(null);
   }, [activeTrip?.id]);
   const rotaAtiva =
     activeTrip?.rotas?.find((rota) => rota.id === rotaAtivaId) ?? activeTrip?.rotas?.[0];
@@ -82,11 +87,11 @@ export function App() {
           <>
             <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
-                {/* TODO(frontend): avaliar o catálogo e hook do commit 286bf75 (ajustes/gerais)
-                    e fornecer municípios ao formulário; não há busca pré-envio no backend atual. */}
                 <RoteiroForm
                   ufs={data.ufs}
                   isSubmitting={isSubmitting}
+                  municipios={municipios}
+                  municipioCatalogStatus={municipioCatalogStatus}
                   sugestoes={sugestoes}
                   suggestionStatus={suggestionStatus}
                   onRequestSuggestions={solicitarSugestoesGps}
@@ -101,6 +106,11 @@ export function App() {
                       onAbaChange={setAbaViagemAtiva}
                       onExcluir={() => deleteTrip(activeTrip.id)}
                       rotaAtiva={rotaAtiva}
+                      alternativaAtiva={
+                        rotaAtiva
+                          ? undefined
+                          : activeTrip.percurso.alternativas?.[alternativaAtiva ?? -1]
+                      }
                     />
 
                     {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'mapa') && (
@@ -116,6 +126,8 @@ export function App() {
                           formParams={activeTripForm}
                           rotaAtivaId={rotaAtivaId}
                           onRotaChange={(rota) => setRotaAtivaId(rota.id)}
+                          alternativaAtiva={alternativaAtiva}
+                          onAlternativaChange={setAlternativaAtiva}
                         />
                       </div>
                     )}
@@ -132,6 +144,7 @@ export function App() {
                         <RoteiroResult
                           viagem={activeTrip}
                           formParams={activeTripForm}
+                          onStreamTelemetry={updateStreamSession}
                           visitPersistenceStatus={visitPersistenceByTrip[activeTrip.id]}
                           visitasIds={
                             visitasPorViagem[activeTrip.id] ??

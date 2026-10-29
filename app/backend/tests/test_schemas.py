@@ -638,7 +638,7 @@ class TestCompatibilidadeLegada:
 
     def test_entrada_legada_sem_uf_usa_vazio(self) -> None:
         payload = TripCreateRequest(origem_cidade="Recife", destino_cidade="Natal")
-        assert payload.model_dump() == {
+        assert payload.model_dump(exclude_none=True) == {
             "origem_cidade": "Recife",
             "origem_uf": "",
             "destino_cidade": "Natal",

@@ -5,6 +5,8 @@ import type {
   RoteiroFormData,
   Usuario,
   Viagem,
+  TelemetriaViagem,
+  PerfilViajante,
 } from '../types/domain';
 import { parseTripOptionalFields } from './tripOptionalFields';
 
@@ -14,6 +16,7 @@ export interface SessionResponse {
   ufs: string[];
   session_started_at?: string | null;
   session_duration_ms?: number | null;
+  visitor_remaining_ms?: number | null;
 }
 
 export interface TripsResponse {
@@ -49,6 +52,7 @@ const FORM_FIELDS = new Set([
   'eficiencia_km_kwh',
   'capacidade_bateria_kwh',
   'preco_energia_kwh',
+  'passageiros',
 ]);
 
 function parseValidationErrors(detail: unknown): Record<string, string> {
@@ -75,6 +79,18 @@ export class ApiContractError extends Error {
 
 const UNAVAILABLE = 'Aguardando dados';
 
+export async function buscarMunicipiosIbge(signal?: AbortSignal): Promise<unknown> {
+  const response = await fetch(
+    'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome',
+    {
+      signal,
+      headers: { Accept: 'application/json' },
+    },
+  );
+  if (!response.ok) throw new Error(`O catálogo do IBGE respondeu com HTTP ${response.status}.`);
+  return response.json();
+}
+
 /** Verifica apenas a saúde do processo da API; não representa provedores externos. */
 export async function verificarSaudeApi(signal?: AbortSignal): Promise<boolean> {
   const healthUrl = `${API_BASE_URL.replace(/\/api\/v1$/, '')}/healthz`;
@@ -96,6 +112,95 @@ function availableText(value: unknown, fallback = UNAVAILABLE): string {
   return normalized && normalized.toUpperCase() !== 'N/D' ? normalized : fallback;
 }
 
+function parseTelemetry(value: unknown): TelemetriaViagem | undefined {
+  const telemetry = recordValue(value);
+  if (!telemetry) return undefined;
+  const durations = recordValue(telemetry.duracoes_etapas_ms);
+  const providers = recordValue(telemetry.provedores);
+  const result: TelemetriaViagem = { duracoes_etapas_ms: {}, provedores: {} };
+  for (const key of [
+    'geocodificacao_origem_ms',
+    'geocodificacao_destino_ms',
+    'clima_ms',
+    'roteamento_ms',
+    'guia_ms',
+    'altimetria_ms',
+    'total_servicos_ms',
+  ] as const) {
+    const duration = durations?.[key];
+    if (typeof duration === 'number' && Number.isFinite(duration) && duration >= 0)
+      result.duracoes_etapas_ms[key] = duration;
+  }
+  for (const key of [
+    'open_meteo_geocoding',
+    'open_meteo_weather',
+    'osrm',
+    'gemini',
+    'open_elevation',
+  ] as const) {
+    const state = providers?.[key];
+    if (
+      state === 'disponivel' ||
+      state === 'indisponivel' ||
+      state === 'nao_consultado' ||
+      state === 'nao_integrado'
+    )
+      result.provedores[key] = state;
+  }
+  return result;
+}
+
+function parseParameters(value: unknown): RoteiroFormData | undefined {
+  const params = recordValue(value);
+  if (!params) return undefined;
+  const origem_cidade = availableText(params.origem_cidade, '');
+  const origem_uf = availableText(params.origem_uf, '');
+  const destino_cidade = availableText(params.destino_cidade, '');
+  const destino_uf = availableText(params.destino_uf, '');
+  if (!origem_cidade || !destino_cidade) return undefined;
+  const result: RoteiroFormData = { origem_cidade, origem_uf, destino_cidade, destino_uf };
+  if (
+    typeof params.duracao_dias === 'number' &&
+    Number.isInteger(params.duracao_dias) &&
+    params.duracao_dias >= 1 &&
+    params.duracao_dias <= 365
+  )
+    result.duracao_dias = params.duracao_dias;
+  const validProfiles: PerfilViajante[] = [
+    'cultural',
+    'gastronomico',
+    'ecoturismo-aventura',
+    'familia',
+    'economico',
+  ];
+  if (
+    Array.isArray(params.perfis) &&
+    params.perfis.every((profile) => validProfiles.includes(profile))
+  )
+    result.perfis = params.perfis;
+  if (params.propulsao === 'combustao' || params.propulsao === 'eletrico')
+    result.propulsao = params.propulsao;
+  if (
+    typeof params.passageiros === 'number' &&
+    Number.isInteger(params.passageiros) &&
+    params.passageiros >= 1 &&
+    params.passageiros <= 8
+  )
+    result.passageiros = params.passageiros;
+  for (const key of [
+    'consumo_km_l',
+    'capacidade_tanque_l',
+    'preco_combustivel_l',
+    'eficiencia_km_kwh',
+    'capacidade_bateria_kwh',
+    'preco_energia_kwh',
+  ] as const) {
+    const number = params[key];
+    if (typeof number === 'number' && Number.isFinite(number) && number > 0) result[key] = number;
+  }
+  return result;
+}
+
 export function parseTrip(value: unknown): Viagem | null {
   const trip = recordValue(value);
   if (!trip) return null;
@@ -107,8 +212,8 @@ export function parseTrip(value: unknown): Viagem | null {
   const createdAt = availableText(trip.criado_em, '');
   const optionalFields = parseTripOptionalFields(trip);
 
-  // TODO(integracao): preservar telemetria e alternativas reais do percurso; geometria
-  // principal e condição já são mapeadas em parseTripOptionalFields.
+  const telemetry = parseTelemetry(trip.telemetria);
+  const parameters = parseParameters(trip.parametros);
   return {
     id,
     ...(createdAt ? { criado_em: createdAt } : {}),
@@ -127,8 +232,13 @@ export function parseTrip(value: unknown): Viagem | null {
     },
     dicas_destino: availableText(trip.dicas_destino, ''),
     ...(diagnostics ? { diagnostico_ia: diagnostics } : {}),
+    ...(telemetry ? { telemetria: telemetry } : {}),
+    ...(parameters ? { parametros: parameters } : {}),
     ...(optionalFields.rotas ? { rotas: optionalFields.rotas } : {}),
     ...(optionalFields.atrativos ? { atrativos: optionalFields.atrativos } : {}),
+    ...(trip.atrativos_fonte === 'catalogo_local'
+      ? { atrativosFonte: 'catalogo_local' as const }
+      : {}),
     ...(optionalFields.atrativosVisitadosIds
       ? { atrativosVisitadosIds: optionalFields.atrativosVisitadosIds }
       : {}),
@@ -232,6 +342,10 @@ export function entrarComoVisitante(): Promise<{ usuario: Usuario }> {
   return request('/auth/visitor', { method: 'POST' });
 }
 
+export function restaurarGoogle(): Promise<{ usuario: Usuario }> {
+  return request('/auth/restore-google', { method: 'POST' });
+}
+
 export function encerrarSessao(): Promise<void> {
   return request('/auth/logout', { method: 'POST' });
 }
@@ -241,8 +355,6 @@ export function listarViagens(signal?: AbortSignal): Promise<TripsResponse> {
 }
 
 export async function criarViagem(data: RoteiroFormData): Promise<PlanTripResponse> {
-  // TODO(integracao): alinhar duração, perfis, veículo e passageiros, se previstos,
-  // ao schema validado; preservar erros 422 por campo e compatibilidade das entradas atuais.
   const startedAt = performance.now();
   const init: RequestInit = {
     method: 'POST',
@@ -256,8 +368,6 @@ export async function criarViagem(data: RoteiroFormData): Promise<PlanTripRespon
   const apiTimeMs = parseProcessTime(response.headers.get('X-Process-Time'));
   const requestId = parseRequestId(response.headers.get('X-Request-ID'));
   const payload = parsePlanTripResponse(await parseResponse<unknown>(response));
-  // TODO(frontend): identificar no painel que este tempo inclui requisição e parsing,
-  // mas termina antes da renderização; medir atualização visual separadamente se necessária.
   const elapsed = performance.now() - startedAt;
   const totalTimeMs: AvailableValue<number> =
     Number.isFinite(elapsed) && elapsed >= 0
@@ -277,20 +387,30 @@ export async function atualizarVisitaAtrativo(
   tripId: string,
   atrativoId: string,
   visitado: boolean,
-): Promise<boolean> {
+): Promise<string[] | null> {
   try {
-    await request(`/roteiros/${encodeURIComponent(tripId)}/visitas`, {
-      method: 'PATCH',
-      body: JSON.stringify({ atrativo_id: atrativoId, visitado }),
-    });
-    return true;
-  } catch (error) {
-    // Se o backend ainda não expõe a rota (404/405/501), permitimos persistência otimista no frontend
+    const response = recordValue(
+      await request<unknown>(`/roteiros/${encodeURIComponent(tripId)}/visitas`, {
+        method: 'PATCH',
+        body: JSON.stringify({ atrativo_id: atrativoId, visitado }),
+      }),
+    );
+    const ids = response?.atrativos_visitados_ids;
     if (
-      error instanceof ApiError &&
-      (error.status === 404 || error.status === 405 || error.status === 501)
+      response?.roteiro_id !== tripId ||
+      response?.atrativo_id !== atrativoId ||
+      response?.visitado !== visitado ||
+      !Array.isArray(ids) ||
+      !ids.every((id) => typeof id === 'string' && id.trim().length > 0) ||
+      ids.some((id: string) => id.trim() === atrativoId) !== visitado
     ) {
-      return false;
+      throw new ApiContractError('A API retornou uma confirmação de visita inválida.');
+    }
+    return [...new Set(ids.map((id: string) => id.trim()))];
+  } catch (error) {
+    // Apenas respostas que indicam método não implementado permitem modo local.
+    if (error instanceof ApiError && (error.status === 405 || error.status === 501)) {
+      return null;
     }
     throw error;
   }

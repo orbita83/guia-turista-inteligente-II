@@ -1,0 +1,536 @@
+{
+  "Recife - PE": [
+    {
+      "id": "atrativo-1",
+      "nome": "Marco Zero e Recife Antigo",
+      "categoria": "historico",
+      "descricao": "Praça histórica à beira-mar com esculturas de Brennand e casarios coloniais.",
+      "destaque": "Marco Zero e Recife Antigo",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Marco%20Zero%20e%20Recife%20Antigo%2C%20Recife%20-%20PE",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-2",
+      "nome": "Instituto Ricardo Brennand",
+      "categoria": "cultura",
+      "descricao": "Complexo cultural com réplicas de castelos e maior acervo de Frans Post.",
+      "destaque": "Instituto Ricardo Brennand",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Instituto%20Ricardo%20Brennand%2C%20Recife%20-%20PE",
+      "icone": "🏰",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-3",
+      "nome": "Praia de Boa Viagem",
+      "categoria": "natureza",
+      "descricao": "Famosa orla urbana protegida por arrecifes naturais e quiosques tradicionais.",
+      "destaque": "Praia de Boa Viagem",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20de%20Boa%20Viagem%2C%20Recife%20-%20PE",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-4",
+      "nome": "Embaixada dos Bonecos Gigantes",
+      "categoria": "cultura",
+      "descricao": "Exposição das figuras tradicionais do carnaval olindense e pernambucano.",
+      "destaque": "Embaixada dos Bonecos Gigantes",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Embaixada%20dos%20Bonecos%20Gigantes%2C%20Recife%20-%20PE",
+      "icone": "🎭",
+      "visitado": false
+    },
+    {
+      "id": "gastro-1",
+      "nome": "Bolo de Rolo Tradicional",
+      "categoria": "gastronomia",
+      "descricao": "Patrimônio cultural com finas camadas de massa amanteigada e goiabada.",
+      "destaque": "Bolo de Rolo Tradicional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bolo%20de%20Rolo%20Tradicional%2C%20Recife%20-%20PE",
+      "icone": "🍰",
+      "visitado": false
+    },
+    {
+      "id": "gastro-2",
+      "nome": "Caldinho de Sururu e Feijão",
+      "categoria": "gastronomia",
+      "descricao": "Petisco clássico das praias e botecos, servido bem quente.",
+      "destaque": "Caldinho de Sururu e Feijão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Caldinho%20de%20Sururu%20e%20Feij%C3%A3o%2C%20Recife%20-%20PE",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "gastro-3",
+      "nome": "Carne de Sol com Macaxeira",
+      "categoria": "gastronomia",
+      "descricao": "Prato sertanejo servido com queijo coalho e manteiga de garrafa.",
+      "destaque": "Carne de Sol com Macaxeira",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Carne%20de%20Sol%20com%20Macaxeira%2C%20Recife%20-%20PE",
+      "icone": "🥩",
+      "visitado": false
+    }
+  ],
+  "Salvador - BA": [
+    {
+      "id": "atrativo-1",
+      "nome": "Pelourinho e Igreja de São Francisco",
+      "categoria": "historico",
+      "descricao": "Centro histórico colonial com ladeiras coloridas e arte barroca dourada.",
+      "destaque": "Arte barroca e ladeiras históricas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pelourinho%20e%20Igreja%20de%20S%C3%A3o%20Francisco%2C%20Salvador%20-%20BA",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-2",
+      "nome": "Elevador Lacerda e Mercado Modelo",
+      "categoria": "mirante",
+      "descricao": "Vista panorâmica da Baía de Todos-os-Santos e feira artesanal.",
+      "destaque": "Vista da Baía de Todos-os-Santos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Elevador%20Lacerda%20e%20Mercado%20Modelo%2C%20Salvador%20-%20BA",
+      "icone": "🛗",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-3",
+      "nome": "Farol da Barra",
+      "categoria": "historico",
+      "descricao": "Fortificação do século XVII e ponto clássico para contemplar o pôr do sol.",
+      "destaque": "Pôr do sol clássico na praia",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Farol%20da%20Barra%2C%20Salvador%20-%20BA",
+      "icone": "🗼",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-4",
+      "nome": "Igreja de Nosso Senhor do Bonfim",
+      "categoria": "cultura",
+      "descricao": "Santuário de fé e devoção famoso pelas fitinhas coloridas dos pedidos.",
+      "destaque": "Fitinhas coloridas tradicionais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Igreja%20de%20Nosso%20Senhor%20do%20Bonfim%2C%20Salvador%20-%20BA",
+      "icone": "✨",
+      "visitado": false
+    },
+    {
+      "id": "gastro-1",
+      "nome": "Acarajé Completo com Vatapá",
+      "categoria": "gastronomia",
+      "descricao": "Bolinho de feijão fradinho frito no dendê com camarão seco e caruru.",
+      "destaque": "Acarajé no Rio Vermelho",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Acaraj%C3%A9%20Completo%20com%20Vatap%C3%A1%2C%20Salvador%20-%20BA",
+      "icone": "🧆",
+      "visitado": false
+    },
+    {
+      "id": "gastro-2",
+      "nome": "Moqueca Baiana com Pirão",
+      "categoria": "gastronomia",
+      "descricao": "Peixe fresco cozido em leite de coco artesanal, azeite de dendê e coentro.",
+      "destaque": "Frutos do mar e dendê",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Moqueca%20Baiana%20com%20Pir%C3%A3o%2C%20Salvador%20-%20BA",
+      "icone": "🥘",
+      "visitado": false
+    },
+    {
+      "id": "gastro-3",
+      "nome": "Cocada Puxa de Fita",
+      "categoria": "gastronomia",
+      "descricao": "Doce tradicional de coco fresco encontrado em tabuleiros típicos.",
+      "destaque": "Doces de tabuleiro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cocada%20Puxa%20de%20Fita%2C%20Salvador%20-%20BA",
+      "icone": "🥥",
+      "visitado": false
+    }
+  ],
+  "Natal - RN": [
+    {
+      "id": "atrativo-1",
+      "nome": "Praia de Ponta Negra",
+      "categoria": "natureza",
+      "descricao": "Famosa orla urbana com calçadão movimentado e vista para o Morro do Careca.",
+      "destaque": "Morro do Careca",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20de%20Ponta%20Negra%2C%20Natal%20-%20RN",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-2",
+      "nome": "Forte dos Reis Magos",
+      "categoria": "natureza",
+      "descricao": "Fortaleza histórica de 1598 localizada no encontro do Rio Potengi com o oceano.",
+      "destaque": "Foz do Rio Potengi",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Forte%20dos%20Reis%20Magos%2C%20Natal%20-%20RN",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-3",
+      "nome": "Maior Cajueiro do Mundo em Pirangi",
+      "categoria": "outro",
+      "descricao": "Fenômeno botânico monumental com copa gigante cobrindo cerca de 8.500 m².",
+      "destaque": "Maior Cajueiro do Mundo em Pirangi",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Maior%20Cajueiro%20do%20Mundo%20em%20Pirangi%2C%20Natal%20-%20RN",
+      "icone": "📍",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-4",
+      "nome": "Dunas de Genipabu",
+      "categoria": "natureza",
+      "descricao": "Complexo de dunas móveis, lagoas de águas mornas e passeios de buggy ecológico.",
+      "destaque": "Lagoa de Pitangui",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Dunas%20de%20Genipabu%2C%20Natal%20-%20RN",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-5",
+      "nome": "Parque das Dunas",
+      "categoria": "mirante",
+      "descricao": "Segunda maior reserva ambiental urbana do Brasil com trilhas na Mata Atlântica.",
+      "destaque": "Bosque dos Namorados",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20das%20Dunas%2C%20Natal%20-%20RN",
+      "icone": "🌿",
+      "visitado": false
+    },
+    {
+      "id": "gastro-1",
+      "nome": "Restaurante Camarões Potiguar Ponta Negra",
+      "categoria": "gastronomia",
+      "descricao": "Consagrado polo gastronômico focado em frutos do mar e receitas exclusivas.",
+      "destaque": "Camarão Potiguar",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Camar%C3%B5es%20Potiguar%20Ponta%20Negra%2C%20Natal%20-%20RN",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "gastro-2",
+      "nome": "Restaurante Mangai Natal",
+      "categoria": "gastronomia",
+      "descricao": "Tradição nordestina com farto buffet sertanejo, baião e queijos típicos.",
+      "destaque": "Comida Nordestina",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Mangai%20Natal%2C%20Natal%20-%20RN",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "gastro-3",
+      "nome": "Tábua de Carne Via Costeira",
+      "categoria": "gastronomia",
+      "descricao": "Carnes nobres grelhadas na brasa com vista privilegiada para o mar de Natal.",
+      "destaque": "Carne de Sol na Nata",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=T%C3%A1bua%20de%20Carne%20Via%20Costeira%2C%20Natal%20-%20RN",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "gastro-4",
+      "nome": "Bar do Caranguejo Ponta Negra",
+      "categoria": "gastronomia",
+      "descricao": "Ambiente descontraído à beira-mar com caranguejos e cervejas artesanais.",
+      "destaque": "Caranguejo Fresco",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Caranguejo%20Ponta%20Negra%2C%20Natal%20-%20RN",
+      "icone": "🍸",
+      "visitado": false
+    },
+    {
+      "id": "gastro-5",
+      "nome": "Casa de Taipa Tapiocaria",
+      "categoria": "gastronomia",
+      "descricao": "Espaço cultural e gastronômico com tapiocas crocantes e cuscuz sertanejo.",
+      "destaque": "Cuscuz",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa%20de%20Taipa%20Tapiocaria%2C%20Natal%20-%20RN",
+      "icone": "🍽️",
+      "visitado": false
+    }
+  ],
+  "Gramado - RS": [
+    {
+      "id": "atrativo-1",
+      "nome": "Lago Negro",
+      "categoria": "natureza",
+      "descricao": "Espelho d’água rodeado de pinheiros trazidos da Floresta Negra alemã.",
+      "destaque": "Lago Negro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Lago%20Negro%2C%20Gramado%20-%20RS",
+      "icone": "🌲",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-2",
+      "nome": "Rua Coberta e Palácio dos Festivais",
+      "categoria": "historico",
+      "descricao": "Coração gastronômico e cultural que abriga o Festival de Cinema.",
+      "destaque": "Rua Coberta e Palácio dos Festivais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Rua%20Coberta%20e%20Pal%C3%A1cio%20dos%20Festivais%2C%20Gramado%20-%20RS",
+      "icone": "🎬",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-3",
+      "nome": "Mini Mundo",
+      "categoria": "cultura",
+      "descricao": "Parque ao ar livre com réplicas fiéis de edifícios do mundo em miniatura.",
+      "destaque": "Mini Mundo",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mini%20Mundo%2C%20Gramado%20-%20RS",
+      "icone": "🏡",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-4",
+      "nome": "Snowland",
+      "categoria": "outro",
+      "descricao": "Primeiro parque de neve coberto das Américas com pista de patinação.",
+      "destaque": "Snowland",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Snowland%2C%20Gramado%20-%20RS",
+      "icone": "❄️",
+      "visitado": false
+    },
+    {
+      "id": "gastro-1",
+      "nome": "Sequência de Fondue Tradicional",
+      "categoria": "gastronomia",
+      "descricao": "Queijos suíços, carnes na pedra e chocolate de Gramado com frutas.",
+      "destaque": "Sequência de Fondue Tradicional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Sequ%C3%AAncia%20de%20Fondue%20Tradicional%2C%20Gramado%20-%20RS",
+      "icone": "🫕",
+      "visitado": false
+    },
+    {
+      "id": "gastro-2",
+      "nome": "Café Colonial Serrano",
+      "categoria": "gastronomia",
+      "descricao": "Farto banquete colonial com pães caseiros, cucas, queijos e vinhos.",
+      "destaque": "Café Colonial Serrano",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Caf%C3%A9%20Colonial%20Serrano%2C%20Gramado%20-%20RS",
+      "icone": "🥐",
+      "visitado": false
+    },
+    {
+      "id": "gastro-3",
+      "nome": "Galeto Al Primo Canto",
+      "categoria": "gastronomia",
+      "descricao": "Franguinho marinado em ervas e assado na brasa, servido com polenta.",
+      "destaque": "Galeto Al Primo Canto",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Galeto%20Al%20Primo%20Canto%2C%20Gramado%20-%20RS",
+      "icone": "🍗",
+      "visitado": false
+    }
+  ],
+  "Rio de Janeiro - RJ": [
+    {
+      "id": "atrativo-1",
+      "nome": "Cristo Redentor no Corcovado",
+      "categoria": "mirante",
+      "descricao": "Monumento icônico no topo da Floresta da Tijuca com vista panorâmica.",
+      "destaque": "Cristo Redentor no Corcovado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cristo%20Redentor%20no%20Corcovado%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "⛰️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-2",
+      "nome": "Pão de Açúcar e Bondinho",
+      "categoria": "mirante",
+      "descricao": "Passeio aéreo entre a Praia Vermelha e os morros da Baía de Guanabara.",
+      "destaque": "Pão de Açúcar e Bondinho",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=P%C3%A3o%20de%20A%C3%A7%C3%BAcar%20e%20Bondinho%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🚠",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-3",
+      "nome": "Jardim Botânico do Rio",
+      "categoria": "natureza",
+      "descricao": "Reserva histórica criada em 1808 com alamedas de palmeiras imperiais.",
+      "destaque": "Jardim Botânico do Rio",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Jardim%20Bot%C3%A2nico%20do%20Rio%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🌴",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-4",
+      "nome": "Orla de Ipanema e Arpoador",
+      "categoria": "natureza",
+      "descricao": "Calçadão célebre da Zona Sul e pedra do Arpoador para aplaudir o sol.",
+      "destaque": "Orla de Ipanema e Arpoador",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Orla%20de%20Ipanema%20e%20Arpoador%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "gastro-1",
+      "nome": "Feijoada Completa Carioca",
+      "categoria": "gastronomia",
+      "descricao": "Feijão preto com carnes nobres, couve mineira, farofa e laranja.",
+      "destaque": "Feijoada Completa Carioca",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Feijoada%20Completa%20Carioca%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "gastro-2",
+      "nome": "Biscoito Globo e Mate Gelado",
+      "categoria": "gastronomia",
+      "descricao": "Parceiros inseparáveis na areia da praia, tradição do cotidiano carioca.",
+      "destaque": "Biscoito Globo e Mate Gelado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Biscoito%20Globo%20e%20Mate%20Gelado%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🥯",
+      "visitado": false
+    },
+    {
+      "id": "gastro-3",
+      "nome": "Filé à Osvaldo Aranha",
+      "categoria": "gastronomia",
+      "descricao": "Filé mignon alto coberto por alho frito, batatas portuguesas e farofa.",
+      "destaque": "Filé à Osvaldo Aranha",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Fil%C3%A9%20%C3%A0%20Osvaldo%20Aranha%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🥩",
+      "visitado": false
+    }
+  ],
+  "São Paulo - SP": [
+    {
+      "id": "atrativo-1",
+      "nome": "Parque Ibirapuera",
+      "categoria": "natureza",
+      "descricao": "Maior refúgio verde urbano da capital paulista com marquise de Niemeyer.",
+      "destaque": "Parque Ibirapuera",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20Ibirapuera%2C%20S%C3%A3o%20Paulo%20-%20SP",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-2",
+      "nome": "Avenida Paulista e MASP",
+      "categoria": "cultura",
+      "descricao": "Museu com vão livre de Lina Bo Bardi e coração pulsante da cidade.",
+      "destaque": "Avenida Paulista e MASP",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Avenida%20Paulista%20e%20MASP%2C%20S%C3%A3o%20Paulo%20-%20SP",
+      "icone": "🎨",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-3",
+      "nome": "Beco do Batman na Vila Madalena",
+      "categoria": "cultura",
+      "descricao": "Galeria aberta de arte urbana e grafite com atmosfera boêmia.",
+      "destaque": "Beco do Batman na Vila Madalena",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Beco%20do%20Batman%20na%20Vila%20Madalena%2C%20S%C3%A3o%20Paulo%20-%20SP",
+      "icone": "🖌️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-4",
+      "nome": "Mercado Municipal Paulistano",
+      "categoria": "gastronomia",
+      "descricao": "Prédio histórico de vitrais coloridos com frutas raras e iguarias.",
+      "destaque": "Mercado Municipal Paulistano",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Municipal%20Paulistano%2C%20S%C3%A3o%20Paulo%20-%20SP",
+      "icone": "🏬",
+      "visitado": false
+    },
+    {
+      "id": "gastro-1",
+      "nome": "Sanduíche de Mortadela do Mercadão",
+      "categoria": "gastronomia",
+      "descricao": "Mais de 300g de fatias generosas servidas quentinhas em pão francês.",
+      "destaque": "Sanduíche de Mortadela do Mercadão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Sandu%C3%ADche%20de%20Mortadela%20do%20Mercad%C3%A3o%2C%20S%C3%A3o%20Paulo%20-%20SP",
+      "icone": "🥪",
+      "visitado": false
+    },
+    {
+      "id": "gastro-2",
+      "nome": "Pizza Paulistana de Longa Fermentação",
+      "categoria": "gastronomia",
+      "descricao": "Herança italiana das cantinas tradicionais do Bixiga e Mooca.",
+      "destaque": "Pizza Paulistana de Longa Fermentação",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pizza%20Paulistana%20de%20Longa%20Fermenta%C3%A7%C3%A3o%2C%20S%C3%A3o%20Paulo%20-%20SP",
+      "icone": "🍕",
+      "visitado": false
+    },
+    {
+      "id": "gastro-3",
+      "nome": "Virado à Paulista Tradicional",
+      "categoria": "gastronomia",
+      "descricao": "Prato colonial tombado com tutu de feijão, bisteca, couve e ovo frito.",
+      "destaque": "Virado à Paulista Tradicional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Virado%20%C3%A0%20Paulista%20Tradicional%2C%20S%C3%A3o%20Paulo%20-%20SP",
+      "icone": "🍛",
+      "visitado": false
+    }
+  ],
+  "Ouro Preto - MG": [
+    {
+      "id": "atrativo-1",
+      "nome": "Igreja de São Francisco de Assis",
+      "categoria": "historico",
+      "descricao": "Obra-prima de Aleijadinho e pintura no teto pelo mestre Ataíde.",
+      "destaque": "Igreja de São Francisco de Assis",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Igreja%20de%20S%C3%A3o%20Francisco%20de%20Assis%2C%20Ouro%20Preto%20-%20MG",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-2",
+      "nome": "Praça Tiradentes e Museu da Inconfidência",
+      "categoria": "historico",
+      "descricao": "Palco principal da história colonial brasileira no topo da colina.",
+      "destaque": "Praça Tiradentes e Museu da Inconfidência",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pra%C3%A7a%20Tiradentes%20e%20Museu%20da%20Inconfid%C3%AAncia%2C%20Ouro%20Preto%20-%20MG",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-3",
+      "nome": "Mina da Passagem",
+      "categoria": "natureza",
+      "descricao": "Maior mina de ouro aberta a visitação com descida em carrinho sobre trilhos.",
+      "destaque": "Mina da Passagem",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mina%20da%20Passagem%2C%20Ouro%20Preto%20-%20MG",
+      "icone": "⛏️",
+      "visitado": false
+    },
+    {
+      "id": "atrativo-4",
+      "nome": "Mirante do Morro São Sebastião",
+      "categoria": "mirante",
+      "descricao": "Vista deslumbrante de todo o vale de montanhas e telhados coloniais.",
+      "destaque": "Mirante do Morro São Sebastião",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mirante%20do%20Morro%20S%C3%A3o%20Sebasti%C3%A3o%2C%20Ouro%20Preto%20-%20MG",
+      "icone": "🌄",
+      "visitado": false
+    },
+    {
+      "id": "gastro-1",
+      "nome": "Tutu de Feijão com Torresmo Pururuca",
+      "categoria": "gastronomia",
+      "descricao": "Clássico mineiro batido com farinha de mandioca e temperos da roça.",
+      "destaque": "Tutu de Feijão com Torresmo Pururuca",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Tutu%20de%20Feij%C3%A3o%20com%20Torresmo%20Pururuca%2C%20Ouro%20Preto%20-%20MG",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "gastro-2",
+      "nome": "Frango com Quiabo e Angu",
+      "categoria": "gastronomia",
+      "descricao": "Prato afetivo servido em panela de pedra-sabão bem fumegante.",
+      "destaque": "Frango com Quiabo e Angu",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Frango%20com%20Quiabo%20e%20Angu%2C%20Ouro%20Preto%20-%20MG",
+      "icone": "🍗",
+      "visitado": false
+    },
+    {
+      "id": "gastro-3",
+      "nome": "Doce de Leite com Queijo Minas",
+      "categoria": "gastronomia",
+      "descricao": "Sobremesa de fazenda com doce cozido lentamente em tacho de cobre.",
+      "destaque": "Doce de Leite com Queijo Minas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Doce%20de%20Leite%20com%20Queijo%20Minas%2C%20Ouro%20Preto%20-%20MG",
+      "icone": "🧀",
+      "visitado": false
+    }
+  ]
+}

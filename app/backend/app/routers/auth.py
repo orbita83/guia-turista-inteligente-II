@@ -117,6 +117,11 @@ def get_session(
         ufs=sorted(settings.states),
         session_started_at=session_started_at,
         session_duration_ms=session_duration_ms,
+        visitor_remaining_ms=(
+            max(0.0, (expires_at - time.time()) * 1000)
+            if isinstance(user, dict) and user.get("tipo") == "visitante" and expires_at is not None
+            else None
+        ),
     )
 
 

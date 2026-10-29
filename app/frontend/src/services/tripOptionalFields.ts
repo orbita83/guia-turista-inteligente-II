@@ -7,6 +7,8 @@ import type {
   PerfilTopografico,
   RotaAlternativa,
   Viagem,
+  AutonomiaRota,
+  CustosRota,
 } from '../types/domain';
 
 type RecordValue = Record<string, unknown>;
@@ -50,9 +52,6 @@ function coordinates(value: unknown): CoordenadaGPS[] | null {
   return parsed.every((point): point is CoordenadaGPS => point !== null) ? parsed : null;
 }
 
-// TODO(integracao): normalizar perfil e indicadores altimétricos reais para a rota correta
-// quando o contrato estiver integrado; preservar estados parciais, indisponíveis e viagens
-// antigas, sem inventar amostras, altitudes ou indicadores.
 function elevationProfile(value: unknown, maxDistanceKm?: number): PontoElevacao[] | null {
   if (!Array.isArray(value) || value.length < 2) return null;
   const points: PontoElevacao[] = [];
@@ -70,6 +69,27 @@ function elevationProfile(value: unknown, maxDistanceKm?: number): PontoElevacao
     points.push({ distanciaKm, altitudeM });
   }
   return points;
+}
+
+function providerElevation(value: unknown): {
+  perfilElevacao?: PontoElevacao[];
+  statusAltimetria?: string;
+} {
+  const result = record(value);
+  const statusAltimetria = text(result?.status);
+  const profile =
+    result?.sucesso === true && Array.isArray(result.pontos)
+      ? elevationProfile(
+          result.pontos.map((value: unknown) => {
+            const point = record(value);
+            return { distanciaKm: point?.distancia_km, altitudeM: point?.elevacao_m };
+          }),
+        )
+      : null;
+  return {
+    ...(profile ? { perfilElevacao: profile } : {}),
+    ...(statusAltimetria ? { statusAltimetria } : {}),
+  };
 }
 
 const categories: readonly CategoriaAtrativo[] = [
@@ -180,6 +200,109 @@ function stop(value: unknown): ParadaEstrategica | null {
   };
 }
 
+function autonomy(value: unknown): AutonomiaRota | undefined {
+  const item = record(value);
+  if (
+    !item ||
+    typeof item.sucesso !== 'boolean' ||
+    typeof item.solucao_segura !== 'boolean' ||
+    !Array.isArray(item.paradas)
+  )
+    return undefined;
+  const paradas: ParadaEstrategica[] = [];
+  for (const value of item.paradas) {
+    const stop = record(value);
+    const coord = record(stop?.coordenadas);
+    const coordenadas = coordinate([coord?.latitude, coord?.longitude]);
+    const id = text(stop?.id);
+    const nome = text(stop?.nome);
+    const km = number(stop?.distancia_km);
+    const nivel = number(stop?.reserva_estimada_percent);
+    const origem = stop?.origem;
+    if (
+      !id ||
+      !nome ||
+      km === null ||
+      nivel === null ||
+      nivel > 100 ||
+      !coordenadas ||
+      (stop?.tipo !== 'combustivel' && stop?.tipo !== 'recarga') ||
+      !(
+        (origem === 'projetado' &&
+          stop.eh_ponto_projetado === true &&
+          stop.estabelecimento_verificado === false) ||
+        (origem === 'verificado' &&
+          stop.eh_ponto_projetado === false &&
+          stop.estabelecimento_verificado === true &&
+          record(stop.detalhes_estabelecimento))
+      )
+    )
+      return undefined;
+    const descricao = text(stop.descricao);
+    paradas.push({
+      id,
+      nome,
+      km,
+      nivelBateriaOuTanquePct: nivel,
+      coordenadas,
+      tipo: stop.tipo,
+      origem,
+      ...(descricao ? { descricao } : {}),
+    });
+  }
+  const autonomiaMaximaKm = number(item.autonomia_maxima_km);
+  return {
+    sucesso: item.sucesso,
+    solucaoSegura: item.solucao_segura,
+    paradas,
+    ...(autonomiaMaximaKm !== null ? { autonomiaMaximaKm } : {}),
+  };
+}
+
+function routeCosts(value: unknown): CustosRota | undefined {
+  const item = record(value);
+  const rateio = record(item?.rateio);
+  const money = (value: unknown): string | null =>
+    typeof value === 'string' && /^\d{1,12}\.\d{2}$/.test(value) ? value : null;
+  const custoPropulsao = money(item?.custo_propulsao);
+  const custoTotal = money(item?.custo_total);
+  if (
+    item?.sucesso !== true ||
+    typeof item.total_completo !== 'boolean' ||
+    !custoPropulsao ||
+    !custoTotal ||
+    !Array.isArray(rateio?.cotas)
+  )
+    return undefined;
+  const cotas = rateio.cotas.flatMap((value: unknown) => {
+    const entry = record(value);
+    const valor = money(entry?.valor);
+    const passageiro = number(entry?.passageiro);
+    return valor &&
+      passageiro !== null &&
+      Number.isInteger(passageiro) &&
+      passageiro >= 1 &&
+      passageiro <= 8
+      ? [{ passageiro, valor }]
+      : [];
+  });
+  if (cotas.length !== rateio.cotas.length || cotas.length === 0 || cotas.length > 8)
+    return undefined;
+  if (
+    rateio.quantidade !== cotas.length ||
+    item.passageiros !== cotas.length ||
+    money(rateio.total_rateado) !== custoTotal ||
+    (item.total_completo && (item.status !== 'completo' || money(item.custo_pedagios) === null)) ||
+    (!item.total_completo && item.status !== 'parcial') ||
+    cotas.some((cota, index) => cota.passageiro !== index + 1)
+  )
+    return undefined;
+  const cents = (value: string) => BigInt(value.replace('.', ''));
+  if (cotas.reduce((sum, cota) => sum + cents(cota.valor), 0n) !== cents(custoTotal))
+    return undefined;
+  return { custoPropulsao, custoTotal, totalCompleto: item.total_completo, cotas };
+}
+
 function route(value: unknown): RotaAlternativa | null {
   const item = record(value);
   if (!item || (item.id !== 'principal' && item.id !== 'economica')) return null;
@@ -266,37 +389,64 @@ export function parseTripOptionalFields(value: RecordValue): Pick<
 } {
   const clima = record(value.clima);
   const percurso = record(value.percurso);
-  // TODO(integracao): mapear clima.sensacao_termica para sensacao e validar valores ausentes.
-  const optionalWeather = (key: 'sensacao' | 'condicao' | 'icone') =>
+  const sensacao = text(clima?.sensacao_termica) ?? text(clima?.sensacao);
+  const optionalWeather = (key: 'condicao' | 'icone') =>
     text(clima?.[key]) ? { [key]: text(clima?.[key]) } : {};
   const geometria = coordinates(percurso?.geometria);
-  // TODO(integracao): preservar percurso.alternativas com distância, duração e geometria reais;
-  // não exigir custos ou topografia que a resposta OSRM ainda não fornece.
+  const alternativas = Array.isArray(percurso?.alternativas)
+    ? percurso.alternativas.flatMap((value: unknown) => {
+        const item = record(value);
+        const distancia = text(item?.distancia);
+        const tempo = text(item?.tempo);
+        const geometriaAlternativa = coordinates(item?.geometria);
+        const autonomia = autonomy(item?.autonomia);
+        const custos = routeCosts(item?.custos);
+        const elevation = providerElevation(item?.altimetria);
+        return distancia && tempo && geometriaAlternativa
+          ? [
+              {
+                distancia,
+                tempo,
+                geometria: geometriaAlternativa,
+                ...elevation,
+                ...(autonomia ? { autonomia } : {}),
+                ...(custos ? { custos } : {}),
+              },
+            ]
+          : [];
+      })
+    : undefined;
   const distanceText = typeof percurso?.distancia === 'string' ? percurso.distancia : '';
   const distanceMatch = /^\s*(\d+(?:[.,]\d+)?)\s*km\s*$/i.exec(distanceText);
   const distanceKm = distanceMatch ? Number(distanceMatch[1].replace(',', '.')) : undefined;
   const perfilElevacao = elevationProfile(percurso?.perfilElevacao, distanceKm);
+  const altimetria = providerElevation(percurso?.altimetria);
+  const autonomia = autonomy(percurso?.autonomia);
+  const custos = routeCosts(percurso?.custos);
   const rotas = Array.isArray(value.rotas)
     ? value.rotas.map(route).filter((item): item is RotaAlternativa => item !== null)
     : null;
   const atrativos = Array.isArray(value.atrativos)
     ? value.atrativos.map(attraction).filter((item): item is AtrativoTuristico => item !== null)
     : null;
+  const rawIds = value.atrativos_visitados_ids ?? value.atrativosVisitadosIds;
   const ids =
-    // TODO(integracao): ler atrativos_visitados_ids do backend e hidratar visitas no histórico.
-    Array.isArray(value.atrativosVisitadosIds) &&
-    value.atrativosVisitadosIds.every((id: unknown) => text(id) !== null)
-      ? value.atrativosVisitadosIds.map((id: string) => id.trim())
+    Array.isArray(rawIds) && rawIds.every((id: unknown) => text(id) !== null)
+      ? rawIds.map((id: string) => id.trim())
       : null;
   return {
     clima: {
-      ...optionalWeather('sensacao'),
+      ...(sensacao ? { sensacao } : {}),
       ...optionalWeather('condicao'),
       ...optionalWeather('icone'),
     },
     percurso: {
       ...(geometria ? { geometria } : {}),
+      ...(alternativas ? { alternativas } : {}),
       ...(perfilElevacao ? { perfilElevacao } : {}),
+      ...altimetria,
+      ...(autonomia ? { autonomia } : {}),
+      ...(custos ? { custos } : {}),
     },
     ...(rotas ? { rotas } : {}),
     ...(atrativos ? { atrativos } : {}),
