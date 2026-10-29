@@ -2,7 +2,7 @@ import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib import import_module
-from time import perf_counter, monotonic
+from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
@@ -27,6 +27,7 @@ from app.core.circuit_breaker import CircuitBreaker, CircuitState
 from app.core.config import get_settings
 from app.core.storage import TripStorage
 from app.core.dependencies import get_current_user
+from app.core.operational import operational_snapshot
 from app.routers import auth, streaming, trips
 
 REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,64}")
@@ -224,17 +225,9 @@ async def operational_telemetry(
 
     Roteiros voláteis de visitantes não entram no contador.
     """
-    data = await run_in_threadpool(request.app.state.trip_storage.all_data)
-    users = data.get("usuarios", {})
-    total = sum(
-        len(user.get("roteiros", []))
-        for user in users.values()
-        if isinstance(user, dict) and isinstance(user.get("roteiros"), list)
-    ) if isinstance(users, dict) else 0
-    return {
-        "uptime_seconds": round(max(0.0, monotonic() - request.app.state.started_at), 3),
-        "total_roteiros_persistidos": total,
-    }
+    return await run_in_threadpool(
+        operational_snapshot, request.app.state.trip_storage, request.app.state.started_at
+    )
 
 
 @app.get("/circuits", tags=["operação"])
