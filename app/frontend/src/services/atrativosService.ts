@@ -444,63 +444,7 @@ export function obterAtrativosPorDestino(
     return atrativos;
   }
 
-  // Fallback dinâmico para cidades sem cadastro prévio
-  const nomeLimpo = destinoNome.split('-')[0].trim() || 'Destino';
-
-  atrativos.push(
-    {
-      id: 'atrativo-1',
-      nome: `Centro Histórico e Praça Central de ${nomeLimpo}`,
-      categoria: 'historico',
-      descricao: `Patrimônio cultural e arquitetônico marcante com edifícios preservados de ${nomeLimpo}.`,
-      destaque: `Casario Histórico de ${nomeLimpo}`,
-      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Centro Histórico, ${destinoNome}`)}`,
-      icone: '🏛️',
-      visitado: false,
-    },
-    {
-      id: 'atrativo-2',
-      nome: `Mirante e Parque Ecológico de ${nomeLimpo}`,
-      categoria: 'natureza',
-      descricao: `Trilhas arborizadas e vista panorâmica privilegiada da região e seus arredores.`,
-      destaque: `Vista Panorâmica da Cidade`,
-      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Parque Ecológico, ${destinoNome}`)}`,
-      icone: '🌿',
-      visitado: false,
-    },
-    {
-      id: 'atrativo-3',
-      nome: `Mercado Municipal e Feira de Artesanato`,
-      categoria: 'cultura',
-      descricao: `Ponto de encontro da comunidade com peças de artistas locais e artigos típicos.`,
-      destaque: `Artesanato Regional`,
-      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Mercado Municipal, ${destinoNome}`)}`,
-      icone: '🎨',
-      visitado: false,
-    },
-    {
-      id: 'gastro-1',
-      nome: `Sabores e Pratos Regionais de ${nomeLimpo}`,
-      categoria: 'gastronomia',
-      descricao: `Culinária artesanal autêntica valorizando ingredientes frescos dos produtores locais.`,
-      destaque: `Prato do Dia Tradicional`,
-      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Restaurante Regional, ${destinoNome}`)}`,
-      icone: '🍲',
-      visitado: false,
-    },
-    {
-      id: 'gastro-2',
-      nome: `Sobremesas e Cafés Tradicionais da Terra`,
-      categoria: 'gastronomia',
-      descricao: `Doces caseiros e cafeterias acolhedoras recomendados para o fim de tarde.`,
-      destaque: `Café com Bolo Caseiro`,
-      linkMaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Cafeteria, ${destinoNome}`)}`,
-      icone: '☕',
-      visitado: false,
-    },
-  );
-
-  return atrativos;
+  return [];
 }
 
 export function obterPontosTuristicosPorDestino(
