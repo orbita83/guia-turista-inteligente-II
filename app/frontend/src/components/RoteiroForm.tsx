@@ -125,6 +125,8 @@ export function RoteiroForm({
     campo: 'origem_cidade' | 'origem_uf' | 'destino_cidade' | 'destino_uf',
     valor: string,
   ) => {
+    // TODO(frontend): ao selecionar município inequívoco, sincronizar a UF correspondente;
+    // preservar escolha explícita quando houver homônimos e não depender do geocoding pós-envio.
     setFormData((atual) => ({ ...atual, [campo]: valor }));
     setErros((atuais) => ({
       ...atuais,
@@ -382,7 +384,7 @@ export function RoteiroForm({
             </p>
           ) : null}
 
-          {/* TODO(backend): mostrar o catálogo real quando houver fonte de municípios;
+          {/* TODO(frontend): mostrar o catálogo real quando houver fonte de municípios;
               a lista de UFs da sessão, sozinha, não preenche o datalist de cidades. */}
           <p
             className={`catalog-status${catalogoDisponivel ? '' : ' is-unavailable'}`}
@@ -408,8 +410,8 @@ export function RoteiroForm({
                 {suggestionStatus === 'loading' ? 'Localizando…' : '⌖ Usar minha localização'}
               </button>
             </div>
-            {/* TODO(backend): preencher sugestoes e suggestionStatus com destinos e distâncias
-                reais após a integração do contrato de recomendação por localização. */}
+            {/* TODO(frontend): validar no fluxo real as sugestões GPS e as distâncias geodésicas
+                já calculadas pelo serviço local, incluindo permissão negada e erro de localização. */}
             {suggestionStatus === 'available' && sugestoes.length > 0 ? (
               <div className="suggestion-list">
                 {sugestoes.map((sugestao) => {

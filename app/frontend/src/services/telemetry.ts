@@ -98,7 +98,7 @@ export function safeRoute(origin: string, destination: string): RouteSummary {
 }
 
 export function defaultProviders(): ProviderDiagnostic[] {
-  // TODO(backend): substituir durações desconhecidas quando o planejamento retornar métricas por provedor.
+  // TODO(frontend): preservar estado desconhecido até haver diagnóstico válido no payload.
   return (['open-meteo', 'osrm', 'open-elevation', 'gemini'] as const).map((provider) => ({
     provider,
     state: 'unknown',
@@ -136,7 +136,8 @@ function geminiDiagnostic(value: unknown): ProviderDiagnostic {
 }
 
 export function providerDiagnostics(viagem: Viagem): ProviderDiagnostic[] {
-  // TODO(backend): trocar os estados inferidos do resultado por diagnósticos explícitos quando vierem no contrato.
+  // TODO(integracao): consumir viagem.telemetria.provedores e duracoes_etapas_ms já retornados;
+  // validar cada campo e evitar inferir disponibilidade ou duração a partir do resultado.
   // TODO(backend): incluir dados reais de Open-Elevation; o payload atual não confirma sua execução.
   const climateAvailable = hasOperationData([
     viagem.clima.temperatura,

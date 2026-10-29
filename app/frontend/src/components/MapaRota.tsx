@@ -16,13 +16,15 @@ export function MapaRota({ viagem, rotaAtivaId = 'principal', onRotaChange }: Ma
   const titleId = useId();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const rotas = useMemo(
+    // TODO(integracao): exibir alternativas de percurso.alternativas após adaptar o contrato real.
     () => (viagem.rotas ?? []).filter((rota) => geometriaValida(rota.coordenadas)),
     [viagem.rotas],
   );
   const rotaAtiva = rotas.find((rota) => rota.id === rotaAtivaId) ?? rotas[0];
   const geometria: CoordenadaGPS[] | undefined =
     rotaAtiva?.coordenadas ?? viagem.percurso.geometria;
-  // TODO: integrar amostras reais do perfil de elevação quando o backend as fornecer.
+  // TODO(integracao): consumir perfil de elevação real quando o backend disponibilizá-lo;
+  // a geometria OSRM atual não contém altitude, custos, autonomia nem pontos de parada.
   const elevation = rotaAtiva ? rotaAtiva.perfilElevacao : viagem.percurso.perfilElevacao;
   const elevations = elevation?.map((point) => point.altitudeM) ?? [];
   const minAltitude = elevations.reduce((min, altitude) => Math.min(min, altitude), Infinity);

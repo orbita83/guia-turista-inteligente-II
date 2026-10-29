@@ -10,6 +10,7 @@ function normalizarChave(texto: string): string {
 }
 
 export function gerarRotasAlternativas(viagem: Viagem): RotaAlternativa[] {
+  // TODO(integracao): representar alternativas OSRM reais sem fabricar custos, paradas ou relevo.
   return viagem.rotas ?? [];
 }
 

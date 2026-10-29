@@ -1,6 +1,7 @@
 import type { AtrativoTuristico, PerfilViajante } from '../types/domain';
 
-// TODO(backend): receber a coleção estruturada de atrativos e gastronomia diretamente da resposta JSON de /planejar ou /minhas-viagens.
+// TODO(integracao): definir fonte e contrato de atrativos e gastronomia estruturados;
+// o backend atual fornece guia textual e este catálogo local cobre apenas alguns destinos.
 
 interface DestinoAtrativosMap {
   pontos: Array<{

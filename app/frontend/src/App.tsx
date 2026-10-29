@@ -82,7 +82,8 @@ export function App() {
           <>
             <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
-                {/* TODO(backend): ligar o catálogo de municípios quando a API expuser esses dados. */}
+                {/* TODO(frontend): avaliar o catálogo e hook do commit 286bf75 (ajustes/gerais)
+                    e fornecer municípios ao formulário; não há busca pré-envio no backend atual. */}
                 <RoteiroForm
                   ufs={data.ufs}
                   isSubmitting={isSubmitting}
@@ -127,7 +128,7 @@ export function App() {
                           abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-guia'
                         }
                       >
-                        {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
+                        {/* TODO(integracao): validar SSE e visitas persistidas no fluxo real, inclusive erros e recarga. */}
                         <RoteiroResult
                           viagem={activeTrip}
                           formParams={activeTripForm}

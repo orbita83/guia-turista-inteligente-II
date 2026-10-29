@@ -107,8 +107,8 @@ export function parseTrip(value: unknown): Viagem | null {
   const createdAt = availableText(trip.criado_em, '');
   const optionalFields = parseTripOptionalFields(trip);
 
-  // TODO: mapear sensação térmica, condição climática, telemetria, geometria e
-  // alternativas do contrato completo da viagem.
+  // TODO(integracao): preservar telemetria e alternativas reais do percurso; geometria
+  // principal e condição já são mapeadas em parseTripOptionalFields.
   return {
     id,
     ...(createdAt ? { criado_em: createdAt } : {}),
@@ -241,6 +241,8 @@ export function listarViagens(signal?: AbortSignal): Promise<TripsResponse> {
 }
 
 export async function criarViagem(data: RoteiroFormData): Promise<PlanTripResponse> {
+  // TODO(integracao): alinhar duração, perfis e parâmetros de veículo com TripCreateRequest;
+  // o schema atual aceita origem/destino e não utiliza os demais campos no planejamento.
   const startedAt = performance.now();
   const init: RequestInit = {
     method: 'POST',
@@ -267,7 +269,7 @@ export function excluirViagem(tripId: string): Promise<void> {
   return request(`/roteiros/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
 }
 
-// TODO: conectar o consumo do guia por streaming quando o endpoint SSE estiver disponível.
+// TODO(integracao): validar o consumo SSE existente em streamingGuide.ts contra o backend real.
 
 export async function atualizarVisitaAtrativo(
   tripId: string,

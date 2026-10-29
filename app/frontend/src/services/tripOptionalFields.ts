@@ -263,9 +263,12 @@ export function parseTripOptionalFields(value: RecordValue): Pick<
 } {
   const clima = record(value.clima);
   const percurso = record(value.percurso);
+  // TODO(integracao): mapear clima.sensacao_termica para sensacao e validar valores ausentes.
   const optionalWeather = (key: 'sensacao' | 'condicao' | 'icone') =>
     text(clima?.[key]) ? { [key]: text(clima?.[key]) } : {};
   const geometria = coordinates(percurso?.geometria);
+  // TODO(integracao): preservar percurso.alternativas com distância, duração e geometria reais;
+  // não exigir custos ou topografia que a resposta OSRM ainda não fornece.
   const distanceText = typeof percurso?.distancia === 'string' ? percurso.distancia : '';
   const distanceMatch = /^\s*(\d+(?:[.,]\d+)?)\s*km\s*$/i.exec(distanceText);
   const distanceKm = distanceMatch ? Number(distanceMatch[1].replace(',', '.')) : undefined;
@@ -277,6 +280,7 @@ export function parseTripOptionalFields(value: RecordValue): Pick<
     ? value.atrativos.map(attraction).filter((item): item is AtrativoTuristico => item !== null)
     : null;
   const ids =
+    // TODO(integracao): ler atrativos_visitados_ids do backend e hidratar visitas no histórico.
     Array.isArray(value.atrativosVisitadosIds) &&
     value.atrativosVisitadosIds.every((id: unknown) => text(id) !== null)
       ? value.atrativosVisitadosIds.map((id: string) => id.trim())

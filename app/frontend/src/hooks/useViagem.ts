@@ -342,6 +342,7 @@ export function useViagem() {
           recordedAt: new Date().toISOString(),
           route,
           ...result.metadata,
+          // TODO(integracao): carregar diagnósticos e tempos reais do payload de planejamento.
           providers: providerDiagnostics(result.viagem),
           session: sessionSummary(usuario, data.viagens.length + 1),
           service: serviceCondition(true),

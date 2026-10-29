@@ -195,6 +195,8 @@ export async function streamGuiaTuristico(
     await executarFallbackProgressivo(options.fallbackText, callbacks, options);
     return;
   }
+  // TODO(frontend): preservar o guia já retornado pelo planejamento em erro HTTP ou SSE,
+  // mantendo o erro explícito e sem afirmar que a transmissão foi concluída.
   if (!response.ok) {
     callbacks.onError(new Error(`Não foi possível gerar o guia (HTTP ${response.status}).`));
     return;

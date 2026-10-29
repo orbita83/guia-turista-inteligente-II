@@ -156,9 +156,9 @@ export function TelemetriaCard({
                 value={displayDuration(snapshot?.totalTimeMs ?? missing)}
                 tone="total"
               />
-              {/* TODO: preencher a duração de geocodificação com viagem.telemetria.duracoes_etapas_ms. */}
+              {/* TODO(integracao): exibir tempos de origem e destino sem somá-los como tempo sequencial. */}
               <Metric label="Geocoding" value="Aguardando dados" />
-              {/* TODO: mapear durações e estados reais dos provedores; não inferir pelo tempo total. */}
+              {/* TODO(integracao): apresentar as etapas reais sem somar tempos executados em paralelo. */}
               <Metric label="APIs + IA Gemini" value="Aguardando dados" />
               <Metric
                 label="Servidor local (Tempo da API)"
@@ -174,7 +174,7 @@ export function TelemetriaCard({
                     <li key={provider.provider}>
                       {providerNames[provider.provider]}:{' '}
                       <span>{providerStates[provider.state]}</span>
-                      {/* TODO: preencher cada duração e disponibilidade com a telemetria da viagem. */}
+                      {/* TODO(integracao): preencher duração e estado com os diagnósticos recebidos. */}
                       {' · Tempo: '}
                       {displayDuration(provider.durationMs)}
                     </li>

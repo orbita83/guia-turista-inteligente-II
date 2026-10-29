@@ -125,7 +125,8 @@ export function RoteiroResult({
 
   // Atrativos do destino
   const todosAtrativos = useMemo(() => {
-    // TODO(backend): receber a coleção estruturada de atrativos e gastronomia diretamente da resposta JSON de /planejar ou /minhas-viagens.
+    // TODO(integracao): consumir atrativos estruturados quando houver contrato; o backend
+    // atual retorna guia textual, e o catálogo local cobre apenas alguns destinos.
     if (viagem.atrativos && viagem.atrativos.length > 0) {
       return viagem.atrativos;
     }
@@ -169,6 +170,8 @@ export function RoteiroResult({
     const controller = new AbortController();
     streamAbortControllerRef.current = controller;
 
+    // TODO(frontend): manter visível o guia já recebido em dicas_destino enquanto o SSE
+    // conecta ou falha, identificando a contingência sem ocultar o erro da transmissão.
     setStreamText('');
     setStreamMessage('');
     setStreamStatus('streaming');
@@ -341,7 +344,7 @@ export function RoteiroResult({
           2. Banner Meteorológico (Open-Meteo) - Conforme Wireframe Seção 3.3
           ------------------------------------------------------------------ */}
       <section className="weather-banner" aria-labelledby="weather-title">
-        {/* TODO(backend): obter dados dinâmicos estendidos de clima (condição e sensação) diretamente do backend Open-Meteo. */}
+        {/* TODO(integracao): exibir sensacao_termica após normalização; condição já vem do backend. */}
         <div className="weather-banner-header">
           <div className="weather-destination-group">
             <span className="weather-icon" aria-hidden="true">
@@ -501,7 +504,7 @@ export function RoteiroResult({
           4. Catálogo Interativo de Atrativos e Gastronomia - Wireframe Seção 3.3
           ------------------------------------------------------------------ */}
       <section className="attractions-section" aria-labelledby="attractions-title">
-        {/* TODO(backend): sincronizar confirmação de visita com o backend via PATCH /roteiros/{id}/visitas assim que disponível. */}
+        {/* TODO(integracao): reconciliar visitas com a resposta PATCH e com o histórico após recarga. */}
         <div className="attractions-header">
           <div className="attractions-title-box">
             <h3 id="attractions-title">Atrativos & Gastronomia</h3>
