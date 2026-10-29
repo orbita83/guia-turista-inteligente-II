@@ -1,24 +1,23 @@
 # Contratos da API
 
-Este documento separa os contratos executáveis hoje dos endpoints futuros descritos
-na arquitetura de referência. A migração atual preserva apenas comportamentos que já
-existiam no monólito; os endpoints futuros não devem ser implementados como parte
-desta reorganização.
+Este documento separa os contratos executáveis dos endpoints futuros. Foi atualizado
+após a validação de QA da development em 28/10/2026.
 
 ## API FastAPI executável
 
-Base REST: `/api/v1`. As respostas de sucesso usam JSON, exceto logout e exclusão,
+Base REST: `/api/v1`. As respostas de sucesso usam JSON, exceto SSE e as operações
 que retornam `204 No Content`.
 
 | Método e caminho | Contrato | Identidade |
 | --- | --- | --- |
-| `GET /api/v1/auth/session` | `{ usuario, google_client_id, ufs }` | cookie de sessão opcional |
-| `POST /api/v1/auth/google` | entrada `{ credential }`; saída `{ usuario }` | valida credencial no Google e cria cookie |
-| `POST /api/v1/auth/visitor` | saída `{ usuario }` | cria sessão visitante com validade de 2 horas |
+| `GET /api/v1/auth/session` | `{ usuario, google_client_id, ufs, session_started_at?, session_duration_ms? }` | cookie de sessão opcional |
+| `POST /api/v1/auth/google` | entrada `{ credential }`; saída `{ usuario, session_started_at, session_duration_ms }` | valida credencial no Google e cria cookie |
+| `POST /api/v1/auth/visitor` | saída `{ usuario, session_started_at, session_duration_ms }` | cria sessão visitante com validade de 2 horas |
 | `POST /api/v1/auth/logout` | `204` | encerra sessão e limpa dados temporários do visitante |
 | `GET /api/v1/roteiros/minhas-viagens` | `{ viagens: [...] }` | sessão obrigatória; lista somente os roteiros da identidade ativa |
 | `GET /api/v1/roteiros/minhas-viagens/json` | metadados legados e envelope `usuarios` contendo somente a identidade ativa | sessão obrigatória; exportação compatível e isolada |
 | `POST /api/v1/roteiros/planejar` | entrada com `origem_cidade`, `origem_uf`, `destino_cidade`, `destino_uf`; saída `{ viagem, aviso }` | sessão obrigatória |
+| `POST /api/v1/roteiros/stream-guia` | entrada `{ destino, dias_estadia?, estilo_viagem?, clima_info?, atrativos?, gastronomia? }`; resposta HTTP 200 `text/event-stream` | sessão obrigatória, inclusive visitante |
 | `DELETE /api/v1/roteiros/{roteiro_id}` | `204` | sessão obrigatória; exclusão limitada à identidade ativa |
 
 O planejamento mantém o formato de viagem já produzido pelo Flask: `id`, `criado_em`,
@@ -27,6 +26,26 @@ são higienizadas e limitadas a 80 caracteres; origem e destino vazios retornam 
 Solicitações iguais da mesma identidade têm bloqueio de concorrência e cooldown de
 quatro segundos, respondendo `409`. Falhas HTTP não tratadas pelos fallbacks dos
 provedores respondem `502`.
+
+`percurso.geometria` é opcional e contém pontos `[latitude, longitude]` convertidos do
+GeoJSON retornado pelo OSRM. Sem geometria válida, o planejamento permanece disponível,
+mas o botão GPX não exporta um traçado estimado. O arquivo é gerado no navegador.
+
+### Streaming do guia
+
+O SSE gera um guia separado; não cria nem atualiza a viagem persistida. Usa eventos
+`telemetry` com `{stage, requestId, serverTimestamp, session, elapsedStreamMs}`,
+`chunk` com `{chunk, done:false}`, `replace` com `{text, done:false}` e `done` com
+`{done:true, text, diagnostico_ia}`. Erros terminais usam `error` com código e mensagem
+seguros. Uma contingência pode substituir os fragmentos antes da conclusão.
+
+Sessão e payload inválidos retornam 401/422 antes do stream. Pedidos equivalentes
+ativos da mesma sessão retornam 409; a chave inclui o payload validado e o usuário.
+Esse bloqueio SSE vale apenas no processo e é liberado ao concluir, falhar ou cancelar.
+É distinto do cooldown de quatro segundos do endpoint JSON. Após iniciar a resposta,
+uma falha terminal é um evento SSE, não outro status HTTP.
+
+Veja [apresentação e exemplos de requisição](../operacao/apresentacao-aluno-4.md).
 
 ### Sessão e isolamento
 
@@ -45,8 +64,8 @@ o backend valida e copia o arquivo legado da raiz sem removê-lo.
 - `409`: planejamento duplicado ativo ou dentro do cooldown;
 - `422`: payload inválido;
 - `502`: falha de transporte em provedor necessária à operação.
-- `X-Process-Time`: duração do processamento em milissegundos;
-- `X-Request-ID`: ecoa o ID enviado ou gera um ID para a requisição.
+- `X-Process-Time`: duração até os cabeçalhos em milissegundos; não mede o corpo SSE inteiro;
+- `X-Request-ID`: preserva um ID válido enviado ou gera um identificador seguro.
 
 Em chamadas cross-origin, os dois cabeçalhos de resposta são expostos por CORS.
 
@@ -56,6 +75,8 @@ Em chamadas cross-origin, os dois cabeçalhos de resposta são expostos por CORS
 | --- | --- | --- |
 | `GET /healthz` | `{ status: "ok" }` | executável |
 | `GET /readyz` | `{ status: "ready" }` | executável; readiness simples do processo |
+| `GET /metrics` | métricas HTTP, circuit breakers e ciclo SSE | executável; registro local ao processo |
+| `GET /circuits` | `{ circuit_breakers: [...] }` | diagnóstico dos circuitos |
 | `GET /docs`, `GET /redoc` | OpenAPI interativo | executável |
 
 ## Rotas antigas aposentadas
@@ -79,12 +100,10 @@ correspondente no frontend monolítico atual; ficam fora desta migração:
 | Método e caminho | Finalidade descrita | Estado |
 | --- | --- | --- |
 | `POST /api/v1/roteiros/mapa-rota` | mapa e alternativas | futuro |
-| `POST /api/v1/roteiros/stream-guia` | guia por SSE | futuro |
 | `PATCH /api/v1/roteiros/{id}/visitas` | marcar atrativos visitados | futuro |
 | método pendente `/api/v1/roteiros/custos` | calculadora de custos | futuro |
-| método pendente `/api/v1/roteiros/exportar/gpx` | exportação GPX | futuro |
+| método pendente `/api/v1/roteiros/exportar/gpx` | exportação no servidor | futuro; download atual é local no navegador |
 | método pendente `/api/v1/roteiros/compartilhar` | compartilhamento | futuro |
 | `/api/v1/telemetria` | diagnóstico de provedores/circuit breakers | futuro |
-| `GET /metrics` | métricas Prometheus/OpenMetrics | futuro; não existe no Flask monolítico |
 
 O schema executável completo também está publicado pelo FastAPI em `/openapi.json`.
