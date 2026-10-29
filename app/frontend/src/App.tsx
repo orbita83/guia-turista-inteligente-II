@@ -37,6 +37,7 @@ export function App() {
     telemetryState,
     apiHealthStatus,
     operationalTelemetry,
+    operationalError,
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
@@ -167,6 +168,7 @@ export function App() {
                   state={telemetryState}
                   apiHealthStatus={apiHealthStatus}
                   operationalTelemetry={operationalTelemetry}
+                  operationalError={operationalError}
                   connectivity={connectivity}
                   onCopyRequestId={copyTelemetryRequestId}
                 />
