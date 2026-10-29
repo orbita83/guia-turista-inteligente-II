@@ -5,6 +5,7 @@ import type {
   AtrativoTuristico,
   GuiaStreamingStatus,
   RoteiroFormData,
+  StreamTelemetryUpdate,
   Viagem,
 } from '../types/domain';
 
@@ -14,6 +15,7 @@ export interface RoteiroResultProps {
   visitasIds?: readonly string[];
   visitadosIds?: readonly string[];
   onToggleVisita?: (atrativoId: string) => void | Promise<void>;
+  onStreamTelemetry?: (update: StreamTelemetryUpdate) => void;
 }
 
 type FiltroAtrativo = 'todos' | 'pendentes' | 'visitados' | 'gastronomia';
@@ -92,6 +94,7 @@ export function RoteiroResult({
   visitasIds,
   visitadosIds,
   onToggleVisita,
+  onStreamTelemetry,
 }: RoteiroResultProps) {
   const idsVisitados = useMemo(
     () => visitasIds ?? visitadosIds ?? viagem.atrativosVisitadosIds ?? [],
@@ -101,6 +104,7 @@ export function RoteiroResult({
   // Estado do Streaming
   const [streamText, setStreamText] = useState('');
   const [streamStatus, setStreamStatus] = useState<GuiaStreamingStatus>('idle');
+  const [streamMessage, setStreamMessage] = useState('');
   const [copiado, setCopiado] = useState(false);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -154,6 +158,7 @@ export function RoteiroResult({
     streamAbortControllerRef.current = controller;
 
     setStreamText('');
+    setStreamMessage('');
     setStreamStatus('streaming');
 
     const payload = {
@@ -167,16 +172,30 @@ export function RoteiroResult({
       payload,
       {
         onChunk: (chunk) => {
-          setStreamText((atual) => atual + chunk);
+          if (!controller.signal.aborted) setStreamText((atual) => atual + chunk);
+        },
+        onReplace: (text) => {
+          if (!controller.signal.aborted) setStreamText(text);
         },
         onDone: (full) => {
+          if (controller.signal.aborted) return;
           setStreamText(full);
           setStreamStatus('completed');
         },
-        onError: () => {
-          // Em caso de falha de conexão, garante que o dicas_destino padrão seja exibido
-          setStreamText(viagem.dicas_destino || 'Guia indisponível temporariamente.');
+        onError: (error) => {
+          if (controller.signal.aborted) return;
+          setStreamMessage(error.message);
           setStreamStatus('error');
+        },
+        onTelemetry: (update) => {
+          if (!controller.signal.aborted) {
+            onStreamTelemetry?.(update);
+            window.dispatchEvent(
+              new CustomEvent('guia:stream-telemetry', {
+                detail: { trip: viagem, update },
+              }),
+            );
+          }
         },
       },
       {
@@ -199,6 +218,13 @@ export function RoteiroResult({
       }
     };
   }, [viagem.id]);
+
+  const cancelarStreaming = () => {
+    streamAbortControllerRef.current?.abort();
+    setStreamText('');
+    setStreamStatus('idle');
+    setStreamMessage('Transmissão cancelada.');
+  };
 
   const copiarTextoGuia = async () => {
     try {
@@ -369,16 +395,23 @@ export function RoteiroResult({
                 ✓ Guia completo
               </span>
             )}
+            {streamStatus === 'idle' && streamMessage && (
+              <span className="guide-status-badge" role="status">
+                {streamMessage}
+              </span>
+            )}
             {streamStatus === 'error' && (
               <span className="guide-status-badge is-error" role="status">
-                ⚠️ Modo contingência
+                ⚠️ Falha na transmissão
               </span>
             )}
           </div>
         </div>
 
+        {streamStatus === 'error' && <p role="alert">{streamMessage}</p>}
+
         {/* Área de Texto em Streaming */}
-        <div className="guide-content-area" role="region" aria-live="polite">
+        <div className="guide-content-area" role="region" aria-label="Conteúdo do guia">
           {secoesParsed.length >= 2 ? (
             <div className="guide-parsed-sections">
               {secoesParsed.map((secao) => (
@@ -406,6 +439,11 @@ export function RoteiroResult({
 
         {/* Ações Rápidas do Guia */}
         <div className="guide-actions-bar">
+          {streamStatus === 'streaming' && (
+            <button type="button" className="btn-guide-action" onClick={cancelarStreaming}>
+              Cancelar transmissão
+            </button>
+          )}
           <button
             type="button"
             className="btn-guide-action"
