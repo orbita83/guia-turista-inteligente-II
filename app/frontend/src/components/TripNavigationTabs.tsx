@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   baixarArquivoGpx,
   gerarLinkGoogleMaps,
@@ -21,6 +22,7 @@ export function TripNavigationTabs({
   onExcluir,
   onGpxDownload,
 }: TripNavigationTabsProps) {
+  const [erroGpx, setErroGpx] = useState('');
   const linkMaps = gerarLinkGoogleMaps(viagem.origem, viagem.destino);
   const linkWhatsapp = gerarLinkWhatsApp(
     viagem.origem,
@@ -36,18 +38,25 @@ export function TripNavigationTabs({
   };
 
   const handleGpx = () => {
-    if (onGpxDownload) {
-      onGpxDownload();
-      return;
-    }
-    const [rotaPrincipal] = gerarRotasAlternativas(viagem);
-    if (rotaPrincipal) {
-      baixarArquivoGpx(viagem.origem, viagem.destino, rotaPrincipal);
+    setErroGpx('');
+    try {
+      if (onGpxDownload) {
+        onGpxDownload();
+        return;
+      }
+      if (!Array.isArray(viagem.percurso?.geometria) || viagem.percurso.geometria.length < 2) {
+        throw new Error('GPX indisponível: esta viagem não possui geometria rodoviária real.');
+      }
+      const [rotaPrincipal] = gerarRotasAlternativas(viagem);
+      if (rotaPrincipal) baixarArquivoGpx(viagem.origem, viagem.destino, rotaPrincipal);
+    } catch (error) {
+      setErroGpx(error instanceof Error ? error.message : 'Não foi possível baixar o GPX.');
     }
   };
 
   return (
     <nav className="trip-navigation-container" aria-label="Navegação e ações da viagem planejada">
+      {erroGpx && <p role="alert">{erroGpx}</p>}
       {/* 1. Linha de Abas de Navegação (Issue #11) */}
       <div className="trip-tabs-bar" role="tablist" aria-label="Seções do resultado da viagem">
         <button
