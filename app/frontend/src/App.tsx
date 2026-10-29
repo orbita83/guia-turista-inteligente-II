@@ -36,6 +36,7 @@ export function App() {
     persistenceById,
     telemetryState,
     apiHealthStatus,
+    operationalTelemetry,
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
@@ -165,6 +166,7 @@ export function App() {
                 <TelemetriaCard
                   state={telemetryState}
                   apiHealthStatus={apiHealthStatus}
+                  operationalTelemetry={operationalTelemetry}
                   connectivity={connectivity}
                   onCopyRequestId={copyTelemetryRequestId}
                 />
