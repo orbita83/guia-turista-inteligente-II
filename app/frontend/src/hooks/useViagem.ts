@@ -1,0 +1,564 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { UFS_BRASIL } from '../constants/ufs';
+import {
+  ApiError,
+  atualizarVisitaAtrativo,
+  carregarSessao,
+  criarViagem,
+  excluirViagem,
+  listarViagens,
+  verificarSaudeApi,
+  type SessionResponse,
+} from '../services/api';
+import { obterCoordenadasNavegador, obterSugestoesDestino } from '../services/geolocation';
+import {
+  copyRequestId,
+  providerDiagnostics,
+  safeRoute,
+  serviceCondition,
+  sessionSummary,
+} from '../services/telemetry';
+import type {
+  HistoryStatus,
+  PersistenceStatus,
+  RoteiroFormData,
+  SugestaoDestino,
+  SuggestionStatus,
+  TelemetryPanelState,
+  TelemetrySnapshot,
+  Viagem,
+} from '../types/domain';
+import { useConnectivity } from './useConnectivity';
+import { useAuth } from './useAuth';
+import { useToasts } from './useToasts';
+import { useTripSelection } from './useTripSelection';
+
+interface AppData extends SessionResponse {
+  viagens: Viagem[];
+}
+
+const EMPTY_DATA: AppData = {
+  usuario: null,
+  viagens: [],
+  ufs: [...UFS_BRASIL],
+  google_client_id: '',
+};
+
+interface PendingRoute {
+  origem: string;
+  destino: string;
+}
+
+function routeLabel(city: string, state: string): string {
+  return state ? `${city} - ${state}` : city;
+}
+
+function mergeTripFirst(trips: readonly Viagem[], trip: Viagem): Viagem[] {
+  return [trip, ...trips.filter((current) => current.id !== trip.id)];
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function getVisitasStorageKey(userId?: string | null): string {
+  return `guia_turista_visitas_${userId || 'anonimo'}`;
+}
+
+function readSavedVisitas(userId?: string | null): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(getVisitasStorageKey(userId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, string[]>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveVisitas(userId: string | null | undefined, visitas: Record<string, string[]>): void {
+  try {
+    localStorage.setItem(getVisitasStorageKey(userId), JSON.stringify(visitas));
+  } catch {
+    // Continua utilizável em memória caso o armazenamento local esteja bloqueado.
+  }
+}
+
+export function useViagem() {
+  const connectivity = useConnectivity();
+  const networkStatus = connectivity.state;
+  const [data, setData] = useState<AppData>(EMPTY_DATA);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+  const [pendingRoute, setPendingRoute] = useState<PendingRoute | null>(null);
+  const {
+    activeTrip,
+    setActiveTrip,
+    activeTripForm,
+    setActiveTripForm,
+    formByTripId,
+    selectTrip,
+    reset: resetSelectedTrip,
+  } = useTripSelection();
+  const [historyStatus, setHistoryStatus] = useState<HistoryStatus>('loading');
+  const [historyError, setHistoryError] = useState<string | undefined>();
+  const [persistenceById, setPersistenceById] = useState<Record<string, PersistenceStatus>>({});
+  const { toasts, addToast, dismissToast } = useToasts();
+  const [telemetryState, setTelemetryState] = useState<TelemetryPanelState>({ kind: 'hidden' });
+  const [apiHealthStatus, setApiHealthStatus] = useState<'checking' | 'online' | 'unavailable'>(
+    'checking',
+  );
+  const [sugestoes, setSugestoes] = useState<SugestaoDestino[]>([]);
+  const [suggestionStatus, setSuggestionStatus] = useState<SuggestionStatus>('idle');
+  const [visitasPorViagem, setVisitasPorViagem] = useState<Record<string, string[]>>({});
+  const [visitPersistenceByTrip, setVisitPersistenceByTrip] = useState<
+    Record<string, 'pending' | 'local' | 'confirmed' | 'error'>
+  >({});
+  const visitasRef = useRef<Record<string, string[]>>({});
+  const pendingVisitRequests = useRef(new Set<string>());
+  const pendingVisitChanges = useRef<Record<string, Record<string, boolean>>>({});
+  const attemptSequence = useRef(0);
+  const sessionGeneration = useRef(0);
+  const deletingRef = useRef(new Set<string>());
+  const mountedRef = useRef(true);
+  const persistenceRef = useRef<Record<string, PersistenceStatus>>({});
+
+  const updatePersistence = useCallback(
+    (update: (current: Record<string, PersistenceStatus>) => Record<string, PersistenceStatus>) => {
+      const next = update(persistenceRef.current);
+      persistenceRef.current = next;
+      setPersistenceById(next);
+    },
+    [],
+  );
+
+  const reload = useCallback(
+    async (signal?: AbortSignal) => {
+      const generation = sessionGeneration.current;
+      const session = await carregarSessao(signal);
+      if (generation !== sessionGeneration.current) return;
+
+      const base: AppData = {
+        ...session,
+        ufs: session.ufs.length > 0 ? session.ufs : [...UFS_BRASIL],
+        viagens: [],
+      };
+      setData(base);
+      setPersistenceById({});
+      persistenceRef.current = {};
+
+      if (!session.usuario) {
+        setHistoryStatus('ready');
+        setHistoryError(undefined);
+        return;
+      }
+
+      setHistoryStatus(networkStatus === 'offline' ? 'offline' : 'loading');
+      setHistoryError(undefined);
+      try {
+        const trips = await listarViagens(signal);
+        if (generation !== sessionGeneration.current) return;
+        setData((current) =>
+          current.usuario?.id === session.usuario?.id
+            ? { ...current, viagens: trips.viagens }
+            : current,
+        );
+        setHistoryStatus(networkStatus === 'offline' ? 'offline' : 'ready');
+      } catch (error: unknown) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        if (generation !== sessionGeneration.current) return;
+        setHistoryStatus(networkStatus === 'offline' ? 'offline' : 'error');
+        setHistoryError('Não foi possível atualizar o histórico. Tente novamente.');
+      }
+    },
+    [networkStatus],
+  );
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    reload(controller.signal)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        addToast(
+          'Não foi possível acessar a API. Confira se o backend está iniciado e tente novamente.',
+        );
+      })
+      .finally(() => setInitialLoading(false));
+    return () => controller.abort();
+  }, [addToast, reload]);
+
+  useEffect(() => {
+    if (!data.usuario) return;
+    if (networkStatus === 'offline') setHistoryStatus('offline');
+    else setHistoryStatus((current) => (current === 'offline' ? 'ready' : current));
+  }, [data.usuario, networkStatus]);
+
+  useEffect(() => {
+    if (!data.usuario?.id) {
+      setApiHealthStatus('checking');
+      return;
+    }
+    const controller = new AbortController();
+    setApiHealthStatus('checking');
+    verificarSaudeApi(controller.signal)
+      .then((healthy) => {
+        if (!controller.signal.aborted) setApiHealthStatus(healthy ? 'online' : 'unavailable');
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setApiHealthStatus('unavailable');
+      });
+    return () => controller.abort();
+  }, [data.usuario?.id, networkStatus]);
+
+  useEffect(() => {
+    const saved = readSavedVisitas(data.usuario?.id);
+    visitasRef.current = saved;
+    setVisitasPorViagem(saved);
+    setVisitPersistenceByTrip({});
+    pendingVisitRequests.current.clear();
+    pendingVisitChanges.current = {};
+  }, [data.usuario?.id]);
+
+  const runSessionAction = useCallback(
+    async (action: () => Promise<unknown>): Promise<boolean> => {
+      attemptSequence.current += 1;
+      sessionGeneration.current += 1;
+      setTelemetryState({ kind: 'hidden' });
+      setIsSubmitting(false);
+      setPendingRoute(null);
+      resetSelectedTrip();
+      setHistoryStatus('loading');
+      setSugestoes([]);
+      setSuggestionStatus('idle');
+      setHistoryError(undefined);
+      updatePersistence(() => ({}));
+      setData((current) => ({
+        ...EMPTY_DATA,
+        google_client_id: current.google_client_id,
+        ufs: current.ufs,
+      }));
+      setSessionLoading(true);
+      try {
+        await action();
+        await reload();
+        return true;
+      } catch {
+        addToast('Não foi possível atualizar a sessão. Tente novamente.');
+        try {
+          await reload();
+        } catch {
+          // A mensagem acima já orienta a repetir a operação.
+        }
+        return false;
+      } finally {
+        setSessionLoading(false);
+      }
+    },
+    [addToast, reload, resetSelectedTrip, updatePersistence],
+  );
+
+  const auth = useAuth({ usuario: data.usuario, runSessionAction, addToast });
+
+  const reconcilePersistence = useCallback(
+    async (tripId: string, expectedUserId: string, generation: number) => {
+      const delays = [400, 900, 1500];
+      for (const delay of delays) {
+        await wait(delay);
+        if (!mountedRef.current || generation !== sessionGeneration.current) return;
+        try {
+          const response = await listarViagens();
+          if (!mountedRef.current || generation !== sessionGeneration.current) return;
+          const found = response.viagens.some((candidate) => candidate.id === tripId);
+          if (!found) continue;
+
+          setData((current) => {
+            if (current.usuario?.id !== expectedUserId) return current;
+            const otherProvisional = current.viagens.filter(
+              (trip) => trip.id !== tripId && persistenceRef.current[trip.id] === 'pending',
+            );
+            const merged = [...otherProvisional, ...response.viagens].filter(
+              (trip, index, all) =>
+                all.findIndex((candidate) => candidate.id === trip.id) === index,
+            );
+            return { ...current, viagens: merged };
+          });
+          updatePersistence((current) => {
+            const { [tripId]: _removed, ...remaining } = current;
+            return remaining;
+          });
+          return;
+        } catch {
+          // A próxima tentativa limitada ainda pode confirmar a gravação.
+        }
+      }
+      if (!mountedRef.current || generation !== sessionGeneration.current) return;
+      updatePersistence((current) => ({ ...current, [tripId]: 'unavailable' }));
+    },
+    [updatePersistence],
+  );
+
+  const submitTrip = useCallback(
+    async (form: RoteiroFormData) => {
+      attemptSequence.current += 1;
+      const attemptId = attemptSequence.current;
+      const generation = sessionGeneration.current;
+      const usuario = data.usuario;
+      if (!usuario) return;
+      const route = safeRoute(
+        routeLabel(form.origem_cidade, form.origem_uf),
+        routeLabel(form.destino_cidade, form.destino_uf),
+      );
+      let previous: TelemetrySnapshot | undefined;
+      setTelemetryState((current) => {
+        previous =
+          current.kind === 'settled'
+            ? current.snapshot
+            : current.kind === 'loading' || current.kind === 'error'
+              ? current.previous
+              : undefined;
+        return { kind: 'loading', attemptId, route, previous };
+      });
+      setPendingRoute({ origem: route.origin, destino: route.destination });
+      setIsSubmitting(true);
+      try {
+        const result = await criarViagem(form);
+        if (attemptId !== attemptSequence.current || generation !== sessionGeneration.current)
+          return;
+        const snapshot: TelemetrySnapshot = {
+          attemptId,
+          sessionIdentityId: usuario.id,
+          recordedAt: new Date().toISOString(),
+          route,
+          ...result.metadata,
+          providers: providerDiagnostics(result.viagem),
+          session: sessionSummary(usuario, data.viagens.length + 1),
+          service: serviceCondition(true),
+          connectivity,
+        };
+        setTelemetryState({ kind: 'settled', snapshot });
+        setActiveTrip(result.viagem);
+        setActiveTripForm(form);
+        formByTripId.current[result.viagem.id] = form;
+        setData((current) =>
+          current.usuario?.id === usuario.id
+            ? { ...current, viagens: mergeTripFirst(current.viagens, result.viagem) }
+            : current,
+        );
+        updatePersistence((current) => ({ ...current, [result.viagem.id]: 'pending' }));
+        void reconcilePersistence(result.viagem.id, usuario.id, generation);
+        if (result.aviso) addToast(result.aviso, 'info');
+        else addToast('Roteiro gerado. Confirmando salvamento.', 'sucesso');
+      } catch (error: unknown) {
+        if (attemptId !== attemptSequence.current || generation !== sessionGeneration.current)
+          return;
+        setTelemetryState({ kind: 'error', attemptId, route, previous });
+        if (error instanceof ApiError && error.status === 422) {
+          throw error;
+        } else if (error instanceof ApiError && error.status === 409) {
+          addToast(error.message, 'info');
+        } else {
+          addToast('Falha de conexão ao gerar o roteiro. Tente novamente.');
+        }
+        throw new Error('Falha ao gerar roteiro.');
+      } finally {
+        if (attemptId === attemptSequence.current && generation === sessionGeneration.current) {
+          setIsSubmitting(false);
+          setPendingRoute(null);
+        }
+      }
+    },
+    [
+      addToast,
+      data.usuario,
+      data.viagens.length,
+      networkStatus,
+      connectivity,
+      reconcilePersistence,
+      updatePersistence,
+    ],
+  );
+
+  const deleteTrip = useCallback(
+    async (tripId: string) => {
+      if (deletingRef.current.has(tripId)) return;
+      const generation = sessionGeneration.current;
+      const userId = data.usuario?.id;
+      if (!userId) return;
+      deletingRef.current.add(tripId);
+      setDeletingIds((current) => [...current, tripId]);
+      try {
+        await excluirViagem(tripId);
+        if (generation !== sessionGeneration.current) return;
+        setData((current) =>
+          current.usuario?.id === userId
+            ? { ...current, viagens: current.viagens.filter((trip) => trip.id !== tripId) }
+            : current,
+        );
+        setActiveTrip((current) => (current?.id === tripId ? null : current));
+        delete formByTripId.current[tripId];
+        updatePersistence((current) => {
+          const { [tripId]: _removed, ...remaining } = current;
+          return remaining;
+        });
+        addToast('Roteiro excluído.', 'sucesso');
+      } catch {
+        if (generation === sessionGeneration.current) {
+          addToast('Não foi possível excluir o roteiro. Tente novamente.');
+        }
+      } finally {
+        deletingRef.current.delete(tripId);
+        setDeletingIds((current) => current.filter((id) => id !== tripId));
+      }
+    },
+    [addToast, data.usuario?.id, updatePersistence],
+  );
+
+  const solicitarSugestoesGps = useCallback(async () => {
+    setSuggestionStatus('loading');
+    try {
+      const coords = await obterCoordenadasNavegador();
+      const recomendacoes = obterSugestoesDestino(coords.latitude, coords.longitude);
+      setSugestoes(recomendacoes);
+      setSuggestionStatus('available');
+      addToast(
+        `${recomendacoes.length} destinos recomendados acima de 400 km a partir do seu GPS.`,
+        'sucesso',
+      );
+    } catch (error) {
+      setSuggestionStatus('unavailable');
+      const mensagem =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível obter sua localização. O preenchimento manual continua disponível.';
+      addToast(mensagem, 'erro');
+    }
+  }, [addToast]);
+
+  const toggleVisitaAtrativo = useCallback(
+    async (viagemId: string, atrativoId: string) => {
+      const requestKey = `${viagemId}:${atrativoId}`;
+      if (pendingVisitRequests.current.has(requestKey)) return;
+      pendingVisitRequests.current.add(requestKey);
+      const generation = sessionGeneration.current;
+      const atuais = visitasRef.current[viagemId] ?? [];
+      const jaVisitado = atuais.includes(atrativoId);
+      const novoStatus = !jaVisitado;
+      const novos = jaVisitado ? atuais.filter((id) => id !== atrativoId) : [...atuais, atrativoId];
+      const proximo = { ...visitasRef.current, [viagemId]: novos };
+      visitasRef.current = proximo;
+      setVisitasPorViagem(proximo);
+      saveVisitas(data.usuario?.id, proximo);
+      setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
+
+      // TODO: hidratar as visitas confirmadas da resposta do histórico ao carregá-lo.
+      try {
+        const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, novoStatus);
+        if (generation !== sessionGeneration.current) return;
+        if (!confirmed) {
+          pendingVisitChanges.current[viagemId] = {
+            ...pendingVisitChanges.current[viagemId],
+            [atrativoId]: novoStatus,
+          };
+          addToast('Visita salva apenas neste dispositivo; servidor indisponível.', 'info');
+        } else if (pendingVisitChanges.current[viagemId]) {
+          delete pendingVisitChanges.current[viagemId][atrativoId];
+        }
+        const hasPending = Object.keys(pendingVisitChanges.current[viagemId] ?? {}).length > 0;
+        setVisitPersistenceByTrip((current) => ({
+          ...current,
+          [viagemId]: hasPending ? 'local' : 'confirmed',
+        }));
+      } catch {
+        if (generation !== sessionGeneration.current) return;
+        const latest = visitasRef.current[viagemId] ?? [];
+        const restoredIds = jaVisitado
+          ? [...new Set([...latest, atrativoId])]
+          : latest.filter((id) => id !== atrativoId);
+        const reverted = { ...visitasRef.current, [viagemId]: restoredIds };
+        visitasRef.current = reverted;
+        setVisitasPorViagem(reverted);
+        saveVisitas(data.usuario?.id, reverted);
+        setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'error' }));
+        addToast('Não foi possível salvar a visita. Tente novamente.');
+      } finally {
+        pendingVisitRequests.current.delete(requestKey);
+      }
+    },
+    [addToast, data.usuario?.id],
+  );
+
+  const retryLocalVisits = useCallback(
+    async (viagemId: string) => {
+      const generation = sessionGeneration.current;
+      const pending = pendingVisitChanges.current[viagemId];
+      if (!pending) return;
+      setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'pending' }));
+      try {
+        for (const [atrativoId, visitado] of Object.entries(pending)) {
+          const confirmed = await atualizarVisitaAtrativo(viagemId, atrativoId, visitado);
+          if (generation !== sessionGeneration.current) return;
+          if (!confirmed) {
+            setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'local' }));
+            return;
+          }
+          delete pending[atrativoId];
+        }
+        setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'confirmed' }));
+        addToast('Visitas sincronizadas com o servidor.', 'sucesso');
+      } catch {
+        if (generation !== sessionGeneration.current) return;
+        setVisitPersistenceByTrip((current) => ({ ...current, [viagemId]: 'local' }));
+        addToast('Ainda não foi possível sincronizar as visitas.');
+      }
+    },
+    [addToast],
+  );
+
+  return {
+    data,
+    toasts,
+    initialLoading,
+    sessionLoading,
+    savedGoogleUser: auth.savedGoogleUser,
+    sessionTimerLabel: auth.sessionTimer.remainingLabel,
+    isSubmitting,
+    deletingIds,
+    pendingRoute,
+    activeTrip,
+    activeTripForm,
+    historyStatus,
+    historyError,
+    persistenceById,
+    telemetryState,
+    apiHealthStatus,
+    sugestoes,
+    suggestionStatus,
+    visitasPorViagem,
+    visitPersistenceByTrip,
+    connectivity,
+    copyTelemetryRequestId: copyRequestId,
+    dismissToast,
+    loginWithGoogle: auth.loginWithGoogle,
+    loginAsVisitor: auth.loginAsVisitor,
+    restoreGoogleUser: auth.restoreGoogleUser,
+    logout: auth.logout,
+    solicitarSugestoesGps,
+    submitTrip,
+    deleteTrip,
+    selectTrip,
+    toggleVisitaAtrativo,
+    retryLocalVisits,
+  };
+}

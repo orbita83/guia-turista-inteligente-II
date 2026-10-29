@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   HistoricoViagens,
   LoginCard,
@@ -10,11 +10,12 @@ import {
   TripNavigationTabs,
 } from './components';
 import { SessionHeader } from './components/SessionHeader';
-import type { AbaViagem } from './types/domain';
-import { useApp } from './hooks/useApp';
+import type { AbaViagem, RotaAlternativa } from './types/domain';
+import { useViagem } from './hooks/useViagem';
 
 export function App() {
   const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
+  const [rotaAtivaId, setRotaAtivaId] = useState<RotaAlternativa['id']>('principal');
 
   const {
     data,
@@ -22,6 +23,7 @@ export function App() {
     initialLoading,
     sessionLoading,
     savedGoogleUser,
+    sessionTimerLabel,
     isSubmitting,
     deletingIds,
     pendingRoute,
@@ -35,6 +37,7 @@ export function App() {
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
+    visitPersistenceByTrip,
     connectivity,
     copyTelemetryRequestId,
     dismissToast,
@@ -47,13 +50,21 @@ export function App() {
     deleteTrip,
     selectTrip,
     toggleVisitaAtrativo,
-  } = useApp();
+    retryLocalVisits,
+  } = useViagem();
+
+  useEffect(() => {
+    setRotaAtivaId('principal');
+  }, [activeTrip?.id]);
+  const rotaAtiva =
+    activeTrip?.rotas?.find((rota) => rota.id === rotaAtivaId) ?? activeTrip?.rotas?.[0];
 
   return (
     <div className="app-shell">
       <SessionHeader
         usuario={data.usuario}
         savedGoogleUser={savedGoogleUser}
+        sessionTimerLabel={sessionTimerLabel}
         isBusy={sessionLoading}
         onVisitorLogin={loginAsVisitor}
         onRestoreGoogle={restoreGoogleUser}
@@ -88,19 +99,39 @@ export function App() {
                       abaAtiva={abaViagemAtiva}
                       onAbaChange={setAbaViagemAtiva}
                       onExcluir={() => deleteTrip(activeTrip.id)}
+                      rotaAtiva={rotaAtiva}
                     />
 
                     {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'mapa') && (
-                      <div id="panel-mapa" role="tabpanel" aria-labelledby="tab-mapa">
-                        <MapaRota viagem={activeTrip} formParams={activeTripForm} />
+                      <div
+                        id="panel-mapa"
+                        role="tabpanel"
+                        aria-labelledby={
+                          abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-mapa'
+                        }
+                      >
+                        <MapaRota
+                          viagem={activeTrip}
+                          formParams={activeTripForm}
+                          rotaAtivaId={rotaAtivaId}
+                          onRotaChange={(rota) => setRotaAtivaId(rota.id)}
+                        />
                       </div>
                     )}
 
                     {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'guia') && (
-                      <div id="panel-guia" role="tabpanel" aria-labelledby="tab-guia">
+                      <div
+                        id="panel-guia"
+                        role="tabpanel"
+                        aria-labelledby={
+                          abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-guia'
+                        }
+                      >
                         {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
                         <RoteiroResult
                           viagem={activeTrip}
+                          formParams={activeTripForm}
+                          visitPersistenceStatus={visitPersistenceByTrip[activeTrip.id]}
                           visitasIds={
                             visitasPorViagem[activeTrip.id] ??
                             activeTrip.atrativosVisitadosIds ??
@@ -109,6 +140,7 @@ export function App() {
                           onToggleVisita={(atrativoId) =>
                             toggleVisitaAtrativo(activeTrip.id, atrativoId)
                           }
+                          onRetryVisitas={() => retryLocalVisits(activeTrip.id)}
                         />
                       </div>
                     )}

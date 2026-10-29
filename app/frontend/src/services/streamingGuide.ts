@@ -4,6 +4,7 @@ import type { GuiaStreamPayload } from '../types/domain';
 // TODO(backend): incluir tratamento de timeout e cancelamento precoce no servidor via request.is_disconnected().
 
 export interface StreamingCallbacks {
+  onMode?: (mode: 'sse' | 'fallback') => void;
   /** Chamado a cada fragmento textual recebido (RN-GUI-007) */
   onChunk: (chunk: string) => void;
   /** Chamado quando a transmissão conclui com sucesso (RN-GUI-006, CA-GUI-002) */
@@ -130,6 +131,7 @@ export async function streamGuiaTuristico(
 ): Promise<void> {
   const signal = options?.signal;
   if (signal?.aborted) return;
+  let emittedSseChunk = false;
 
   try {
     const response = await fetch(`${API_BASE_URL}/roteiros/stream-guia`, {
@@ -146,6 +148,7 @@ export async function streamGuiaTuristico(
     // Se o endpoint estiver disponível e retornar text/event-stream com sucesso
     const contentType = response.headers.get('content-type') || '';
     if (response.ok && contentType.includes('text/event-stream') && response.body) {
+      callbacks.onMode?.('sse');
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
@@ -169,6 +172,7 @@ export async function streamGuiaTuristico(
           const parsed = parseSseBlock(event);
           if (parsed) {
             if (parsed.chunk) {
+              emittedSseChunk = true;
               fullText += parsed.chunk;
               callbacks.onChunk(parsed.chunk);
             }
@@ -184,17 +188,18 @@ export async function streamGuiaTuristico(
       if (buffer.trim()) {
         const parsed = parseSseBlock(buffer);
         if (parsed?.chunk) {
+          emittedSseChunk = true;
           fullText += parsed.chunk;
           callbacks.onChunk(parsed.chunk);
         }
       }
 
-      callbacks.onDone(fullText);
-      return;
+      throw new Error('Transmissão encerrada sem confirmação de conclusão.');
     }
 
     // Se o backend retornou 404, 501 ou outro status (endpoint ainda em desenvolvimento)
     if (options?.fallbackText) {
+      callbacks.onMode?.('fallback');
       await executarFallbackProgressivo(options.fallbackText, callbacks, options);
       return;
     }
@@ -206,7 +211,8 @@ export async function streamGuiaTuristico(
     }
 
     // Em falha de rede/conexão, ativa fallback progressivo se disponível
-    if (options?.fallbackText) {
+    if (options?.fallbackText && !emittedSseChunk && !signal?.aborted) {
+      callbacks.onMode?.('fallback');
       await executarFallbackProgressivo(options.fallbackText, callbacks, options);
       return;
     }
