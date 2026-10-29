@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from enum import Enum
 from typing import Any
 
@@ -373,3 +374,234 @@ class ResultadoAutonomia(BaseModel):
     observacao: str | None = Field(
         default=None, description="Nota técnica sobre distinção entre projeções e postos reais"
     )
+
+
+# ===========================================================================
+# Schemas para Custos, Pedágios e Rateio (Issue #29)
+# ===========================================================================
+
+
+class StatusAjusteRelevo(str, Enum):
+    """Disponibilidade do ajuste de consumo por relevo."""
+
+    APLICADO = "aplicado"
+    INDISPONIVEL = "indisponivel"
+
+
+class StatusPedagios(str, Enum):
+    """Confiabilidade e completude do total de pedágios."""
+
+    VERIFICADO = "verificado"
+    ESTIMADO = "estimado"
+    SEM_PEDAGIO_CONFIRMADO = "sem_pedagio_confirmado"
+    INDISPONIVEL = "indisponivel"
+
+
+class ConfiabilidadePedagio(str, Enum):
+    """Procedência do valor de uma praça de pedágio individual."""
+
+    VERIFICADO = "verificado"
+    ESTIMADO = "estimado"
+    INDISPONIVEL = "indisponivel"
+
+
+class StatusCustosViagem(str, Enum):
+    """Completude do custo total apresentado."""
+
+    COMPLETO = "completo"
+    PARCIAL = "parcial"
+    INVALIDO = "invalido"
+
+
+class AjusteRelevo(BaseModel):
+    """Ajuste quantitativo de consumo por relevo com procedência explícita.
+
+    O valor é uma variação percentual sobre o consumo base. Um valor positivo
+    aumenta o consumo; um valor negativo representa ganho. O serviço não deriva
+    esse percentual de dados altimétricos brutos sem um modelo validado: quem
+    integra deve fornecer o ajuste, o método e a fonte.
+    """
+
+    variacao_consumo_percent: Decimal = Field(
+        ..., description="Variação percentual sobre o consumo base (> -100%)"
+    )
+    metodo: str = Field(..., min_length=1, description="Método usado para obter o ajuste")
+    fonte: str = Field(..., min_length=1, description="Fonte ou referência do ajuste")
+    limitacoes: str | None = Field(default=None, description="Limitações conhecidas do ajuste")
+
+    @field_validator("variacao_consumo_percent")
+    @classmethod
+    def validar_variacao(cls, valor: Decimal) -> Decimal:
+        if not valor.is_finite() or valor <= Decimal(-100):
+            raise ValueError(
+                "A variação de consumo por relevo deve ser finita e maior que -100%."
+            )
+        return valor
+
+    @field_validator("metodo", "fonte")
+    @classmethod
+    def validar_texto_obrigatorio(cls, valor: str) -> str:
+        valor = valor.strip()
+        if not valor:
+            raise ValueError("Método e fonte do ajuste de relevo são obrigatórios.")
+        return valor
+
+
+class AjusteRelevoResultado(BaseModel):
+    """Resultado da tentativa de aplicar o ajuste de relevo ao consumo."""
+
+    status: StatusAjusteRelevo = Field(..., description="Se o ajuste foi aplicado ou está indisponível")
+    variacao_consumo_percent: Decimal | None = Field(
+        default=None, description="Variação percentual aplicada ao consumo"
+    )
+    fator_consumo: Decimal | None = Field(
+        default=None, gt=Decimal(0), description="Multiplicador aplicado ao consumo base"
+    )
+    metodo: str | None = Field(default=None, description="Método informado para o ajuste")
+    fonte: str | None = Field(default=None, description="Fonte informada para o ajuste")
+    limitacoes: str | None = Field(default=None, description="Limitações do ajuste ou motivo da indisponibilidade")
+
+
+class Pedagio(BaseModel):
+    """Praça de pedágio com valor, confiabilidade e procedência explícitas."""
+
+    id_praca: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="Identificação estável da praça, por exemplo rodovia:sentido:km",
+    )
+    valor: Decimal | None = Field(
+        default=None, ge=Decimal(0), description="Valor cobrado na praça em BRL"
+    )
+    confiabilidade: ConfiabilidadePedagio = Field(
+        ..., description="Classificação da procedência do valor"
+    )
+    fonte: str | None = Field(default=None, description="Fonte identificável do valor")
+    metodo_estimativa: str | None = Field(
+        default=None, description="Método usado quando o valor é uma estimativa"
+    )
+    nome: str | None = Field(default=None, description="Nome da praça ou concessionária")
+    rodovia: str | None = Field(default=None, description="Rodovia da praça")
+    km: float | None = Field(default=None, ge=0.0, description="Quilômetro da praça na rodovia")
+    atualizado_em: str | None = Field(default=None, description="Data ou referência de atualização")
+    limitacoes: str | None = Field(default=None, description="Limitações do valor ou da fonte")
+
+    @field_validator("id_praca")
+    @classmethod
+    def normalizar_id_praca(cls, valor: str) -> str:
+        valor = valor.strip()
+        if not valor:
+            raise ValueError("A identificação da praça de pedágio não pode ser vazia.")
+        return valor
+
+    @field_validator("valor")
+    @classmethod
+    def validar_valor_finito(cls, valor: Decimal | None) -> Decimal | None:
+        if valor is not None and not valor.is_finite():
+            raise ValueError("O valor do pedágio deve ser um número finito.")
+        return valor
+
+    @model_validator(mode="after")
+    def validar_procedencia(self) -> Pedagio:
+        if self.confiabilidade == ConfiabilidadePedagio.INDISPONIVEL:
+            if self.valor is not None:
+                raise ValueError("Praça indisponível não pode ter valor numérico.")
+            return self
+        if self.valor is None:
+            raise ValueError("Praça verificada ou estimada exige valor numérico.")
+        if not (self.fonte and self.fonte.strip()):
+            raise ValueError("Praça verificada ou estimada exige fonte identificável.")
+        if self.confiabilidade == ConfiabilidadePedagio.ESTIMADO and not (
+            self.metodo_estimativa and self.metodo_estimativa.strip()
+        ):
+            raise ValueError("Praça estimada exige método de estimativa.")
+        return self
+
+
+class ResumoPedagios(BaseModel):
+    """Total e procedência dos pedágios de uma rota após deduplicação."""
+
+    status: StatusPedagios = Field(..., description="Confiabilidade e completude do total")
+    total: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0),
+        description="Total de pedágios quando determinável; None se indisponível",
+    )
+    total_conhecido: Decimal = Field(
+        default=Decimal("0.00"),
+        ge=Decimal(0),
+        description="Soma dos valores conhecidos, mesmo quando o total está incompleto",
+    )
+    total_completo: bool = Field(..., description="Indica se todas as praças têm valor conhecido")
+    pracas_unicas: int = Field(..., ge=0, description="Quantidade de praças após deduplicação")
+    pracas: list[Pedagio] = Field(default_factory=list, description="Praças únicas consideradas")
+    fontes: list[str] = Field(default_factory=list, description="Fontes identificáveis usadas")
+    limitacoes: list[str] = Field(default_factory=list, description="Limitações do total de pedágios")
+
+
+class ResultadoCustoPropulsao(BaseModel):
+    """Consumo e custo de combustível ou energia para uma propulsão."""
+
+    propulsao: TipoPropulsao = Field(..., description="Tipo de propulsão calculado")
+    distancia_km: Decimal = Field(..., ge=Decimal(0), description="Distância rodoviária em km")
+    consumo_base: Decimal = Field(..., ge=Decimal(0), description="Consumo antes do ajuste de relevo")
+    consumo_estimado: Decimal = Field(..., ge=Decimal(0), description="Consumo após o ajuste de relevo")
+    unidade_consumo: str = Field(..., description="Unidade do consumo: L ou kWh")
+    preco_unitario: Decimal = Field(..., gt=Decimal(0), description="Preço unitário informado")
+    unidade_preco: str = Field(..., description="Unidade do preço: BRL/L ou BRL/kWh")
+    fator_relevo: Decimal = Field(..., gt=Decimal(0), description="Multiplicador de consumo por relevo")
+    ajuste_relevo: AjusteRelevoResultado = Field(..., description="Estado do ajuste de relevo")
+    custo: Decimal = Field(..., ge=Decimal(0), description="Custo de propulsão em BRL")
+
+
+class CotaPassageiro(BaseModel):
+    """Cota individual de um passageiro após o rateio monetário."""
+
+    passageiro: int = Field(..., ge=1, le=8, description="Número do passageiro, iniciando em 1")
+    valor: Decimal = Field(..., ge=Decimal(0), description="Cota individual em BRL")
+
+
+class RateioPassageiros(BaseModel):
+    """Rateio do custo total com soma das cotas igual ao total rateado."""
+
+    quantidade: int = Field(..., ge=1, le=8, description="Quantidade de passageiros")
+    total_rateado: Decimal = Field(..., ge=Decimal(0), description="Total efetivamente rateado em BRL")
+    cotas: list[CotaPassageiro] = Field(..., min_length=1, description="Cotas individuais")
+
+
+class ResultadoCustosViagem(BaseModel):
+    """Contrato estruturado de custos, pedágios, relevo e rateio."""
+
+    sucesso: bool = Field(..., description="Indica se o cálculo foi concluído")
+    status: StatusCustosViagem = Field(..., description="Completude do custo apresentado")
+    mensagem: str | None = Field(default=None, description="Mensagem diagnóstica")
+
+    distancia_km: Decimal | None = Field(default=None, ge=Decimal(0), description="Distância em km")
+    unidade_distancia: str = Field(default="km", description="Unidade da distância")
+    propulsao: TipoPropulsao | None = Field(default=None, description="Tipo de propulsão")
+    consumo_estimado: Decimal | None = Field(default=None, ge=Decimal(0), description="Consumo estimado")
+    unidade_consumo: str | None = Field(default=None, description="Unidade do consumo: L ou kWh")
+
+    custo_combustivel: Decimal | None = Field(default=None, ge=Decimal(0), description="Custo de combustível em BRL")
+    custo_energia: Decimal | None = Field(default=None, ge=Decimal(0), description="Custo de energia em BRL")
+    custo_propulsao: Decimal | None = Field(default=None, ge=Decimal(0), description="Custo de combustível ou energia em BRL")
+
+    custo_pedagios: Decimal | None = Field(
+        default=None, ge=Decimal(0), description="Total de pedágios em BRL; None se indisponível"
+    )
+    custo_pedagios_conhecido: Decimal = Field(
+        default=Decimal("0.00"), ge=Decimal(0), description="Soma conhecida de pedágios em BRL"
+    )
+    pedagios: ResumoPedagios | None = Field(default=None, description="Detalhamento dos pedágios")
+
+    ajuste_relevo: AjusteRelevoResultado | None = Field(default=None, description="Ajuste de relevo aplicado ou indisponível")
+    custo_total: Decimal | None = Field(default=None, ge=Decimal(0), description="Total conhecido em BRL")
+    total_completo: bool = Field(default=False, description="Indica se todos os componentes obrigatórios estão disponíveis")
+
+    passageiros: int = Field(default=1, ge=1, le=8, description="Quantidade de passageiros")
+    rateio: RateioPassageiros | None = Field(default=None, description="Rateio individual do custo total")
+
+    hipoteses: list[str] = Field(default_factory=list, description="Hipóteses usadas no cálculo")
+    fontes: list[str] = Field(default_factory=list, description="Fontes identificáveis usadas")
+    limitacoes: list[str] = Field(default_factory=list, description="Limitações e ressalvas do resultado")

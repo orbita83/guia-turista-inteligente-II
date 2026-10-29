@@ -87,4 +87,9 @@ correspondente no frontend monolítico atual; ficam fora desta migração:
 | `/api/v1/telemetria` | diagnóstico de provedores/circuit breakers | futuro |
 | `GET /metrics` | métricas Prometheus/OpenMetrics | futuro; não existe no Flask monolítico |
 
+O serviço de domínio de custos (`app/backend/app/services/custos_service.py`) existe
+desde a Issue #29, mas o endpoint `/api/v1/roteiros/custos` continua futuro e não
+está registrado no FastAPI. O contrato detalhado do serviço está em
+[`custos.md`](./custos.md); a orquestração no planejamento pertence à Issue #23.
+
 O schema executável completo também está publicado pelo FastAPI em `/openapi.json`.
