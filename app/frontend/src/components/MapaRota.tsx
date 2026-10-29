@@ -1,15 +1,6 @@
-// TODO(backend): o endpoint /api/v1/roteiros/planejar
-// precisa retornar a geometria rodoviária real (coordenadas da rota)
-// e coordenadas geocodificadas de origem/destino.
-// O contrato atual retorna apenas distância, tempo e modal.
-// Não usar interpolação entre cidades como trajeto rodoviário real.
-// Relacionado à Issue #15 (geometria rodoviária).
-
-// TODO(backend): obter geometria rodoviária real e amostras de
-// elevação ao longo do trajeto para renderizar o perfil topográfico.
-// A resposta atual de planejamento não fornece série de altitudes.
-// Não exibir valores simulados como medições reais.
-// Relacionado à Issue #15 (geometria rodoviária) e Issue #16 (altimetria e relevo).
+// TODO: usar a geometria e as alternativas reais do OSRM fornecidas em viagem.percurso,
+// sem apresentar rotas calculadas localmente como alternativas rodoviárias confirmadas.
+// TODO: renderizar o perfil topográfico com amostras reais de elevação quando disponíveis.
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
