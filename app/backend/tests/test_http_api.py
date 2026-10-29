@@ -11,6 +11,33 @@ from app.core.storage import TripStorage
 from app.main import app
 
 
+def test_chave_de_duplicidade_considera_parametros_adicionais() -> None:
+    from app.routers.trips import _request_key
+    from app.schemas.trips import TripCreateRequest
+
+    class FutureRequest(TripCreateRequest):
+        duracao_dias: int
+
+    first = FutureRequest(
+        origem_cidade=" Recife ",
+        origem_uf="pe",
+        destino_cidade="Salvador",
+        destino_uf="ba",
+        duracao_dias=1,
+    )
+    equivalent = FutureRequest(
+        origem_cidade="recife",
+        origem_uf="PE",
+        destino_cidade="salvador",
+        destino_uf="BA",
+        duracao_dias=1,
+    )
+    different = equivalent.model_copy(update={"duracao_dias": 2})
+    assert _request_key("usuario", first) == _request_key("usuario", equivalent)
+    assert _request_key("usuario", equivalent) != _request_key("usuario", different)
+    assert _request_key("outro", equivalent) != _request_key("usuario", equivalent)
+
+
 @pytest.fixture
 def storage(tmp_path) -> TripStorage:
     return TripStorage(tmp_path / "viagens.json")

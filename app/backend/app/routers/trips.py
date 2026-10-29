@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 from typing import Any
 
@@ -23,13 +24,12 @@ WARNING_TIMEOUT = (
 
 
 def _request_key(user_id: str, payload: TripCreateRequest) -> str:
-    values = (
-        payload.origem_cidade.strip().lower(),
-        payload.origem_uf.strip().upper(),
-        payload.destino_cidade.strip().lower(),
-        payload.destino_uf.strip().upper(),
-    )
-    return f"{user_id}:{':'.join(values)}"
+    values = payload.model_dump(mode="json")
+    for field in ("origem_cidade", "destino_cidade"):
+        values[field] = values[field].strip().lower()
+    for field in ("origem_uf", "destino_uf"):
+        values[field] = values[field].strip().upper()
+    return json.dumps([user_id, values], sort_keys=True, ensure_ascii=False)
 
 
 @router.get("/minhas-viagens", response_model=TripListResponse)
@@ -47,9 +47,7 @@ async def get_my_trips_json(
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> dict[str, Any]:
     """Expõe os metadados antigos da base, isolando a exportação ao usuário ativo."""
-    return await run_in_threadpool(
-        storage.data_for_user, str(user["id"]), user
-    )
+    return await run_in_threadpool(storage.data_for_user, str(user["id"]), user)
 
 
 @router.post("/planejar", response_model=TripCreateResponse)
@@ -82,6 +80,8 @@ async def create_trip(
         _recent_requests[key] = now
 
     try:
+        # TODO(aluno-3): integrar o schema ampliado da issue #30 e sua validação
+        # antes de encaminhar parâmetros de viagem/veículo sem descarte silencioso.
         form = payload.model_dump()
         trip = await plan_trip(
             form,

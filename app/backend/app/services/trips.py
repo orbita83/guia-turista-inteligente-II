@@ -71,6 +71,8 @@ async def plan_trip(
 
     weather_result, route_result = await asyncio.gather(
         get_weather(client, latitude_destination, longitude_destination),
+        # TODO(integracao): encaminhar preferência de rota após acordar o campo
+        # com o schema #30 e o serviço de roteamento (issue #20).
         get_route(
             client,
             latitude_origin,
@@ -84,11 +86,15 @@ async def plan_trip(
     if route_result:
         route = route_result
 
+    # TODO(aluno-4): encaminhar duração e perfis quando o serviço de guia aceitar
+    # esses parâmetros no contrato acordado (issue #20).
     guide, diagnostics = await get_guide_with_diagnostics(
         destination_name,
         api_key=gemini_api_key,
         timeout_seconds=gemini_timeout_seconds,
     )
+    # TODO(aluno-3): compor resultados reais de autonomia, paradas, altimetria
+    # e custos quando schemas e serviços das issues #23 e #27–#30 estiverem integrados.
     trip = {
         "id": str(uuid.uuid4()),
         "criado_em": datetime.now(UTC).isoformat(),
