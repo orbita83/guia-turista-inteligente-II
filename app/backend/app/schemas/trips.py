@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class TripCreateRequest(BaseModel):
+    # TODO: incluir parâmetros de duração, perfil e veículo quando o contrato e os
+    # schemas de validação estiverem definidos.
     origem_cidade: str = Field(max_length=256)
     origem_uf: str = Field(default="", max_length=16)
     destino_cidade: str = Field(max_length=256)
