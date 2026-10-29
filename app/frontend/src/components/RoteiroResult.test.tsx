@@ -202,7 +202,9 @@ describe('RoteiroResult: estados reais da transmissão', () => {
     const { enviar } = prepararStream();
     render(<RoteiroResult viagem={mockViagem} />);
     expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeDisabled();
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Transmitindo ao vivo'));
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Transmitindo ao vivo'),
+    );
     await enviar('chunk', { chunk: 'Conteúdo que chegou primeiro', done: false });
     expect(screen.getByText('Conteúdo que chegou primeiro')).toBeInTheDocument();
     expect(screen.queryByText(/✓ Guia completo/i)).not.toBeInTheDocument();
@@ -220,6 +222,43 @@ describe('RoteiroResult: estados reais da transmissão', () => {
     expect(screen.getByText('Conteúdo completo de contingência')).toBeInTheDocument();
     expect(screen.queryByText('Resposta interrompida')).not.toBeInTheDocument();
     await enviar('done', { done: true });
+    expect(await screen.findByText(/✓ Transmissão concluída/i)).toBeInTheDocument();
+  });
+
+  it('clicar Retransmitir inicia outra solicitação e mostra apenas o novo guia', async () => {
+    const user = userEvent.setup();
+    const first = prepararStream();
+    render(<RoteiroResult viagem={mockViagem} />);
+    await first.enviar('chunk', { chunk: 'Primeira geração', done: false });
+    await first.enviar('done', { done: true });
+    expect(await screen.findByText(/✓ Transmissão concluída/i)).toBeInTheDocument();
+    let second!: ReadableStreamDefaultController<Uint8Array>;
+    first.fetchMock.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            second = controller;
+          },
+        }),
+        { headers: { 'Content-Type': 'text/event-stream' } },
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: /Retransmitir/i }));
+    expect(first.fetchMock).toHaveBeenCalledTimes(2);
+    expect(first.fetchMock.mock.calls[1][1]?.method).toBe('POST');
+    expect(screen.queryByText('Primeira geração')).not.toBeInTheDocument();
+    await act(async () => {
+      second.enqueue(
+        new TextEncoder().encode(
+          'event: chunk\ndata: {"chunk":"Segunda geração","done":false}\n\n',
+        ),
+      );
+    });
+    expect(screen.getByText('Segunda geração')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retransmitir/i })).toBeDisabled();
+    await act(async () => {
+      second.enqueue(new TextEncoder().encode('event: done\ndata: {"done":true}\n\n'));
+    });
     expect(await screen.findByText(/✓ Transmissão concluída/i)).toBeInTheDocument();
   });
 
