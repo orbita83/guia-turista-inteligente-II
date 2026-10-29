@@ -1,5 +1,21 @@
 # Plano de entrega do frontend
 
+As correções incrementais do frontend começam pela validação de campos opcionais
+da API. O fornecimento desses campos continua dependente dos contratos do backend.
+Sem geometria validada, o mapa apresenta indisponibilidade e mantém o resumo textual
+da viagem. Alternativas só aparecem quando foram recebidas na resposta.
+O formulário mostra erros HTTP 422 por campo e valida os números do veículo ativo
+antes de enviar o planejamento.
+A marcação de visitas diferencia confirmação no servidor e salvamento local;
+falhas revertem a marcação e alterações locais pendentes podem ser sincronizadas.
+O guia identifica transmissão SSE e reprodução do conteúdo já recebido; somente
+o evento `done` confirma a conclusão de uma transmissão SSE.
+Mapa e exportação GPX usam a rota ativa da aplicação. Sem geometria válida, o
+download fica indisponível; o XML preserva caracteres especiais e não inventa
+elevação.
+A árvore principal possui uma barreira de erros com mensagem acessível e ação de
+nova tentativa para falhas inesperadas de renderização.
+
 Este plano transforma os requisitos globais em incrementos verticais verificáveis.
 Ele não é estimativa de calendário. Os estados **Fonte**, **Derivado**, **Decisão
 aprovada**, **Proposto** e **Questão em aberto** seguem a legenda do [índice](./README.md).
@@ -11,7 +27,61 @@ React e integrados aos contratos JSON do backend reorganizado. A tabela abaixo e
 referencia para modulos futuros descritos na arquitetura global; ela nao autoriza
 implementar esses recursos no escopo atual de reorganizacao.
 
+### Incremento concluído: painel de telemetria
+
+A parte visual de `UC-TEL-001` foi implementada no frontend com os contratos já
+disponíveis. Ela cobre `RF-TEL-001`–`003`, diferencia tempo do servidor e tempo do
+cliente, apresenta correlação mascarada, quatro provedores e isolamento por sessão.
+Não altera o backend e não promove `API-TEL-001` a contrato atual.
+
+Os sinais ausentes no contrato vigente — processamento interno, rede externa, RTT,
+uptime, conexões, totais sistêmicos, elevação e duração por provedor — permanecem
+indisponíveis. A disponibilidade mostrada é sempre relativa à última operação, e
+não monitoramento em tempo real.
+
+Na tela autenticada, o formulário fica à esquerda e o `aside` fica à direita a
+partir de 1024 px. O histórico ocupa o `aside` desde o carregamento da identidade; a
+telemetria aparece acima dele desde o carregamento da identidade, com uma mensagem
+inicial até a primeira tentativa. Abaixo do breakpoint, formulário, telemetria e
+histórico são empilhados nessa ordem.
+
+### Incremento concluído: histórico e persistência de viagens
+
+> Correção aprovada do escopo desta tarefa: a entrega é somente frontend. Descrições
+> abaixo de implementação de backend/background/storage não são parte desta feature.
+
+`UC-HIS-001` e a parte visual de `RF-HIS-001`–`003` foram implementados no frontend,
+consumindo os contratos existentes. Esta tarefa não alterou backend, armazenamento,
+autenticação ou endpoints.
+
+“Viagens Salvas” ocupa o `aside` abaixo da telemetria em desktop e empilha depois do
+planejador em telas estreitas. O componente valida JSON em runtime, mantém campos
+ausentes visíveis com mensagens como “Aguardando dados”, preserva a viagem retornada
+durante reconciliação, evita duplicidade e remove localmente após sucesso observável
+da API, sem reload da SPA. Paginação, retenção e confirmação modal continuam fora do
+escopo. Persistência não confirmada não é apresentada como sucesso.
+
 ## Ordem de implementacao
+
+### Incremento em andamento: cabeçalho da sessão híbrida
+
+O cabeçalho segue `tela-sessao-hibrida.png` e sua posição segue
+`tela-referencial-dos-componentes.png`. O menu mostra a identidade ativa,
+permite alternar da conta Google para visitante e preserva somente o perfil
+Google em `guia_turista_saved_google_user`. As viagens continuam carregadas
+pela sessão assinada ativa e são limpas ao trocar de identidade.
+
+`RF-AUT-003` e a parte visual de `RF-AUT-004` estão cobertos. A restauração em
+um clique funciona enquanto a credencial Google mantida em memória pela SPA
+continuar válida. Após recarregar a página ou expirar a credencial, o perfil
+salvo não autentica: `CA-AUT-002` depende de um contrato de restauração segura
+no backend. O `TODO(backend)` está no fluxo de restauração do frontend.
+Nenhum endpoint ou arquivo do backend é alterado neste incremento.
+
+O tema claro/escuro agora usa tokens semânticos para superfícies, texto,
+controles e estados de sucesso, aviso e erro. A preferência é guardada no
+`localStorage`. O teste de contraste verifica os pares essenciais de texto
+em 4,5:1 e a borda dos controles em 3:1 nos dois temas (`CA-PLN-004`).
 
 | Etapa | Entrega frontend | Dependências | Rastreabilidade principal |
 | --- | --- | --- | --- |
@@ -112,7 +182,7 @@ O frontend estará concluído quando:
 | --- | --- | --- |
 | Bloqueante | Schemas completos de planejamento, mapa, custos, histórico e autenticação | tipos, formulários, adapters e testes contratuais |
 | Bloqueante | Métodos/caminhos finais de custos, GPX, compartilhamento, autenticação e telemetria | cliente HTTP e fluxos de ação |
-| Bloqueante | Modelo confiável de autenticação/autorização além de `X-User-Id` | sessão, headers e isolamento de dados |
+| Resolvido para o escopo atual | Sessão assinada substitui `X-User-Id` como identidade confiável | histórico isolado e proteção contra spoofing |
 | Bloqueante | Domínios e limites de dias, perfil, veículo e passageiros | validação, controles e mensagens |
 | Alta | Interpretação do limiar de `400 km` | sugestões por geolocalização |
 | Alta | Semântica de respostas parciais/fallback por provedor | estados degradados e conteúdo disponível |

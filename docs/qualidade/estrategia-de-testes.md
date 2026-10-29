@@ -1,6 +1,6 @@
 # Estratégia de testes
 
-> **Estado:** ferramentas e áreas são de **Fonte**; pirâmide, gates e cenários são **Derivados/Propostos**.
+> **Estado:** cenários SSE, GPX, isolamento e métricas executados em 28/10/2026. Resultados e limites em [evidencias-qa.md](evidencias-qa.md); cenários de produto ainda não implementados continuam como propostas.
 
 ## Objetivos
 
@@ -18,7 +18,7 @@
 | Unitário frontend | hooks, services e funções puras TypeScript | `vp test` (Vitest) | Fonte + decisão aprovada |
 | Componente frontend | componentes `.tsx`, formulários, mapa adaptado, resultados e histórico | `vp test` + Testing Library | Fonte + decisão aprovada |
 | Contrato | payloads, respostas e sessão por cookie | testes de contrato no backend | Implementado |
-| E2E | jornadas críticas em dois processos | ferramenta a decidir | Proposto |
+| E2E | jornada SPA/API em processos separados e download | Chromium/Playwright no ensaio local; Uvicorn TCP automatizado | Executado com provedores controlados |
 | Não funcional | latência, acessibilidade e resiliência | ferramentas a decidir | Derivado |
 
 ## Cenários prioritários
@@ -37,13 +37,23 @@
 - desconexão interrompe trabalho e evita persistência incompleta.
 - pool HTTP é criado/encerrado pelo `lifespan`.
 
-### Recursos futuros fora do escopo atual
+### SSE implementado e verificado
 
 - resposta usa `text/event-stream` e headers anti-buffering.
 - chunks mantêm ordem e caractere Unicode.
 - evento final contém `done: true`.
 - desconexão encerra o gerador.
 - erro durante geração produz término controlado.
+- payload equivalente simultâneo recebe 409 antes do início do segundo stream.
+- cancelamento durante espera no provedor libera conexão e bloqueio.
+- cliente rejeita EOF sem evento terminal; fallback não mascara 409/422/500.
+
+### GPX e isolamento
+
+- exportação usa geometria válida recebida da API, sem inventar trajeto na ausência dela.
+- coordenadas, namespace, escapamento e representação decimal são verificados; arquivo baixado validado com XSD oficial.
+- a geração do arquivo é local no navegador; histórico e exclusão da API permanecem isolados por sessão.
+- a suíte não certifica altimetria nem precisão cartográfica dos serviços externos.
 
 ### Frontend
 
@@ -63,7 +73,7 @@
 - estado global, locks e circuit breakers devem ser restaurados entre casos.
 - segredos reais não entram em fixtures ou logs.
 
-## Gates propostos
+## Gates executados
 
 - `npm test` aprovado para backend e frontend.
 - `npm run check`/`vp check` aprovado, incluindo formato, lint e tipos.

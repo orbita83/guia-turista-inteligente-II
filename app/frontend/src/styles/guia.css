@@ -1,0 +1,688 @@
+/* ==========================================================================
+   Tópico 3.5: Guia do Viajante, Banner Meteorológico e Atrativos Visitados
+   Conforme Wireframe Oficial Seção 3.3 (automacao_guia_turista_guia_atrativos_clima.png)
+   ========================================================================== */
+
+.roteiro-result-card {
+  margin-top: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+}
+
+/* --------------------------------------------------------------------------
+   0. Card de Identificação da Viagem (Wireframe Seção 3.3)
+   -------------------------------------------------------------------------- */
+.trip-summary-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 0.75rem 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+[data-theme='dark'] .trip-summary-header-card {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.trip-profile-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #ffffff;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: #15803d;
+}
+
+[data-theme='dark'] .trip-profile-pill {
+  background: #1e293b;
+  border-color: #059669;
+  color: #34d399;
+}
+
+.trip-route-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* --------------------------------------------------------------------------
+   1. Banner Meteorológico (Open-Meteo) - Wireframe Seção 3.3
+   -------------------------------------------------------------------------- */
+.weather-banner {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+[data-theme='dark'] .weather-banner {
+  background: var(--bg-card);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.weather-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.weather-destination-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.weather-icon {
+  font-size: 1.35rem;
+}
+
+.weather-destination-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.weather-provider-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+[data-theme='dark'] .weather-provider-badge {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+.weather-banner-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.weather-highlight {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.weather-temp-val {
+  font-size: 1.75rem;
+  font-weight: 850;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.weather-dot-sep {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+}
+
+.weather-cond-label {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.weather-sub-metrics {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.weather-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+}
+
+[data-theme='dark'] .weather-sub-item {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.weather-sub-label {
+  color: var(--text-muted);
+}
+
+.weather-sub-val {
+  color: var(--text-main);
+  font-weight: 750;
+}
+
+/* --------------------------------------------------------------------------
+   2. Guia do Viajante com Streaming (Gemini AI / SSE)
+   -------------------------------------------------------------------------- */
+.guide-streaming-block {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+[data-theme='dark'] .guide-streaming-block {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.guide-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.guide-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.guide-ai-tag {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+}
+
+.guide-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+
+.guide-status-badge.is-streaming {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.guide-status-badge.is-completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.guide-status-badge.is-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-glow 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.3);
+  }
+}
+
+.guide-content-area {
+  min-height: 120px;
+  font-size: 0.94rem;
+  line-height: 1.65;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.guide-parsed-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.guide-section-card {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border-left: 3px solid var(--primary, #0284c7);
+}
+
+[data-theme='dark'] .guide-section-card {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.guide-section-heading {
+  font-size: 0.86rem;
+  font-weight: 750;
+  color: var(--primary-strong, #0369a1);
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.15em;
+  background-color: var(--primary, #0284c7);
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  animation: blink 0.85s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.guide-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.btn-guide-action {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .btn-guide-action {
+  background: #1e293b;
+}
+
+.btn-guide-action:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-guide-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   3. Catálogo Interativo de Atrativos e Gastronomia
+   -------------------------------------------------------------------------- */
+.attractions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.attractions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.attractions-title-box h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.attractions-title-box p {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Barra de Progresso de Visitas */
+.visits-progress-container {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+[data-theme='dark'] .visits-progress-container {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.visits-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 750;
+  color: var(--text-secondary);
+}
+
+.visits-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+[data-theme='dark'] .visits-progress-bar {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.visits-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+/* Filtros de Categoria */
+.attractions-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.filter-tab-btn {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-tab-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.filter-tab-btn.is-active {
+  background: var(--primary, #0284c7);
+  border-color: var(--primary, #0284c7);
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   4. Grupos de Atrativos e Gastronomia (Wireframe Seção 3.3)
+   -------------------------------------------------------------------------- */
+.attractions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.attractions-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.attractions-group-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.attractions-count-pill {
+  font-size: 0.74rem;
+  font-weight: 750;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+[data-theme='dark'] .attractions-count-pill {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.attractions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.attraction-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+[data-theme='dark'] .attraction-card {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.attraction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.attraction-card.is-visited {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.04);
+}
+
+[data-theme='dark'] .attraction-card.is-visited {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #059669;
+}
+
+.attraction-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.attraction-tag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.attraction-category-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #0284c7;
+  letter-spacing: 0.03em;
+}
+
+[data-theme='dark'] .attraction-category-badge {
+  background: rgba(2, 132, 199, 0.15);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.attraction-maps-link {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #0284c7;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  transition: color 0.15s ease;
+}
+
+.attraction-maps-link:hover {
+  color: #0369a1;
+  text-decoration: underline;
+}
+
+.attraction-name {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.35;
+}
+
+.attraction-highlight {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.attraction-highlight strong {
+  color: var(--text-main);
+}
+
+.attraction-description {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.btn-toggle-visit {
+  width: 100%;
+  padding: 0.48rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .btn-toggle-visit {
+  background: #1e293b;
+}
+
+.btn-toggle-visit:hover {
+  border-color: #10b981;
+  color: #059669;
+}
+
+.btn-toggle-visit.is-visited {
+  background: #10b981;
+  border-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+/* Responsividade Mobile (< 639px) */
+@media (max-width: 639px) {
+  .trip-summary-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .weather-banner-details {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .attractions-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .guide-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

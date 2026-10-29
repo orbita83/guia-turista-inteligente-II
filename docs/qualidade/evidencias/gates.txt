@@ -1,0 +1,159 @@
+
+> guia-turista-inteligente-monorepo@0.1.0 check
+> turbo run check
+
+
+   • turbo 2.11.10
+   • Packages in scope: @guia/backend, @guia/frontend
+   • Running check in 2 packages
+   • Remote caching disabled
+
+@guia/backend:check: cache bypass, force executing fd79d32ed0f99167
+@guia/frontend:check: cache bypass, force executing 3c8dadd7f9a073b1
+@guia/backend:check: 
+@guia/backend:check: > @guia/backend@0.1.0 check
+@guia/backend:check: > uv run --with-requirements requirements.lock python -m ruff check . && uv run --with-requirements requirements.lock python -m mypy .
+@guia/backend:check: 
+@guia/frontend:check: 
+@guia/frontend:check: > @guia/frontend@0.1.0 check
+@guia/frontend:check: > vp check
+@guia/frontend:check: 
+@guia/backend:check: All checks passed!
+@guia/frontend:check: pass: All 65 files are correctly formatted (283ms, 12 threads)
+@guia/backend:check: Success: no issues found in 30 source files
+@guia/frontend:check: pass: Found no warnings, lint errors, or type errors in 47 files (484ms, 12 threads)
+
+ Tasks:    2 successful, 2 total
+Cached:    0 cached, 2 total
+  Time:    1.183s 
+
+
+> guia-turista-inteligente-monorepo@0.1.0 test
+> turbo run test
+
+
+   • turbo 2.11.10
+   • Packages in scope: @guia/backend, @guia/frontend
+   • Running test in 2 packages
+   • Remote caching disabled
+
+@guia/frontend:test: cache bypass, force executing 747278097097f938
+@guia/backend:test: cache bypass, force executing 46b1ab32a3438786
+@guia/backend:test: 
+@guia/backend:test: > @guia/backend@0.1.0 test
+@guia/backend:test: > uv run --with-requirements requirements.lock python -m pytest
+@guia/backend:test: 
+@guia/frontend:test: 
+@guia/frontend:test: > @guia/frontend@0.1.0 test
+@guia/frontend:test: > vp test
+@guia/frontend:test: 
+@guia/frontend:test: 
+@guia/frontend:test:  RUN  v5.0.5 /home/Vitor/Projetos/guia-turista-inteligente-II/app/frontend
+@guia/frontend:test: 
+@guia/backend:test: ============================= test session starts ==============================
+@guia/backend:test: platform linux -- Python 3.12.13, pytest-9.1.1, pluggy-1.7.0
+@guia/backend:test: rootdir: /home/Vitor/Projetos/guia-turista-inteligente-II/app/backend
+@guia/backend:test: configfile: pytest.ini
+@guia/backend:test: testpaths: tests
+@guia/backend:test: plugins: cov-7.1.0, respx-0.23.1, anyio-4.15.1, asyncio-1.4.0
+@guia/backend:test: asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+@guia/backend:test: collected 72 items
+@guia/backend:test: 
+@guia/backend:test: tests/test_circuit_breaker.py ...........                                [ 15%]
+@guia/backend:test: tests/test_history_isolation.py .                                        [ 16%]
+@guia/frontend:test:  ✓ src/services/api.test.ts (12 tests) 30ms
+@guia/frontend:test:  ✓ src/services/routeCalculator.test.ts (26 tests) 65ms
+@guia/frontend:test:  ✓ src/services/streamingGuide.test.ts (22 tests) 139ms
+@guia/backend:test: tests/test_http_api.py ...........                                       [ 31%]
+@guia/backend:test: tests/test_main_observability.py .....                                   [ 38%]
+@guia/backend:test: tests/test_migrated_services.py .............                            [ 56%]
+@guia/backend:test: tests/test_route_geometry.py ........                                    [ 68%]
+@guia/backend:test: tests/test_session_cleanup.py .                                          [ 69%]
+@guia/frontend:test:  ✓ src/components/HistoricoViagens.test.tsx (7 tests) 432ms
+@guia/frontend:test:    ✓ ViagemCard (3)
+@guia/frontend:test:      ✓ apresenta o resumo compacto do wireframe e uma exclusão acessível 306ms
+@guia/backend:test: tests/test_stream_metrics.py ...                                         [ 73%]
+@guia/frontend:test:  ✓ src/components/TelemetriaCard.test.tsx (7 tests) 558ms
+@guia/frontend:test:  ✓ src/hooks/useApp.test.tsx (13 tests) 866ms
+@guia/frontend:test:  ✓ src/components/TripNavigationTabs.test.tsx (7 tests) 766ms
+@guia/frontend:test:  ✓ src/services/geolocation.test.ts (11 tests) 30ms
+@guia/frontend:test:  ✓ src/hooks/useNetworkStatus.test.tsx (2 tests) 29ms
+@guia/frontend:test:  ✓ src/components/RoteiroResult.test.tsx (10 tests) 1378ms
+@guia/frontend:test:    ✓ RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos) (5)
+@guia/frontend:test:      ✓ apresenta catálogo de atrativos e permite marcar visitas e atualizar progresso 441ms
+@guia/frontend:test:  ✓ src/services/streamingBaseUrl.test.ts (1 test) 20ms
+@guia/frontend:test:  ✓ src/components/MapaRota.test.tsx (9 tests) 1427ms
+@guia/frontend:test:    ✓ MapaRota (Tópico 3.3 e Wireframe Oficial - Issues #12, #14, #15 e #16) (9)
+@guia/frontend:test:      ✓ renderiza o cabeçalho e os 6 cards métricos da rota conforme wireframe da seção 3.3 498ms
+@guia/frontend:test:  ✓ src/services/telemetry.test.ts (7 tests) 9ms
+@guia/frontend:test:  ✓ src/services/atrativosService.test.ts (4 tests) 12ms
+@guia/backend:test: tests/test_streaming.py ...................                              [100%]
+@guia/backend:test: 
+@guia/backend:test: =============================== warnings summary ===============================
+@guia/backend:test: ../../../../.cache/uv/archive-v0/DNOvjJR89cQNulQd/lib/python3.12/site-packages/fastapi/testclient.py:1
+@guia/backend:test:   /home/Vitor/.cache/uv/archive-v0/DNOvjJR89cQNulQd/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+@guia/backend:test:     from starlette.testclient import TestClient as TestClient  # noqa
+@guia/backend:test: 
+@guia/backend:test: -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+@guia/backend:test: ======================== 72 passed, 1 warning in 3.16s =========================
+@guia/frontend:test:  ✓ src/services/apiGeometry.test.ts (8 tests) 6ms
+@guia/frontend:test:  ✓ src/App.test.tsx (3 tests) 1710ms
+@guia/frontend:test:    ✓ App (3)
+@guia/frontend:test:      ✓ persiste o tema escuro e permite voltar ao claro 371ms
+@guia/frontend:test:      ✓ mostra o painel desde a sessão e atualiza seus dados após planejamento 1258ms
+@guia/frontend:test:  ✓ src/styles/themeContrast.test.tsx (30 tests) 10ms
+@guia/frontend:test:  ✓ src/components/RoteiroForm.test.tsx (6 tests) 1702ms
+@guia/frontend:test:    ✓ RoteiroForm (6)
+@guia/frontend:test:      ✓ alterna para parâmetros elétricos e envia toda a parametrização 1262ms
+@guia/frontend:test: 
+@guia/frontend:test:  Test Files  18 passed (18)
+@guia/frontend:test:       Tests  185 passed (185)
+@guia/frontend:test:    Start at  16:09:48
+@guia/frontend:test:    Duration  3.45s (environment 54%, tests 30%, setup 8%, import 5%, transform 3%, worker 1%)
+@guia/frontend:test: 
+@guia/frontend:test: Environment  jsdom was created 18 times · 16.89s total, 54% of tracked time
+@guia/frontend:test:              create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+@guia/frontend:test:              learn more: https://vitest.dev/guide/improving-performance#test-environments
+@guia/frontend:test: 
+
+ Tasks:    2 successful, 2 total
+Cached:    0 cached, 2 total
+  Time:    3.907s 
+
+ WARNING  no output files found for task @guia/backend#test. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @guia/frontend#test. Please check your `outputs` key in `turbo.json`
+
+> guia-turista-inteligente-monorepo@0.1.0 build
+> turbo run build
+
+
+   • turbo 2.11.10
+   • Packages in scope: @guia/backend, @guia/frontend
+   • Running build in 2 packages
+   • Remote caching disabled
+
+@guia/backend:build: cache bypass, force executing aadf4a6bd205642c
+@guia/frontend:build: cache bypass, force executing 6f3116e74e209169
+@guia/backend:build: 
+@guia/backend:build: > @guia/backend@0.1.0 build
+@guia/backend:build: > uv run --with-requirements requirements.lock python -m compileall -q app
+@guia/backend:build: 
+@guia/frontend:build: 
+@guia/frontend:build: > @guia/frontend@0.1.0 build
+@guia/frontend:build: > vp build
+@guia/frontend:build: 
+@guia/frontend:build: transforming...
+@guia/frontend:build: ✓ 38 modules transformed.
+@guia/frontend:build: rendering chunks...
+@guia/frontend:build: computing gzip size...
+@guia/frontend:build: dist/index.html                   0.95 kB │ gzip:   0.50 kB
+@guia/frontend:build: dist/assets/index-BnDGxhgB.css   67.41 kB │ gzip:  16.84 kB
+@guia/frontend:build: dist/assets/index-D1ScyRUo.js   470.94 kB │ gzip: 142.58 kB
+@guia/frontend:build: 
+@guia/frontend:build: ✓ built in 328ms
+
+ Tasks:    2 successful, 2 total
+Cached:    0 cached, 2 total
+  Time:    729ms 
+
+ WARNING  no output files found for task @guia/backend#build. Please check your `outputs` key in `turbo.json`

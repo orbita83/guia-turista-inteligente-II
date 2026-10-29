@@ -9,7 +9,7 @@
 | Origem | Município e UF | Cidade sanitizada; UF com 2 letras maiúsculas e aceita pelo catálogo. |
 | Destino | Município e UF | Mesmas regras; autocomplete de cidades brasileiras é exigido, catálogo não definido. |
 | Duração | 1 a 5 dias | Inteiro dentro do intervalo. |
-| Perfil | Cultural; gastronômico; ecoturismo/aventura; família; romântico/econômico | A fonte não esclarece se “romântico/econômico” é uma ou duas opções. |
+| Perfil | Cultural; gastronômico; ecoturismo/aventura; família; econômico | “Econômico” é uma opção única, conforme correção do produto. |
 | Combustão | km/l, capacidade do tanque em litros, preço por litro | Limites numéricos e casas decimais em aberto. |
 | Elétrico | km/kWh, capacidade da bateria em kWh, preço por kWh | Limites numéricos e casas decimais em aberto. |
 | Ocupação | 1 a 8 passageiros | Inteiro no intervalo. |

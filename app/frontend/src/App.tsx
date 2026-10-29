@@ -1,35 +1,75 @@
+import { useEffect, useState } from 'react';
 import {
-  AppHeader,
   HistoricoViagens,
-  LoadingCard,
   LoginCard,
+  MapaRota,
   RoteiroForm,
+  RoteiroResult,
+  TelemetriaCard,
   ToastContainer,
-  UserBar,
+  TripNavigationTabs,
 } from './components';
-import { useApp } from './hooks/useApp';
+import { SessionHeader } from './components/SessionHeader';
+import type { AbaViagem, RotaAlternativa } from './types/domain';
+import { useViagem } from './hooks/useViagem';
 
 export function App() {
+  const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
+  const [rotaAtivaId, setRotaAtivaId] = useState<RotaAlternativa['id']>('principal');
+
   const {
     data,
-    jsonUrl,
     toasts,
     initialLoading,
     sessionLoading,
+    savedGoogleUser,
+    sessionTimerLabel,
     isSubmitting,
-    deletingId,
+    deletingIds,
     pendingRoute,
+    activeTrip,
+    activeTripForm,
+    historyStatus,
+    historyError,
+    persistenceById,
+    telemetryState,
+    apiHealthStatus,
+    sugestoes,
+    suggestionStatus,
+    visitasPorViagem,
+    visitPersistenceByTrip,
+    connectivity,
+    copyTelemetryRequestId,
     dismissToast,
     loginWithGoogle,
     loginAsVisitor,
+    restoreGoogleUser,
     logout,
+    solicitarSugestoesGps,
     submitTrip,
     deleteTrip,
-  } = useApp();
+    selectTrip,
+    toggleVisitaAtrativo,
+    retryLocalVisits,
+  } = useViagem();
+
+  useEffect(() => {
+    setRotaAtivaId('principal');
+  }, [activeTrip?.id]);
+  const rotaAtiva =
+    activeTrip?.rotas?.find((rota) => rota.id === rotaAtivaId) ?? activeTrip?.rotas?.[0];
 
   return (
     <div className="app-shell">
-      <AppHeader />
+      <SessionHeader
+        usuario={data.usuario}
+        savedGoogleUser={savedGoogleUser}
+        sessionTimerLabel={sessionTimerLabel}
+        isBusy={sessionLoading}
+        onVisitorLogin={loginAsVisitor}
+        onRestoreGoogle={restoreGoogleUser}
+        onLogout={logout}
+      />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <main aria-busy={initialLoading || sessionLoading}>
@@ -40,19 +80,93 @@ export function App() {
           </section>
         ) : data.usuario ? (
           <>
-            <UserBar usuario={data.usuario} isBusy={sessionLoading} onLogout={logout} />
-            <RoteiroForm ufs={data.ufs} isSubmitting={isSubmitting} onSubmit={submitTrip} />
-            <HistoricoViagens
-              viagens={data.viagens}
-              jsonUrl={jsonUrl}
-              deletingId={deletingId}
-              loadingCard={
-                pendingRoute ? (
-                  <LoadingCard origem={pendingRoute.origem} destino={pendingRoute.destino} />
-                ) : null
-              }
-              onDelete={deleteTrip}
-            />
+            <div className="planning-layout planning-layout-with-sidebar">
+              <section className="planning-column" aria-label="Planejamento da viagem">
+                {/* TODO(backend): ligar o catálogo de municípios quando a API expuser esses dados. */}
+                <RoteiroForm
+                  ufs={data.ufs}
+                  isSubmitting={isSubmitting}
+                  sugestoes={sugestoes}
+                  suggestionStatus={suggestionStatus}
+                  onRequestSuggestions={solicitarSugestoesGps}
+                  onSubmit={submitTrip}
+                />
+
+                {activeTrip ? (
+                  <>
+                    <TripNavigationTabs
+                      viagem={activeTrip}
+                      abaAtiva={abaViagemAtiva}
+                      onAbaChange={setAbaViagemAtiva}
+                      onExcluir={() => deleteTrip(activeTrip.id)}
+                      rotaAtiva={rotaAtiva}
+                    />
+
+                    {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'mapa') && (
+                      <div
+                        id="panel-mapa"
+                        role="tabpanel"
+                        aria-labelledby={
+                          abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-mapa'
+                        }
+                      >
+                        <MapaRota
+                          viagem={activeTrip}
+                          formParams={activeTripForm}
+                          rotaAtivaId={rotaAtivaId}
+                          onRotaChange={(rota) => setRotaAtivaId(rota.id)}
+                        />
+                      </div>
+                    )}
+
+                    {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'guia') && (
+                      <div
+                        id="panel-guia"
+                        role="tabpanel"
+                        aria-labelledby={
+                          abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-guia'
+                        }
+                      >
+                        {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
+                        <RoteiroResult
+                          viagem={activeTrip}
+                          formParams={activeTripForm}
+                          visitPersistenceStatus={visitPersistenceByTrip[activeTrip.id]}
+                          visitasIds={
+                            visitasPorViagem[activeTrip.id] ??
+                            activeTrip.atrativosVisitadosIds ??
+                            []
+                          }
+                          onToggleVisita={(atrativoId) =>
+                            toggleVisitaAtrativo(activeTrip.id, atrativoId)
+                          }
+                          onRetryVisitas={() => retryLocalVisits(activeTrip.id)}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : null}
+              </section>
+              <aside className="planning-aside" aria-label="Painéis da viagem">
+                <TelemetriaCard
+                  state={telemetryState}
+                  apiHealthStatus={apiHealthStatus}
+                  connectivity={connectivity}
+                  onCopyRequestId={copyTelemetryRequestId}
+                />
+                <HistoricoViagens
+                  viagens={data.viagens}
+                  status={historyStatus}
+                  errorMessage={historyError}
+                  deletingIds={deletingIds}
+                  activeTripId={activeTrip?.id}
+                  pendingRoute={pendingRoute}
+                  persistenceById={persistenceById}
+                  onSelectTrip={selectTrip}
+                  onDelete={deleteTrip}
+                />
+              </aside>
+            </div>
           </>
         ) : (
           <LoginCard

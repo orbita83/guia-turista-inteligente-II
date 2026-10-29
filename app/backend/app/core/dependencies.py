@@ -1,10 +1,15 @@
+import logging
+import math
 import time
-from typing import Any
+from typing import Annotated, Any
 
 import httpx
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
+
+from app.core.circuit_breaker import CircuitBreaker
 
 VISITOR_TTL_SECONDS = 2 * 60 * 60
+logger = logging.getLogger(__name__)
 
 
 def get_http_client(request: Request) -> httpx.AsyncClient:
@@ -21,24 +26,57 @@ def get_storage(request: Request) -> Any:
     return storage
 
 
-def get_current_user(request: Request) -> dict[str, Any]:
+def get_session_storage(request: Request) -> Any:
+    user = request.session.get("usuario")
+    if not isinstance(user, dict) or not user.get("id"):
+        return None
+    return get_storage(request)
+
+
+def get_circuit_breakers(request: Request) -> dict[str, CircuitBreaker]:
+    breakers = getattr(request.app.state, "circuit_breakers", None)
+    if not isinstance(breakers, dict) or any(
+        not isinstance(breakers.get(name), CircuitBreaker)
+        for name in ("weather", "guide")
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Disjuntores de integração indisponíveis.",
+        )
+    return breakers
+
+
+def get_current_user(
+    request: Request, storage: Annotated[Any, Depends(get_session_storage)]
+) -> dict[str, Any]:
     user = request.session.get("usuario")
     if not isinstance(user, dict) or not user.get("id"):
         raise HTTPException(status_code=401, detail="Autenticação necessária.")
 
-    expires_at = request.session.get("visitor_expires_at")
-    if user.get("tipo") == "visitante" and expires_at:
-        try:
-            expired = time.time() >= float(expires_at)
-        except (TypeError, ValueError):
-            expired = True
-        if expired:
-            storage = getattr(request.app.state, "trip_storage", None)
-            if storage is not None and hasattr(storage, "forget_visitor"):
-                try:
-                    storage.forget_visitor(str(user["id"]))
-                except Exception:
-                    pass
+    session_id = request.session.get("session_id")
+    if not isinstance(session_id, str) or not storage.valid_session(
+        session_id, str(user["id"]), str(user.get("tipo", ""))
+    ):
+        request.session.clear()
+        raise HTTPException(status_code=401, detail="Sessão inválida ou encerrada.")
+
+    if user.get("tipo") == "visitante":
+        expiration = request.session.get("visitor_expires_at")
+        if isinstance(expiration, bool) or not isinstance(
+            expiration, (int, float, str)
+        ):
+            expires_at: float = 0.0
+        else:
+            try:
+                expires_at = float(expiration)
+            except (TypeError, ValueError, OverflowError):
+                expires_at = 0
+        if not math.isfinite(expires_at) or time.time() >= expires_at:
+            storage.revoke_session(session_id)
+            try:
+                storage.forget_visitor(str(user["id"]))
+            except Exception as error:  # noqa: BLE001 - revogação deve prevalecer sobre falha de limpeza
+                logger.warning("Falha ao limpar sessão visitante expirada: %s", type(error).__name__)
             request.session.clear()
             raise HTTPException(
                 status_code=401, detail="A sessão de visitante expirou."

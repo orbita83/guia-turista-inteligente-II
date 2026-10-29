@@ -1,0 +1,138 @@
+/* ==========================================================================
+   Issue #11: Abas de Navegação e Linha de Ações da Viagem
+   Conforme Identidade Visual de Referência (Seção 3.3)
+   ========================================================================== */
+
+.trip-navigation-container {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* --------------------------------------------------------------------------
+   1. Linha de Abas de Navegação (Visão Geral, Mapa & Paradas, Guia & Clima)
+   -------------------------------------------------------------------------- */
+.trip-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+}
+
+.trip-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.trip-tab-btn:hover {
+  color: var(--primary, #0284c7);
+  background: rgba(2, 132, 199, 0.06);
+}
+
+.trip-tab-btn.is-active {
+  color: var(--primary, #0284c7);
+  background: rgba(2, 132, 199, 0.1);
+  font-weight: 800;
+}
+
+.trip-tab-btn.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.55rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  height: 3px;
+  background: var(--primary, #0284c7);
+  border-radius: 3px 3px 0 0;
+}
+
+.trip-tab-icon {
+  font-size: 1.1rem;
+}
+
+/* --------------------------------------------------------------------------
+   2. Linha de Ações Rápidas da Viagem (Maps, WhatsApp, Imprimir, Excluir, GPX)
+   -------------------------------------------------------------------------- */
+.trip-actions-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.btn-trip-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+[data-theme='dark'] .btn-trip-action {
+  background: #1e293b;
+}
+
+.btn-trip-action:hover {
+  border-color: var(--primary, #0284c7);
+  color: var(--primary, #0284c7);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.btn-action-delete:hover {
+  border-color: #ef4444;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+[data-theme='dark'] .btn-action-delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.btn-action-maps:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.btn-action-wpp:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+@media (max-width: 639px) {
+  .trip-actions-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

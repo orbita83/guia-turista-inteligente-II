@@ -44,66 +44,75 @@
     padding: 0.75rem 0.85rem;
   }
 
-  .viagem-card {
-    margin-top: 1.4rem;
-    padding: 1.4rem;
-    border-radius: 16px;
+  .telemetry-heading h2 {
+    font-size: 1.4rem;
+  }
+  .telemetry-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    max-width: 1320px;
   }
 
-  .viagem-header {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  .viagem-rota-info {
-    flex: 1 1 auto;
-  }
-  .viagem-rota-titulo,
-  .viagem-toggle,
-  .viagem-accordion-trigger {
-    font-size: 1.2rem;
-  }
-
-  .btn-actions {
-    display: inline-flex;
-    width: auto;
-    flex-shrink: 0;
-    flex-flow: row nowrap;
-    align-items: center;
-  }
-
-  .form-deletar,
-  .btn-maps,
-  .btn-danger {
-    width: auto;
-  }
-  .btn-maps,
-  .btn-danger {
-    padding: 0 14px;
-  }
-  .tele-badge {
-    padding: 5px 10px;
-    font-size: 0.82rem;
-  }
-  .secao-guia {
-    padding: 1.2rem;
-  }
-  .secao-guia-header {
-    font-size: 1rem;
-  }
-  .guia-texto {
-    font-size: 0.92rem;
+  .planning-layout-with-sidebar {
+    grid-template-columns: minmax(0, 1.62fr) minmax(340px, 1fr);
+    align-items: start;
+    gap: 1.4rem;
   }
 }
 
 @media (max-width: 639px) {
+  .suggestions-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .btn-location {
+    width: 100%;
+  }
+
+  .suggestion-list,
+  .propulsion-options,
+  .parameter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .suggestion-chip {
+    width: 100%;
+  }
+
+  .profile-options button {
+    flex: 1 1 145px;
+  }
+
   .toast-container {
     top: 0.85rem;
     right: 0.85rem;
     left: 0.85rem;
     width: auto;
+  }
+
+  .telemetry-details > div {
+    flex-wrap: wrap;
+  }
+  .telemetry-correlation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .telemetry-copy {
+    width: 100%;
+  }
+  .telemetry-providers li > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .telemetry-state {
+    text-align: left;
   }
 }
 

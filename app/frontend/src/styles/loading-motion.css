@@ -1,7 +1,7 @@
 /* Estado de carregamento */
 .viagem-card-loading {
   border: 1.5px dashed var(--primary);
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-subtle) 100%);
   animation: pulse-card 2s ease-in-out infinite;
   cursor: wait;
 }
@@ -45,7 +45,12 @@
 .skeleton-linha {
   height: 12px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 75%
+  );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.6s infinite;
 }
@@ -103,7 +108,7 @@
 }
 
 .btn-loading {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  background: linear-gradient(135deg, var(--action-bg) 0%, var(--action-hover) 100%);
   user-select: none;
 }
 

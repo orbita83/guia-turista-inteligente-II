@@ -1,0 +1,110 @@
+{
+  "up{job=\"guia-qa\"}": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "__name__": "up",
+            "instance": "127.0.0.1:18001",
+            "job": "guia-qa"
+          },
+          "value": [
+            1793214634.713,
+            "1"
+          ]
+        }
+      ]
+    }
+  },
+  "guia_stream_active": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "__name__": "guia_stream_active",
+            "instance": "127.0.0.1:18001",
+            "job": "guia-qa"
+          },
+          "value": [
+            1793214634.715,
+            "0"
+          ]
+        }
+      ]
+    }
+  },
+  "guia_stream_finished_total": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "__name__": "guia_stream_finished_total",
+            "instance": "127.0.0.1:18001",
+            "job": "guia-qa",
+            "outcome": "completed"
+          },
+          "value": [
+            1793214634.716,
+            "2"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "guia_stream_finished_total",
+            "instance": "127.0.0.1:18001",
+            "job": "guia-qa",
+            "outcome": "cancelled"
+          },
+          "value": [
+            1793214634.716,
+            "2"
+          ]
+        }
+      ]
+    }
+  },
+  "guia_stream_conflicts_total": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "__name__": "guia_stream_conflicts_total",
+            "instance": "127.0.0.1:18001",
+            "job": "guia-qa"
+          },
+          "value": [
+            1793214634.716,
+            "2"
+          ]
+        }
+      ]
+    }
+  },
+  "guia_stream_first_content_seconds_count": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "__name__": "guia_stream_first_content_seconds_count",
+            "instance": "127.0.0.1:18001",
+            "job": "guia-qa"
+          },
+          "value": [
+            1793214634.716,
+            "4"
+          ]
+        }
+      ]
+    }
+  }
+}

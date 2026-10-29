@@ -37,7 +37,6 @@ Estas decisões bloqueiam uma definição completamente fechada da experiência:
 2. Fonte e extensão do catálogo/autocomplete de cidades.
 3. Contratos exatos de veículo, rota, custos e eventos SSE.
 4. Limites, unidades, arredondamento e valores padrão dos campos numéricos.
-5. Se “romântico/econômico” é um perfil ou dois.
 6. Resposta mínima aceitável quando clima, elevação, IA, rota ou paradas falham.
 7. Comportamento exato após expiração da sessão visitante.
 8. Modelo de confiança do `X-User-Id` e armazenamento permitido para identidade.

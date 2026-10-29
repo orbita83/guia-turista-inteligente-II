@@ -4,7 +4,7 @@ Aplicação web de planejamento de viagens pelo Brasil, organizada como monorepo
 
 ## 📚 Documentação de engenharia
 
-A documentação do produto e da arquitetura está em [`docs/README.md`](docs/README.md). As specs de migração e os limites de escopo estão em [`specs/README.md`](specs/README.md).
+A documentação do produto e da arquitetura está em [`docs/README.md`](docs/README.md).
 
 O projeto é orquestrado pelo **Turborepo**. O backend fica em `app/backend`; o
 frontend, em `app/frontend`. A migração reorganiza o sistema existente, sem adicionar
@@ -59,7 +59,6 @@ Acesse a SPA em `http://localhost:5173`. A API FastAPI roda em
 ├── app/frontend/          # SPA React, estilos, serviços e testes
 ├── static/data/           # Arquivos antigos preservados para compatibilidade de migração
 ├── docs/                  # Documentação de produto e arquitetura
-├── specs/                 # Ordem e limites da migração
 └── package.json           # Workspaces npm e tarefas Turborepo
 ```
 
@@ -84,3 +83,8 @@ npm test --workspace @guia/frontend
 
 Os testes usam dependências simuladas e não precisam de credenciais reais. Para
 gerar guias com Gemini em execução local, configure `GEMINI_API_KEY` no `.env`.
+
+As [evidências de QA](docs/qualidade/evidencias-qa.md) registram os cenários e gates
+executados. O [roteiro do aluno 4](docs/operacao/apresentacao-aluno-4.md) inclui uma
+demonstração isolada com provedores controlados, exemplos SSE/409/cancelamento,
+download GPX e métricas Prometheus.

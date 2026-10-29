@@ -114,7 +114,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-subtle) 100%);
 }
 
 .user-info {

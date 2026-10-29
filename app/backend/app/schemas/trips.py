@@ -66,6 +66,10 @@ def _normalizar_cidade(valor: object) -> object:
 class TripCreateRequest(BaseModel):
     """Entrada do planejamento, preservando UFs opcionais por compatibilidade."""
 
+    # TODO(aluno-3): integrar os schemas validados da issue #30 para duração,
+    # perfis e veículo; coordenar compatibilidade com o Frontend na issue #20.
+
+
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
@@ -145,8 +149,8 @@ class ViagemLegada(ModeloViagemLegado):
 
     id: str
     criado_em: str | None = None
-    origem: str
-    destino: str
+    origem: str | None = None
+    destino: str | None = None
     clima: ClimaViagem | None = None
     percurso: PercursoViagem | None = None
     dicas_destino: str | None = None
