@@ -9,6 +9,7 @@ import {
   excluirViagem,
   listarViagens,
   verificarSaudeApi,
+  obterTelemetriaOperacional,
   type SessionResponse,
 } from '../services/api';
 import { obterCoordenadasNavegador, obterSugestoesDestino } from '../services/geolocation';
@@ -160,6 +161,7 @@ export function useViagem() {
   const [persistenceById, setPersistenceById] = useState<Record<string, PersistenceStatus>>({});
   const { toasts, addToast, dismissToast } = useToasts();
   const [telemetryState, setTelemetryState] = useState<TelemetryPanelState>({ kind: 'hidden' });
+  const [operationalTelemetry, setOperationalTelemetry] = useState<{ uptimeSeconds: number; totalPersistedTrips: number } | null>(null);
   const [apiHealthStatus, setApiHealthStatus] = useState<'checking' | 'online' | 'unavailable'>(
     'checking',
   );
@@ -261,10 +263,15 @@ export function useViagem() {
   useEffect(() => {
     if (!data.usuario?.id) {
       setApiHealthStatus('checking');
+      setOperationalTelemetry(null);
       return;
     }
     const controller = new AbortController();
     setApiHealthStatus('checking');
+    setOperationalTelemetry(null);
+    obterTelemetriaOperacional(controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setOperationalTelemetry(data); })
+      .catch(() => { if (!controller.signal.aborted) setOperationalTelemetry(null); });
     verificarSaudeApi(controller.signal)
       .then((healthy) => {
         if (!controller.signal.aborted) setApiHealthStatus(healthy ? 'online' : 'unavailable');
@@ -745,6 +752,7 @@ export function useViagem() {
     persistenceById,
     telemetryState,
     apiHealthStatus,
+    operationalTelemetry,
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
