@@ -3,12 +3,79 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.dependencies import get_storage
 from app.core.storage import TripStorage
 from app.main import app
+
+
+@pytest.mark.parametrize(
+    "osrm_response,expected_state",
+    [
+        (
+            {
+                "code": "Ok",
+                "routes": [
+                    {
+                        "distance": 1000,
+                        "duration": 120,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-34, -8], [-35, -9]],
+                        },
+                    }
+                ],
+            },
+            "disponivel",
+        ),
+        ({"code": "NoRoute"}, "indisponivel"),
+    ],
+)
+def test_planejamento_retorna_geometria_ou_indisponibilidade(
+    client, monkeypatch, osrm_response, expected_state
+):
+    import app.services.trips as services
+    from app.core.dependencies import get_http_client
+
+    async def geocode_fake(client, city, state, states):
+        return (-8.0, -34.0, city)
+
+    async def weather_fake(client, latitude, longitude):
+        return {"temperatura": "20 °C", "umidade": "50%", "vento": "5 km/h"}
+
+    async def guide_fake(destination, **kwargs):
+        return "guia", {}
+
+    monkeypatch.setattr(services, "geocode", geocode_fake)
+    monkeypatch.setattr(services, "get_weather", weather_fake)
+    monkeypatch.setattr(services, "get_guide_with_diagnostics", guide_fake)
+    mock_client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=osrm_response)
+        )
+    )
+    app.dependency_overrides[get_http_client] = lambda: mock_client
+    client.post("/api/v1/auth/visitor")
+    response = client.post(
+        "/api/v1/roteiros/planejar",
+        json={
+            "origem_cidade": "Recife",
+            "origem_uf": "PE",
+            "destino_cidade": "Salvador",
+            "destino_uf": "BA",
+        },
+    )
+    assert response.status_code == 200
+    percurso = response.json()["viagem"]["percurso"]
+    assert percurso["estado"] == expected_state
+    if expected_state == "disponivel":
+        assert percurso["geometria"] == [[-8, -34], [-9, -35]]
+        assert percurso["alternativas"] == []
+    else:
+        assert "geometria" not in percurso
 
 
 @pytest.fixture

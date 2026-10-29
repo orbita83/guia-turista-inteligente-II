@@ -134,7 +134,19 @@ async def test_weather_and_route_retain_legacy_output_shapes() -> None:
             )
         return httpx.Response(
             200,
-            json={"code": "Ok", "routes": [{"distance": 1674600, "duration": 77880}]},
+            json={
+                "code": "Ok",
+                "routes": [
+                    {
+                        "distance": 1674600,
+                        "duration": 77880,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-34.9, -8.05], [-35.2, -9.1]],
+                        },
+                    }
+                ],
+            },
         )
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
@@ -146,8 +158,98 @@ async def test_weather_and_route_retain_legacy_output_shapes() -> None:
         "distancia": "1674.6 km",
         "tempo": "21h 38min de carro",
         "modal": "carro",
+        "geometria": [[-8.05, -34.9], [-9.1, -35.2]],
+        "estado": "disponivel",
+        "alternativas": [],
     }
     assert unavailable == {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
+
+
+@pytest.mark.asyncio
+async def test_osrm_geometria_e_alternativas_reais() -> None:
+    def response(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["overview"] == "full"
+        assert request.url.params["geometries"] == "geojson"
+        assert request.url.params["alternatives"] == "true"
+        return httpx.Response(
+            200,
+            json={
+                "code": "Ok",
+                "routes": [
+                    {
+                        "distance": 1000,
+                        "duration": 120,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-34, -8], [-35, -9]],
+                        },
+                    },
+                    {
+                        "distance": 2000,
+                        "duration": 180,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-34, -8], [-36, -10]],
+                        },
+                    },
+                    {
+                        "distance": 3000,
+                        "duration": 180,
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[400, 2], [3, 4]],
+                        },
+                    },
+                ],
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
+        result = await get_route(client, -8, -34, -9, -35)
+    assert result["geometria"] == [[-8.0, -34.0], [-9.0, -35.0]]
+    assert len(result["alternativas"]) == 1
+    assert result["alternativas"][0]["geometria"] == [[-8.0, -34.0], [-10.0, -36.0]]
+
+
+@pytest.mark.parametrize(
+    "payload,reason",
+    [
+        ({"code": "NoRoute"}, "sem_rota"),
+        ({"code": "Ok", "routes": []}, "sem_rota"),
+        (
+            {
+                "code": "Ok",
+                "routes": [
+                    {
+                        "distance": 10,
+                        "duration": 10,
+                        "geometry": {"type": "LineString", "coordinates": [[1, 2]]},
+                    }
+                ],
+            },
+            "dados_rota_invalidos",
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_osrm_indisponivel_sem_geometria_fabricada(payload, reason) -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=payload))
+    ) as client:
+        result = await get_route(client, -8, -34, -9, -35)
+    assert result["estado"] == "indisponivel"
+    assert result["motivo"] == reason
+    assert "geometria" not in result
+
+
+@pytest.mark.asyncio
+async def test_osrm_erro_http_fica_indisponivel() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(503))
+    ) as client:
+        result = await get_route(client, -8, -34, -9, -35)
+    assert result["motivo"] == "erro_provedor"
+    assert "geometria" not in result
 
 
 def test_sanitize_input_matches_legacy_cleanup_and_limit() -> None:

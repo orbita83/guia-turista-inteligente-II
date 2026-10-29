@@ -54,7 +54,7 @@ async def plan_trip(
         else destination_city
     )
     weather: dict[str, str] = {"temperatura": "N/D", "umidade": "N/D", "vento": "N/D"}
-    route: dict[str, str] = {"distancia": "N/D", "tempo": "N/D"}
+    route: dict[str, Any] = {"distancia": "N/D", "tempo": "N/D"}
 
     origin_coords, destination_coords = await asyncio.gather(
         geocode(client, origin_city, origin_state, states),

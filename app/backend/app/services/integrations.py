@@ -193,47 +193,91 @@ async def get_weather(
     }
 
 
+def _parse_osrm_route(value: object) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    distance = _finite_number(value.get("distance"))
+    duration = _finite_number(value.get("duration"))
+    geometry = value.get("geometry")
+    if distance is None or duration is None or distance < 0 or duration < 0:
+        return None
+    if not isinstance(geometry, dict) or geometry.get("type") != "LineString":
+        return None
+    coordinates = geometry.get("coordinates")
+    if not isinstance(coordinates, list) or len(coordinates) < 2:
+        return None
+    points: list[list[float]] = []
+    for point in coordinates:
+        if not isinstance(point, list) or len(point) != 2:
+            return None
+        longitude, latitude = map(_finite_number, point)
+        if (
+            latitude is None
+            or longitude is None
+            or not (-90 <= latitude <= 90 and -180 <= longitude <= 180)
+        ):
+            return None
+        points.append([latitude, longitude])
+    hours, minutes = divmod(math.floor(duration / 60 + 0.5), 60)
+    return {
+        "distancia": f"{round(distance / 1000, 1)} km",
+        "tempo": f"{hours}h {minutes}min de carro",
+        "modal": "carro",
+        "geometria": points,
+    }
+
+
 async def get_route(
     client: httpx.AsyncClient,
     latitude_origin: float,
     longitude_origin: float,
     latitude_destination: float,
     longitude_destination: float,
-) -> dict[str, str]:
-    fallback = {
-        "distancia": "Sem rota direta",
-        "tempo": "Considere voos ou barcos",
-        "modal": "alternativo",
-    }
+) -> dict[str, Any]:
+    def unavailable(reason: str) -> dict[str, Any]:
+        return {
+            "distancia": "N/D",
+            "tempo": "N/D",
+            "modal": "indisponivel",
+            "estado": "indisponivel",
+            "motivo": reason,
+        }
+
     if not (
         _valid_coordinates(latitude_origin, longitude_origin)
         and _valid_coordinates(latitude_destination, longitude_destination)
     ):
-        return fallback
+        return unavailable("coordenadas_invalidas")
     try:
         response = await client.get(
             "https://router.project-osrm.org/route/v1/driving/"
             f"{longitude_origin},{latitude_origin};{longitude_destination},{latitude_destination}",
-            params={"overview": "false", "radiuses": "1000;1000"},
+            params={
+                "overview": "full",
+                "geometries": "geojson",
+                "alternatives": "true",
+                "radiuses": "1000;1000",
+            },
             timeout=6.0,
         )
         response.raise_for_status()
         data = response.json()
     except (httpx.HTTPError, ValueError):
-        return fallback
+        return unavailable("erro_provedor")
     if not isinstance(data, dict) or data.get("code") != "Ok":
-        return fallback
+        return unavailable(
+            "sem_rota"
+            if isinstance(data, dict) and data.get("code") == "NoRoute"
+            else "erro_provedor"
+        )
     routes = data.get("routes")
     if not isinstance(routes, list) or not routes or not isinstance(routes[0], dict):
-        return fallback
-    distance = _finite_number(routes[0].get("distance"))
-    duration = _finite_number(routes[0].get("duration"))
-    if distance is None or duration is None or distance < 0 or duration < 0:
-        return fallback
-    total_minutes = math.floor(duration / 60 + 0.5)
-    hours, minutes = divmod(total_minutes, 60)
-    return {
-        "distancia": f"{round(distance / 1000, 1)} km",
-        "tempo": f"{hours}h {minutes}min de carro",
-        "modal": "carro",
-    }
+        return unavailable("sem_rota")
+    principal = _parse_osrm_route(routes[0])
+    if principal is None:
+        return unavailable("dados_rota_invalidos")
+    principal["estado"] = "disponivel"
+    principal["alternativas"] = [
+        route for item in routes[1:] if (route := _parse_osrm_route(item)) is not None
+    ]
+    return principal

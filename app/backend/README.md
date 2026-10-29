@@ -32,3 +32,21 @@ manual de ambiente virtual. O arquivo `.env` da raiz fornece `GEMINI_API_KEY`,
 - `app/core/`: configuração, dependências e persistência;
 - `tests/`: testes de serviço e contrato HTTP.
 
+## Geometria rodoviária no planejamento (issue #19)
+
+`POST /api/v1/roteiros/planejar` retorna em `viagem.percurso` a rota principal
+do OSRM. `geometria` é uma sequência ordenada de pares `[latitude, longitude]`,
+em graus, compatível com Leaflet; o serviço converte a ordem GeoJSON do OSRM.
+`distancia` e `tempo` continuam em formato textual. Por exemplo:
+
+```json
+{"percurso":{"distancia":"1.0 km","tempo":"0h 2min de carro","modal":"carro","estado":"disponivel","geometria":[[-8.0,-34.0],[-9.0,-35.0]],"alternativas":[]}}
+```
+
+`alternativas` contém somente rotas adicionais válidas retornadas pelo OSRM,
+com distância, tempo, modal e geometria no mesmo formato; uma lista vazia indica
+que nenhuma alternativa válida foi recebida. A integração visual das alternativas
+depende de alinhamento com os consumidores e não inventa custos ou paradas.
+Quando o provedor falha, não encontra rota ou retorna dados inválidos, o percurso
+tem `estado: "indisponivel"`, `motivo` e valores `N/D`, sem geometria fabricada.
+
