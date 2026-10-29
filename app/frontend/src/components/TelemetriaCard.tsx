@@ -19,6 +19,7 @@ import {
 interface TelemetriaCardProps {
   state: TelemetryPanelState;
   apiHealthStatus: 'checking' | 'online' | 'unavailable';
+  operationalTelemetry?: { uptimeSeconds: number; totalPersistedTrips: number } | null;
   onCopyRequestId: (requestId: string) => Promise<boolean>;
   connectivity?: ConnectivityCondition;
 }
@@ -50,6 +51,15 @@ function connectivityLabel(connectivity?: ConnectivityCondition): string {
   return 'Aguardando dados';
 }
 
+function formatUptime(seconds: number): string {
+  const whole = Math.floor(seconds);
+  const days = Math.floor(whole / 86400);
+  const hours = Math.floor((whole % 86400) / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const secs = whole % 60;
+  return [days ? `${days}d` : '', days || hours ? `${hours}h` : '', `${minutes}min`, `${secs}s`].filter(Boolean).join(' ');
+}
+
 function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="telemetry-metric">
@@ -62,6 +72,7 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: s
 export function TelemetriaCard({
   state,
   apiHealthStatus,
+  operationalTelemetry,
   connectivity,
   onCopyRequestId,
 }: TelemetriaCardProps) {
@@ -298,10 +309,8 @@ export function TelemetriaCard({
                 }
                 tone={apiHealthStatus === 'online' ? 'server' : undefined}
               />
-              {/* TODO: consumir uptime da API operacional quando houver campo estável no contrato. */}
-              <Metric label="Uptime backend" value="Aguardando dados" />
-              {/* TODO: consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
-              <Metric label="Roteiros totais" value="Aguardando dados" />
+              <Metric label="Uptime backend" value={operationalTelemetry ? formatUptime(operationalTelemetry.uptimeSeconds) : 'Aguardando dados'} />
+              <Metric label="Roteiros totais" value={operationalTelemetry ? String(operationalTelemetry.totalPersistedTrips) : 'Aguardando dados'} />
             </dl>
             <p className="telemetry-health-note">
               Status da API: última verificação de /healthz; não é monitoramento contínuo.
