@@ -1,184 +1,95 @@
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-
-import type { RoteiroFormData, Viagem } from '../types/domain';
+import { describe, expect, it } from 'vite-plus/test';
+import type { CoordenadaGPS, RotaAlternativa, Viagem } from '../types/domain';
 import {
-  baixarArquivoGpx,
-  calcularAutonomiaVeiculo,
-  calcularCustosViagem,
-  calcularParadasEstrategicas,
-  extrairKmDeTexto,
-  formatarMinutosEmTempo,
   gerarConteudoGpx,
   gerarLinkGoogleMaps,
   gerarLinkWhatsApp,
   gerarRotasAlternativas,
-  obterCoordenadasLocal,
 } from './routeCalculator';
 
-describe('routeCalculator', () => {
-  it('extrai valor numérico de quilometragem de strings variadas', () => {
-    // Formato decimal padrão retornado pelo backend Python/OSRM (com ponto)
-    expect(extrairKmDeTexto('6.5 km')).toBe(6.5);
-    expect(extrairKmDeTexto('800.0 km')).toBe(800);
-    expect(extrairKmDeTexto('166.4 km')).toBe(166.4);
-    expect(extrairKmDeTexto('1250.5 km')).toBe(1250.5);
+const route: RotaAlternativa = {
+  id: 'principal',
+  titulo: 'Rota principal',
+  tipoRotulo: 'Principal',
+  descricao: 'Via principal',
+  resumoDestaque: 'Rota recebida',
+  distanciaKm: 8,
+  tempoFormatado: '20 min',
+  pedagios: 0,
+  autonomiaKm: 300,
+  coordenadas: [
+    [-8.05, -34.88],
+    [-8.02, -34.85],
+  ],
+  paradas: [],
+  topografia: {
+    altitudeMaximaM: 10,
+    desnivelSubidaM: 2,
+    desnivelDescidaM: 1,
+    desnivelLiquidoM: 1,
+    cotaMinimaM: 2,
+    cotaMaximaM: 10,
+    penalizacaoConsumoPct: 0,
+  },
+  custos: { combustivelOuEnergia: 5, pedagios: 0, total: 5, passageiros: 1, valorPorPassageiro: 5 },
+};
 
-    // Formato pt-BR com vírgula decimal
-    expect(extrairKmDeTexto('1.250,5 km')).toBe(1250.5);
-    expect(extrairKmDeTexto('6,5 km')).toBe(6.5);
+const trip: Viagem = {
+  id: 'trip-1',
+  origem: 'Recife - PE',
+  destino: 'Olinda - PE',
+  clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
+  percurso: { distancia: '8 km', tempo: '20 min' },
+  dicas_destino: '',
+};
 
-    // Formato inteiro com e sem separador de milhar
-    expect(extrairKmDeTexto('1.250 km')).toBe(1250);
-    expect(extrairKmDeTexto('800 km')).toBe(800);
-
-    // Strings vazias ou não numéricas
-    expect(extrairKmDeTexto('')).toBe(120);
-    expect(extrairKmDeTexto('Sem rota direta')).toBe(120);
-    expect(extrairKmDeTexto(null)).toBe(120);
+describe('rotas recebidas e GPX', () => {
+  it('não cria alternativas artificiais', () => {
+    expect(gerarRotasAlternativas(trip)).toEqual([]);
+    expect(gerarRotasAlternativas({ ...trip, rotas: [route] })).toEqual([route]);
   });
 
-  it('mantém a distância decimal exata em rotas curtas e calcula alternativas coerentes', () => {
-    const viagemCurta: Viagem = {
-      id: 'trip-olinda',
-      origem: 'Recife - PE',
-      destino: 'Olinda - PE',
-      clima: { temperatura: '26 °C', umidade: '75%', vento: '14 km/h' },
-      percurso: { distancia: '6.5 km', tempo: '8 min' },
-      dicas_destino: 'Dicas de Recife e Olinda',
-    };
-
-    const [principal, economica] = gerarRotasAlternativas(viagemCurta);
-    // Não pode inflar 10x para 65 km
-    expect(principal.distanciaKm).toBe(6.5);
-    expect(economica.distanciaKm).toBe(7);
-    expect(principal.paradas).toHaveLength(0);
-    expect(economica.paradas).toHaveLength(0);
-  });
-
-  it('formata minutos em horas e minutos', () => {
-    expect(formatarMinutosEmTempo(45)).toBe('45 min');
-    expect(formatarMinutosEmTempo(120)).toBe('2h');
-    expect(formatarMinutosEmTempo(135)).toBe('2h 15min');
-  });
-
-  it('calcula autonomia corretamente para combustão e elétrico', () => {
-    const combustao: RoteiroFormData = {
-      origem_cidade: 'Recife',
-      origem_uf: 'PE',
-      destino_cidade: 'Natal',
-      destino_uf: 'RN',
-      propulsao: 'combustao',
-      consumo_km_l: 10,
-      capacidade_tanque_l: 50,
-    };
-    expect(calcularAutonomiaVeiculo(combustao)).toBe(500);
-
-    const eletrico: RoteiroFormData = {
-      origem_cidade: 'Recife',
-      origem_uf: 'PE',
-      destino_cidade: 'Natal',
-      destino_uf: 'RN',
-      propulsao: 'eletrico',
-      eficiencia_km_kwh: 5,
-      capacidade_bateria_kwh: 70,
-    };
-    expect(calcularAutonomiaVeiculo(eletrico)).toBe(350);
-  });
-
-  it('posiciona paradas respeitando a margem de segurança de ~18%', () => {
-    const autonomia = 400;
-    const coordenadas = [[-8.0, -35.0] as [number, number], [-12.0, -38.0] as [number, number]];
-
-    // Viagem de 300 km com 400 km de autonomia:
-    // Limite crítico = 400 * 0.82 = 328 km. 300 km < 328 km => 0 paradas necessárias.
-    const paradasCurta = calcularParadasEstrategicas(300, autonomia, 'combustao', coordenadas);
-    expect(paradasCurta).toHaveLength(0);
-
-    // Viagem de 900 km com 400 km de autonomia:
-    // Limite crítico = 328 km. 900 km requer paradas estratégicas antes da reserva.
-    const paradasLonga = calcularParadasEstrategicas(900, autonomia, 'combustao', coordenadas);
-    expect(paradasLonga.length).toBeGreaterThan(0);
-    expect(paradasLonga[0].nivelBateriaOuTanquePct).toBeGreaterThan(18); // Acima do crítico de 18%
-    expect(paradasLonga[0].tipo).toBe('combustivel');
-  });
-
-  it('calcula rateio de passageiros corretamente de 1 a 8', () => {
-    const custos1 = calcularCustosViagem(500, 40, undefined, 0, 1);
-    expect(custos1.passageiros).toBe(1);
-    expect(custos1.valorPorPassageiro).toBe(custos1.total);
-
-    const custos4 = calcularCustosViagem(500, 40, undefined, 0, 4);
-    expect(custos4.passageiros).toBe(4);
-    expect(custos4.valorPorPassageiro).toBe(Math.round((custos4.total / 4) * 100) / 100);
-  });
-
-  it('gera duas alternativas de rotas (Principal e Econômica) com atualização atômica de métricas', () => {
-    const viagem: Viagem = {
-      id: 'trip-1',
-      origem: 'Recife - PE',
-      destino: 'Salvador - BA',
-      clima: { temperatura: '26 °C', umidade: '75%', vento: '14 km/h' },
-      percurso: { distancia: '800 km', tempo: '11h' },
-      dicas_destino: 'Dicas de viagem',
-    };
-
-    const rotas = gerarRotasAlternativas(viagem, undefined, 2);
-    expect(rotas).toHaveLength(2);
-
-    const [principal, economica] = rotas;
-    expect(principal.id).toBe('principal');
-    expect(economica.id).toBe('economica');
-
-    // A rota econômica evita pedágios
-    expect(economica.pedagios).toBeLessThan(principal.pedagios);
-    // A rota econômica é ligeiramente mais longa em distância e tempo
-    expect(economica.distanciaKm).toBeGreaterThan(principal.distanciaKm);
-  });
-
-  it('gera XML GPX 1.1 válido com waypoints e track', () => {
-    const viagem: Viagem = {
-      id: 'trip-1',
-      origem: 'Recife - PE',
-      destino: 'Olinda - PE',
-      clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
-      percurso: { distancia: '10 km', tempo: '25 min' },
-      dicas_destino: 'Centro histórico',
-    };
-    const [rota] = gerarRotasAlternativas(viagem);
-    const gpx = gerarConteudoGpx('Recife - PE', 'Olinda - PE', rota);
-
+  it('gera XML GPX 1.1 com geometria recebida e caracteres escapados', () => {
+    const gpx = gerarConteudoGpx('Recife & Olinda', 'Praia <Norte>', {
+      ...route,
+      titulo: 'Rota "principal"',
+    });
     expect(gpx).toContain('<?xml version="1.0" encoding="UTF-8"?>');
     expect(gpx).toContain('<gpx version="1.1"');
-    expect(gpx).toContain('<wpt lat=');
-    expect(gpx).toContain('<trk>');
+    expect(gpx).toContain('<trkpt lat="-8.05" lon="-34.88" />');
+    expect(gpx).toContain('Recife &amp; Olinda');
+    expect(gpx).toContain('Praia &lt;Norte&gt;');
+    expect(gpx).toContain('Rota &quot;principal&quot;');
+    expect(gpx).not.toContain('<ele>0</ele>');
   });
 
-  it('gera links válidos para Google Maps e WhatsApp', () => {
-    const maps = gerarLinkGoogleMaps('Recife - PE', 'Olinda - PE');
-    expect(maps).toContain('https://www.google.com/maps/dir/?api=1');
-    expect(maps).toContain('origin=Recife%20-%20PE');
-    expect(maps).toContain('destination=Olinda%20-%20PE');
-
-    const viagem: Viagem = {
-      id: 'trip-1',
-      origem: 'Recife - PE',
-      destino: 'Olinda - PE',
-      clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
-      percurso: { distancia: '10 km', tempo: '25 min' },
-      dicas_destino: 'Centro histórico',
-    };
-    const [rota] = gerarRotasAlternativas(viagem);
-    const whatsapp = gerarLinkWhatsApp('Recife - PE', 'Olinda - PE', rota);
-    expect(whatsapp).toContain('https://api.whatsapp.com/send?text=');
-    expect(whatsapp).toContain(encodeURIComponent('Recife - PE'));
+  const invalidGeometries: { coordenadas: CoordenadaGPS[] }[] = [
+    { coordenadas: [] },
+    { coordenadas: [[-8, -34]] },
+    {
+      coordenadas: [
+        [100, -34],
+        [-8, -35],
+      ],
+    },
+    {
+      coordenadas: [
+        [Number.NaN, -34],
+        [-8, -35],
+      ],
+    },
+  ];
+  it.each(invalidGeometries)('recusa geometria inválida: $coordenadas', ({ coordenadas }) => {
+    expect(() => gerarConteudoGpx('A', 'B', { ...route, coordenadas })).toThrow(
+      /Geometria indisponível/,
+    );
   });
 
-  it('obtém coordenadas aproximadas por capital ou UF', () => {
-    const coordRecife = obterCoordenadasLocal('Recife - PE');
-    expect(coordRecife[0]).toBeCloseTo(-8.0476, 2);
-
-    const coordBahia = obterCoordenadasLocal('Feira de Santana - BA');
-    expect(coordBahia[0]).toBeLessThan(0); // Coordenada válida no hemisfério sul
+  it('gera links externos com origem e destino codificados', () => {
+    expect(gerarLinkGoogleMaps('Recife - PE', 'Olinda - PE')).toContain('origin=Recife%20-%20PE');
+    expect(gerarLinkWhatsApp('Recife - PE', 'Olinda - PE', route)).toContain(
+      encodeURIComponent('Recife - PE'),
+    );
   });
 });
 

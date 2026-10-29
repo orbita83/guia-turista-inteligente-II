@@ -24,6 +24,16 @@ que retornam `204 No Content`.
 O planejamento mantém o formato de viagem já produzido pelo Flask: `id`, `criado_em`,
 `origem`, `destino`, `clima`, `percurso`, `dicas_destino` e `diagnostico_ia`. Cidades
 são higienizadas e limitadas a 80 caracteres; origem e destino vazios retornam `422`.
+
+O frontend aceita, quando presentes, `clima.sensacao`, `clima.condicao`,
+`clima.icone`, `percurso.geometria` (lista de pelo menos duas coordenadas
+`[latitude, longitude]`), `rotas`, `atrativos` e `atrativosVisitadosIds`.
+Também admite `percurso.perfilElevacao` e `rotas[].perfilElevacao` como listas de
+amostras `{ distanciaKm, altitudeM }` com distâncias crescentes dentro da rota.
+Esses campos são opcionais e ainda não são garantidos pelos endpoints executáveis.
+O cliente valida seus formatos em runtime e ignora itens opcionais inválidos sem
+perder a viagem identificada. O formato estruturado de `rotas` e `atrativos` segue
+os tipos da SPA e permanece **proposto** até estabilização do contrato no backend.
 Solicitações iguais da mesma identidade têm bloqueio de concorrência e cooldown de
 quatro segundos, respondendo `409`. Falhas HTTP não tratadas pelos fallbacks dos
 provedores respondem `502`.
@@ -49,6 +59,9 @@ o backend valida e copia o arquivo legado da raiz sem removê-lo.
 - `X-Request-ID`: ecoa o ID enviado ou gera um ID para a requisição.
 
 Em chamadas cross-origin, os dois cabeçalhos de resposta são expostos por CORS.
+No frontend, uma resposta `422` no formato FastAPI `detail: [{loc, msg}]` associa
+mensagens aos campos conhecidos do formulário. Formatos desconhecidos mantêm uma
+mensagem geral segura; essa leitura não altera o contrato do servidor.
 
 ### Operação
 

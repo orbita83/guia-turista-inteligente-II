@@ -7,6 +7,7 @@ import type {
   Usuario,
   Viagem,
 } from '../types/domain';
+import { parseTripOptionalFields } from './tripOptionalFields';
 
 export interface SessionResponse {
   usuario: Usuario | null;
@@ -30,10 +31,40 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly fieldErrors: Readonly<Record<string, string>> = {},
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+const FORM_FIELDS = new Set([
+  'origem_cidade',
+  'origem_uf',
+  'destino_cidade',
+  'destino_uf',
+  'perfis',
+  'consumo_km_l',
+  'capacidade_tanque_l',
+  'preco_combustivel_l',
+  'eficiencia_km_kwh',
+  'capacidade_bateria_kwh',
+  'preco_energia_kwh',
+]);
+
+function parseValidationErrors(detail: unknown): Record<string, string> {
+  if (!Array.isArray(detail)) return {};
+  const errors: Record<string, string> = {};
+  for (const value of detail) {
+    const issue = recordValue(value);
+    if (!issue || !Array.isArray(issue.loc) || typeof issue.msg !== 'string') continue;
+    let field: string | undefined;
+    for (const entry of issue.loc) {
+      if (typeof entry === 'string' && FORM_FIELDS.has(entry)) field = entry;
+    }
+    if (typeof field === 'string' && !errors[field]) errors[field] = issue.msg;
+  }
+  return errors;
 }
 
 export class ApiContractError extends Error {
@@ -98,6 +129,7 @@ export function parseTrip(value: unknown): Viagem | null {
   const geometry = parseGeometry(route?.geometria);
   const diagnostics = recordValue(trip.diagnostico_ia);
   const createdAt = availableText(trip.criado_em, '');
+  const optionalFields = parseTripOptionalFields(trip);
 
   // TODO(backend): consumir origem, destino, clima e percurso completos quando o contrato
   // de planejamento/listagem os entregar; os campos ausentes seguem visíveis como "Aguardando dados".
@@ -110,14 +142,20 @@ export function parseTrip(value: unknown): Viagem | null {
       temperatura: availableText(weather?.temperatura),
       umidade: availableText(weather?.umidade),
       vento: availableText(weather?.vento),
+      ...optionalFields.clima,
     },
     percurso: {
       distancia: availableText(route?.distancia),
       tempo: availableText(route?.tempo),
-      ...(geometry ? { geometria: geometry } : {}),
+      ...optionalFields.percurso,
     },
     dicas_destino: availableText(trip.dicas_destino, ''),
     ...(diagnostics ? { diagnostico_ia: diagnostics } : {}),
+    ...(optionalFields.rotas ? { rotas: optionalFields.rotas } : {}),
+    ...(optionalFields.atrativos ? { atrativos: optionalFields.atrativos } : {}),
+    ...(optionalFields.atrativosVisitadosIds
+      ? { atrativosVisitadosIds: optionalFields.atrativosVisitadosIds }
+      : {}),
   };
 }
 
@@ -149,16 +187,18 @@ function requestHeaders(init?: RequestInit): Headers {
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let message = `O servidor respondeu com HTTP ${response.status}.`;
+    let fieldErrors: Record<string, string> = {};
     try {
       const payload: unknown = await response.json();
       if (payload && typeof payload === 'object' && 'detail' in payload) {
         const detail = payload.detail;
         message = typeof detail === 'string' ? detail : message;
+        if (response.status === 422) fieldErrors = parseValidationErrors(detail);
       }
     } catch {
       // Mantém uma mensagem segura quando não há corpo JSON legível.
     }
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, fieldErrors);
   }
 
   if (response.status === 204) return undefined as T;

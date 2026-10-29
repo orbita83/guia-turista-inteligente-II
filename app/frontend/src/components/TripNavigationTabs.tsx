@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import {
   baixarArquivoGpx,
   gerarLinkGoogleMaps,
   gerarLinkWhatsApp,
-  gerarRotasAlternativas,
+  geometriaValida,
 } from '../services/routeCalculator';
-import type { AbaViagem, Viagem } from '../types/domain';
+import type { AbaViagem, RotaAlternativa, Viagem } from '../types/domain';
 
 export interface TripNavigationTabsProps {
   viagem: Viagem;
@@ -13,6 +13,7 @@ export interface TripNavigationTabsProps {
   onAbaChange: (aba: AbaViagem) => void;
   onExcluir?: () => void;
   onGpxDownload?: () => void;
+  rotaAtiva?: RotaAlternativa;
 }
 
 export function TripNavigationTabs({
@@ -21,14 +22,17 @@ export function TripNavigationTabs({
   onAbaChange,
   onExcluir,
   onGpxDownload,
+  rotaAtiva,
 }: TripNavigationTabsProps) {
-  const [erroGpx, setErroGpx] = useState('');
+  const [gpxFeedback, setGpxFeedback] = useState('');
+  const geometria = rotaAtiva?.coordenadas ?? viagem.percurso.geometria;
+  const podeExportar = geometriaValida(geometria);
   const linkMaps = gerarLinkGoogleMaps(viagem.origem, viagem.destino);
   const linkWhatsapp = gerarLinkWhatsApp(
     viagem.origem,
     viagem.destino,
-    viagem.percurso?.distancia || '',
-    viagem.percurso?.tempo || '',
+    rotaAtiva ?? viagem.percurso.distancia,
+    rotaAtiva ? undefined : viagem.percurso.tempo,
   );
 
   const handlePrint = () => {
@@ -37,20 +41,37 @@ export function TripNavigationTabs({
     }
   };
 
+  const handleTabKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const tabs: AbaViagem[] = ['visao-geral', 'mapa', 'guia'];
+    const current = tabs.indexOf(abaAtiva);
+    let next = current;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    onAbaChange(tabs[next]);
+    event.currentTarget.querySelector<HTMLElement>(`#tab-${tabs[next]}`)?.focus();
+  };
+
   const handleGpx = () => {
-    setErroGpx('');
+    if (!geometriaValida(geometria) || !geometria) return;
     try {
-      if (onGpxDownload) {
-        onGpxDownload();
-        return;
-      }
-      if (!Array.isArray(viagem.percurso?.geometria) || viagem.percurso.geometria.length < 2) {
-        throw new Error('GPX indisponível: esta viagem não possui geometria rodoviária real.');
-      }
-      const [rotaPrincipal] = gerarRotasAlternativas(viagem);
-      if (rotaPrincipal) baixarArquivoGpx(viagem.origem, viagem.destino, rotaPrincipal);
-    } catch (error) {
-      setErroGpx(error instanceof Error ? error.message : 'Não foi possível baixar o GPX.');
+      if (onGpxDownload) onGpxDownload();
+      else
+        baixarArquivoGpx(
+          viagem.origem,
+          viagem.destino,
+          rotaAtiva ?? {
+            titulo: 'Traçado principal',
+            coordenadas: geometria,
+            paradas: [],
+          },
+        );
+      setGpxFeedback('Arquivo GPX preparado para download.');
+    } catch {
+      setGpxFeedback('Não foi possível exportar o GPX. Tente novamente.');
     }
   };
 
@@ -58,13 +79,19 @@ export function TripNavigationTabs({
     <nav className="trip-navigation-container" aria-label="Navegação e ações da viagem planejada">
       {erroGpx && <p role="alert">{erroGpx}</p>}
       {/* 1. Linha de Abas de Navegação (Issue #11) */}
-      <div className="trip-tabs-bar" role="tablist" aria-label="Seções do resultado da viagem">
+      <div
+        className="trip-tabs-bar"
+        role="tablist"
+        aria-label="Seções do resultado da viagem"
+        onKeyDown={handleTabKeys}
+      >
         <button
           type="button"
           role="tab"
           id="tab-visao-geral"
           aria-selected={abaAtiva === 'visao-geral'}
-          aria-controls="panel-visao-geral"
+          aria-controls="panel-mapa panel-guia"
+          tabIndex={abaAtiva === 'visao-geral' ? 0 : -1}
           className={`trip-tab-btn${abaAtiva === 'visao-geral' ? ' is-active' : ''}`}
           onClick={() => onAbaChange('visao-geral')}
         >
@@ -80,6 +107,7 @@ export function TripNavigationTabs({
           id="tab-mapa"
           aria-selected={abaAtiva === 'mapa'}
           aria-controls="panel-mapa"
+          tabIndex={abaAtiva === 'mapa' ? 0 : -1}
           className={`trip-tab-btn${abaAtiva === 'mapa' ? ' is-active' : ''}`}
           onClick={() => onAbaChange('mapa')}
         >
@@ -95,6 +123,7 @@ export function TripNavigationTabs({
           id="tab-guia"
           aria-selected={abaAtiva === 'guia'}
           aria-controls="panel-guia"
+          tabIndex={abaAtiva === 'guia' ? 0 : -1}
           className={`trip-tab-btn${abaAtiva === 'guia' ? ' is-active' : ''}`}
           onClick={() => onAbaChange('guia')}
         >
@@ -153,12 +182,14 @@ export function TripNavigationTabs({
           type="button"
           className="btn-trip-action btn-action-gpx"
           onClick={handleGpx}
+          disabled={!podeExportar}
           title="Baixar arquivo GPX 1.1 da rota para GPS ou Garmin"
         >
           <span aria-hidden="true">📥</span>
           <span>Baixar GPX</span>
         </button>
       </div>
+      {gpxFeedback && <p role="status">{gpxFeedback}</p>}
     </nav>
   );
 }
