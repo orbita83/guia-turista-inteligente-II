@@ -2,7 +2,7 @@ import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib import import_module
-from time import perf_counter
+from time import perf_counter, monotonic
 from typing import Any
 from uuid import uuid4
 
