@@ -106,6 +106,15 @@ def test_calcular_autonomia_combustao_penalizacao_relevo():
     assert ef_km == pytest.approx(400.0, rel=1e-3)
 
 
+def test_ganho_altimetrico_aumenta_autonomia_sem_fator_invalido():
+    combustao = calcular_autonomia_combustao(50.0, 10.0, 100.0, penalizacao_relevo_percent=-5.0)
+    eletrico = calcular_autonomia_eletrico(60.0, 5.0, 100.0, penalizacao_relevo_percent=-5.0)
+    assert combustao[0] == pytest.approx(500.0 / 0.95)
+    assert eletrico[0] == pytest.approx(300.0 / 0.95)
+    with pytest.raises(ParametrosVeiculoInvalidosError):
+        calcular_autonomia_combustao(50.0, 10.0, penalizacao_relevo_percent=-100.0)
+
+
 def test_calcular_autonomia_eletrico_sucesso():
     """Valida a fórmula de veículo elétrico: autonomia = capacidade (kWh) * eficiência (km/kWh)."""
     # Bateria: 60 kWh, Eficiência: 6 km/kWh -> 360 km

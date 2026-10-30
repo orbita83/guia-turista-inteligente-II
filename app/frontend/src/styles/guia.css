@@ -192,15 +192,16 @@
    2. Guia do Viajante com Streaming (Gemini AI / SSE)
    -------------------------------------------------------------------------- */
 .guide-streaming-block {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  background: #f3edff;
+  border: 1px solid #d9c8fa;
+  border-radius: 14px;
   padding: 1.25rem;
   margin-bottom: 1.5rem;
 }
 
 [data-theme='dark'] .guide-streaming-block {
-  background: rgba(30, 41, 59, 0.5);
+  background: #28213d;
+  border-color: #594783;
 }
 
 .guide-header {
@@ -284,11 +285,20 @@
 
 .guide-content-area {
   min-height: 120px;
+  background: #ffffff;
+  border: 1px solid #e9ddfb;
+  border-radius: 10px;
+  padding: 1.25rem;
   font-size: 0.94rem;
   line-height: 1.65;
   color: var(--text-main);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+[data-theme='dark'] .guide-content-area {
+  background: #1e293b;
+  border-color: #594783;
 }
 
 .guide-parsed-sections {
@@ -298,14 +308,17 @@
 }
 
 .guide-section-card {
-  padding: 0.85rem 1rem;
-  border-radius: 8px;
-  background: #f8fafc;
-  border-left: 3px solid var(--primary, #0284c7);
+  padding: 0.4rem 0 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.guide-section-card:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 [data-theme='dark'] .guide-section-card {
-  background: rgba(15, 23, 42, 0.4);
+  border-color: #475569;
 }
 
 .guide-section-heading {
@@ -341,11 +354,18 @@
 .guide-actions-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 0.6rem;
   margin-top: 1rem;
   padding-top: 0.75rem;
   border-top: 1px dashed var(--border-color);
+}
+
+.guide-collapse-row {
+  display: flex;
+  flex: 0 0 100%;
+  justify-content: center;
 }
 
 .btn-guide-action {
@@ -383,7 +403,21 @@
 .attractions-section {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.attractions-header,
+.attractions-group {
+  padding: 1.4rem;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.attractions-header {
+  display: block;
 }
 
 .attractions-header {
@@ -490,11 +524,30 @@
 }
 
 .attractions-group-header {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding-bottom: 0.4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 0.65rem;
+  padding-bottom: 0.8rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+.attractions-group-header p {
+  grid-column: 1;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.83rem;
+}
+
+.attractions-group-header .attractions-count-pill {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+}
+
+.attractions-group-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 .attractions-group-title {

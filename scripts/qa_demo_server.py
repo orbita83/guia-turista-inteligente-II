@@ -26,6 +26,22 @@ def main() -> None:
         from app.main import app
         import uvicorn
 
+        @app.middleware('http')
+        async def controlled_provider_marker(request, call_next):
+            response = await call_next(request)
+            response.headers['X-QA-Provider'] = 'controlled'
+            exposed = response.headers.get('Access-Control-Expose-Headers', '')
+            response.headers['Access-Control-Expose-Headers'] = f'{exposed}, X-QA-Provider'.strip(', ')
+            return response
+
+        async def complete_guide(destination, **kwargs):
+            return (
+                '📍 Pontos turísticos\nCentro histórico.\n\n'
+                '🍽️ Culinária\nPratos regionais.\n\n'
+                '💡 Dica de ouro\nProvedor controlado de demonstração.',
+                {'status': 'sucesso', 'fallback_utilizado': False, 'modelo': 'qa-controlled'},
+            )
+
         async def provider(destination, api_key, timeout_seconds, context):
             yield "📍 Pontos turísticos\nCentro histórico e praça central.\n\n"
             await asyncio.sleep(0.7)
@@ -51,6 +67,7 @@ def main() -> None:
             }
 
         guide._request_guide_chunks = provider
+        trips.get_guide_with_diagnostics = complete_guide
         trips.geocode = geocode
         trips.get_weather = weather
         trips.get_route = route

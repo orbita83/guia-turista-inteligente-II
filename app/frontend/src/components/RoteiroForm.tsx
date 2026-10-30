@@ -23,10 +23,10 @@ const FORMULARIO_INICIAL: Required<RoteiroFormData> = {
   propulsao: 'combustao',
   consumo_km_l: 12,
   capacidade_tanque_l: 50,
-  preco_combustivel_l: 6.19,
+  preco_combustivel_l: Number.NaN,
   eficiencia_km_kwh: 6,
   capacidade_bateria_kwh: 60,
-  preco_energia_kwh: 0.95,
+  preco_energia_kwh: Number.NaN,
   passageiros: 1,
 };
 
@@ -58,6 +58,7 @@ export interface RoteiroFormProps {
   suggestionStatus?: SuggestionStatus;
   onRequestSuggestions?: () => void | Promise<void>;
   onSubmit: (data: RoteiroFormData) => void | Promise<void>;
+  onCancel?: () => void;
 }
 
 function normalizar(valor: string): string {
@@ -87,6 +88,7 @@ export function RoteiroForm({
   suggestionStatus = 'unavailable',
   onRequestSuggestions,
   onSubmit,
+  onCancel,
 }: RoteiroFormProps) {
   const [formData, setFormData] = useState<Required<RoteiroFormData>>(FORMULARIO_INICIAL);
   const [erros, setErros] = useState<ErrosFormulario>({});
@@ -645,6 +647,11 @@ export function RoteiroForm({
             )}
           </button>
         </fieldset>
+        {isSubmitting && onCancel && (
+          <button type="button" className="btn planner-cancel" onClick={onCancel}>
+            ✕ Cancelar
+          </button>
+        )}
       </form>
     </section>
   );

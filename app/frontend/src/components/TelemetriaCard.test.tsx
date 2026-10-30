@@ -31,17 +31,21 @@ describe('TelemetriaCard', () => {
   });
 
   it('organiza as métricas e seções como no wireframe sem inventar valores', () => {
-    renderPanel();
+    const { container } = renderPanel();
+    expect(container.querySelectorAll('.telemetry-metrics > .telemetry-metric')).toHaveLength(4);
     expect(screen.getByText('Tempo total').nextElementSibling).toHaveTextContent('620 ms');
+    expect(screen.getByText('Geocoding').nextElementSibling).toHaveTextContent('Aguardando dados');
+    expect(screen.getByText('APIs + IA Gemini').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
+    );
+    expect(screen.getByText('Ver etapas medidas').parentElement).not.toHaveAttribute('open');
     expect(screen.getByText('Geocodificação da origem').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
     expect(screen.getByText('Total dos serviços').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
-    expect(screen.getByText('Servidor local (Tempo da API)').nextElementSibling).toHaveTextContent(
-      '480 ms',
-    );
+    expect(screen.getByText('Tempo da API').nextElementSibling).toHaveTextContent('480 ms');
     expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
@@ -83,7 +87,9 @@ describe('TelemetriaCard', () => {
       />,
     );
     expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent('Indisponível');
-    expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent('Indisponível');
+    expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent(
+      'Indisponível',
+    );
     expect(screen.getByRole('status')).toHaveTextContent('HTTP 404');
   });
 
@@ -98,7 +104,7 @@ describe('TelemetriaCard', () => {
       ],
     });
     renderPanel(settledTelemetryFixture(snapshot));
-    expect(screen.getByText('Servidor local (Tempo da API)').nextElementSibling).toHaveTextContent(
+    expect(screen.getByText('Tempo da API').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
     expect(screen.getByText('Degradado').closest('li')).toHaveTextContent('OSRM');

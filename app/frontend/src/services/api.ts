@@ -103,15 +103,21 @@ export function parseOperationalTelemetry(value: unknown): OperationalTelemetry 
   const uptime = fields?.uptime_seconds;
   const total = fields?.total_roteiros_persistidos;
   if (
-    typeof uptime !== 'number' || !Number.isFinite(uptime) || uptime < 0 ||
-    typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0
+    typeof uptime !== 'number' ||
+    !Number.isFinite(uptime) ||
+    uptime < 0 ||
+    typeof total !== 'number' ||
+    !Number.isSafeInteger(total) ||
+    total < 0
   ) {
     throw new ApiContractError('Resposta de telemetria operacional inválida.');
   }
   return { uptimeSeconds: uptime, totalPersistedTrips: total };
 }
 
-export async function obterTelemetriaOperacional(signal?: AbortSignal): Promise<OperationalTelemetry> {
+export async function obterTelemetriaOperacional(
+  signal?: AbortSignal,
+): Promise<OperationalTelemetry> {
   const response = await fetch(`${API_BASE_URL}/operacao/telemetria`, {
     signal,
     credentials: 'include',
@@ -193,7 +199,7 @@ function parseParameters(value: unknown): RoteiroFormData | undefined {
     typeof params.duracao_dias === 'number' &&
     Number.isInteger(params.duracao_dias) &&
     params.duracao_dias >= 1 &&
-    params.duracao_dias <= 365
+    params.duracao_dias <= 5
   )
     result.duracao_dias = params.duracao_dias;
   const validProfiles: PerfilViajante[] = [
@@ -395,11 +401,15 @@ export function listarViagens(signal?: AbortSignal): Promise<TripsResponse> {
   return request<unknown>('/roteiros/minhas-viagens', { signal }).then(parseTripsResponse);
 }
 
-export async function criarViagem(data: RoteiroFormData): Promise<PlanTripResponse> {
+export async function criarViagem(
+  data: RoteiroFormData,
+  signal?: AbortSignal,
+): Promise<PlanTripResponse> {
   const startedAt = performance.now();
   const init: RequestInit = {
     method: 'POST',
     body: JSON.stringify(data),
+    signal,
   };
   const response = await fetch(`${API_BASE_URL}/roteiros/planejar`, {
     ...init,
@@ -420,6 +430,42 @@ export async function criarViagem(data: RoteiroFormData): Promise<PlanTripRespon
 
 export function excluirViagem(tripId: string): Promise<void> {
   return request(`/roteiros/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
+}
+
+export async function baixarGpxViagem(tripId: string, alternative = -1): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/roteiros/${encodeURIComponent(tripId)}/exportar/gpx?alternative=${alternative}`,
+    { credentials: 'include', headers: { Accept: 'application/gpx+xml' } },
+  );
+  if (!response.ok) {
+    let message = `Não foi possível exportar a viagem (HTTP ${response.status}).`;
+    try {
+      const payload: unknown = await response.json();
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        'detail' in payload &&
+        typeof payload.detail === 'string'
+      ) {
+        message = payload.detail;
+      }
+    } catch {
+      // Mantém mensagem segura se a resposta de erro não for JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  try {
+    link.href = url;
+    link.download = `rota-${tripId.replace(/[^a-zA-Z0-9_-]/g, '-')}.gpx`;
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 // TODO(integracao): validar o consumo SSE existente em streamingGuide.ts contra o backend real.

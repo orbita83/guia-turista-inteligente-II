@@ -66,7 +66,7 @@ function extrairSecoesGuia(texto: string): SecaoGuia[] {
 }
 
 function formatarPerfilViagem(perfis?: readonly string[]): string {
-  if (!perfis || perfis.length === 0) return 'Cultural & Histórico';
+  if (!perfis || perfis.length === 0) return 'Perfil não informado';
   const mapa: Record<string, string> = {
     cultural: 'Cultural & Histórico',
     gastronomico: 'Gastronômico',
@@ -117,6 +117,7 @@ export function RoteiroResult({
   const [streamMessage, setStreamMessage] = useState('');
   const [streamMode, setStreamMode] = useState<'connecting' | 'sse' | 'fallback'>('connecting');
   const [copiado, setCopiado] = useState(false);
+  const [detalhesAbertos, setDetalhesAbertos] = useState(true);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
 
   // Filtro de atrativos
@@ -127,6 +128,8 @@ export function RoteiroResult({
 
   // Estatísticas de visita
   const totalAtrativos = todosAtrativos.length;
+  const totalPontos = todosAtrativos.filter((item) => item.categoria !== 'gastronomia').length;
+  const totalGastronomia = totalAtrativos - totalPontos;
   const visitadosCount = useMemo(
     () => todosAtrativos.filter((a) => idsVisitados.includes(a.id)).length,
     [todosAtrativos, idsVisitados],
@@ -221,7 +224,8 @@ export function RoteiroResult({
   };
 
   useEffect(() => {
-    dispararStreaming();
+    // O planejamento já entrega o guia; uma segunda geração só ocorre por ação explícita.
+    if (!viagem.dicas_destino.trim()) dispararStreaming();
     return () => {
       if (streamAbortControllerRef.current) {
         streamAbortControllerRef.current.abort();
@@ -249,6 +253,28 @@ export function RoteiroResult({
   };
 
   const secoesParsed = useMemo(() => extrairSecoesGuia(textoGuia), [textoGuia]);
+  const secoesExibidas = useMemo(() => {
+    const pontos = secoesParsed.find((secao) => secao.titulo.includes('📍'));
+    if (!pontos) return secoesParsed;
+    const primeiroTurno = pontos.conteudo.search(/(?:Manhã|Tarde|Noite|Dia\s+\d+)\s*[:：-]/i);
+    if (primeiroTurno < 0) return secoesParsed;
+    const identidade = pontos.conteudo.slice(0, primeiroTurno).trim();
+    const roteiro = pontos.conteudo.slice(primeiroTurno).trim();
+    return secoesParsed.flatMap((secao) => {
+      if (secao !== pontos) {
+        if (secao.titulo.includes('🍽️')) return [{ ...secao, titulo: 'Tradições Gastronômicas' }];
+        if (secao.titulo.includes('💡'))
+          return [{ ...secao, titulo: 'Orientações Práticas e Clima' }];
+        return [secao];
+      }
+      return [
+        ...(identidade
+          ? [{ titulo: 'Identidade e Atmosfera Local', conteudo: identidade, icone: '📍' }]
+          : []),
+        { titulo: 'Roteiro Sugerido', conteudo: roteiro, icone: '📅' },
+      ];
+    });
+  }, [secoesParsed]);
 
   const duracao = formParams?.duracao_dias;
   const duracaoLabel = duracao
@@ -312,207 +338,235 @@ export function RoteiroResult({
   };
 
   return (
-    <article
-      className="roteiro-result-card"
-      aria-label={`Resultado do destino para ${viagem.destino}`}
-    >
-      {/* ------------------------------------------------------------------
+    <div className="roteiro-result-layout">
+      <article
+        className="roteiro-result-card"
+        aria-label={`Resultado do destino para ${viagem.destino}`}
+      >
+        {/* ------------------------------------------------------------------
           1. Topo / Identificação da Viagem (Wireframe Seção 3.3)
           ------------------------------------------------------------------ */}
-      <div className="trip-summary-header-card" aria-label="Identificação da viagem">
-        <div className="trip-profile-pill">
-          <span className="trip-profile-icon" aria-hidden="true">
-            🏛️
-          </span>
-          <span className="trip-profile-text">
-            {perfilLabel} · {duracaoLabel}
-          </span>
+        <div className="trip-summary-header-card" aria-label="Identificação da viagem">
+          <div className="trip-profile-pill">
+            <span className="trip-profile-icon" aria-hidden="true">
+              🏛️
+            </span>
+            <span className="trip-profile-text">
+              {perfilLabel} · {duracaoLabel}
+            </span>
+          </div>
+          <div className="trip-route-title">
+            <span aria-hidden="true">🚗</span>
+            <span>
+              {viagem.origem} ➔ {viagem.destino}
+            </span>
+          </div>
         </div>
-        <div className="trip-route-title">
-          <span aria-hidden="true">🚗</span>
-          <span>
-            {viagem.origem} ➔ {viagem.destino}
-          </span>
-        </div>
-      </div>
 
-      {/* ------------------------------------------------------------------
+        {/* ------------------------------------------------------------------
           2. Banner Meteorológico (Open-Meteo) - Conforme Wireframe Seção 3.3
           ------------------------------------------------------------------ */}
-      <section className="weather-banner" aria-labelledby="weather-title">
-        <div className="weather-banner-header">
-          <div className="weather-destination-group">
-            <span className="weather-icon" aria-hidden="true">
-              {obterIconeClima(climaDisponivel(viagem.clima.condicao) ?? undefined)}
-            </span>
-            <h3
-              id="weather-title"
-              className="weather-destination-title"
-              aria-label={`Clima em ${viagem.destino}`}
-            >
-              CLIMA NO DESTINO ({viagem.destino.toUpperCase()})
-            </h3>
-            <span className="sr-only">Clima em {viagem.destino}</span>
-          </div>
-          {(climaDisponivel(viagem.clima.temperatura) ||
-            climaDisponivel(viagem.clima.condicao)) && (
-            <span className="weather-provider-badge">Open-Meteo API</span>
-          )}
-        </div>
-
-        <div className="weather-banner-details">
-          <div className="weather-highlight">
-            <strong className="weather-temp-val">
-              {climaDisponivel(viagem.clima.temperatura) ?? 'Temperatura indisponível'}
-            </strong>
-            <span className="weather-dot-sep">·</span>
-            <span className="weather-cond-label">
-              {climaDisponivel(viagem.clima.condicao) ?? 'Condição indisponível'}
-            </span>
-          </div>
-
-          <div className="weather-sub-metrics">
-            <div className="weather-sub-item">
-              <span className="weather-sub-label">Sensação:</span>
-              <strong className="weather-sub-val">
-                {climaDisponivel(viagem.clima.sensacao) ?? 'Indisponível'}
-              </strong>
+        <section className="weather-banner" aria-labelledby="weather-title">
+          <div className="weather-banner-header">
+            <div className="weather-destination-group">
+              <span className="weather-icon" aria-hidden="true">
+                {obterIconeClima(climaDisponivel(viagem.clima.condicao) ?? undefined)}
+              </span>
+              <h3
+                id="weather-title"
+                className="weather-destination-title"
+                aria-label={`Clima em ${viagem.destino}`}
+              >
+                CLIMA NO DESTINO ({viagem.destino.toUpperCase()})
+              </h3>
+              <span className="sr-only">Clima em {viagem.destino}</span>
             </div>
-            {climaDisponivel(viagem.clima.vento) && (
-              <div className="weather-sub-item">
-                <span className="weather-sub-label">Vento:</span>
-                <strong className="weather-sub-val">{climaDisponivel(viagem.clima.vento)}</strong>
-              </div>
-            )}
-            {climaDisponivel(viagem.clima.umidade) && (
-              <div className="weather-sub-item">
-                <span className="weather-sub-label">Umidade:</span>
-                <strong className="weather-sub-val">{climaDisponivel(viagem.clima.umidade)}</strong>
-              </div>
+            {(climaDisponivel(viagem.clima.temperatura) ||
+              climaDisponivel(viagem.clima.condicao)) && (
+              <span className="weather-provider-badge">Open-Meteo API</span>
             )}
           </div>
-        </div>
-      </section>
 
-      {/* ------------------------------------------------------------------
+          <div className="weather-banner-details">
+            <div className="weather-highlight">
+              <strong className="weather-temp-val">
+                {climaDisponivel(viagem.clima.temperatura) ?? 'Temperatura indisponível'}
+              </strong>
+              <span className="weather-dot-sep">·</span>
+              <span className="weather-cond-label">
+                {climaDisponivel(viagem.clima.condicao) ?? 'Condição indisponível'}
+              </span>
+            </div>
+
+            <div className="weather-sub-metrics">
+              <div className="weather-sub-item">
+                <span className="weather-sub-label">Sensação:</span>
+                <strong className="weather-sub-val">
+                  {climaDisponivel(viagem.clima.sensacao) ?? 'Indisponível'}
+                </strong>
+              </div>
+              {climaDisponivel(viagem.clima.vento) && (
+                <div className="weather-sub-item">
+                  <span className="weather-sub-label">Vento:</span>
+                  <strong className="weather-sub-val">{climaDisponivel(viagem.clima.vento)}</strong>
+                </div>
+              )}
+              {climaDisponivel(viagem.clima.umidade) && (
+                <div className="weather-sub-item">
+                  <span className="weather-sub-label">Umidade:</span>
+                  <strong className="weather-sub-val">
+                    {climaDisponivel(viagem.clima.umidade)}
+                  </strong>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------------------
           3. Guia do Viajante com Streaming (Gemini AI / SSE) - RF-GUI-002–004
           ------------------------------------------------------------------ */}
-      <section className="guide-streaming-block" aria-labelledby="guide-title">
-        <div className="guide-header">
-          <div className="guide-title-wrapper">
-            <h3 id="guide-title" className="guide-title">
-              <span aria-hidden="true">🧭</span> <span>Guia do Viajante</span>
-            </h3>
-            <span className="guide-ai-tag">Gemini AI</span>
-          </div>
-
-          <div className="guide-header-badges">
-            {streamStatus === 'streaming' && (
-              <span className="guide-status-badge is-streaming" role="status">
-                <span className="pulse-dot" aria-hidden="true" />
-                {streamMode === 'sse'
-                  ? 'Transmitindo ao vivo…'
-                  : streamMode === 'fallback'
-                    ? 'Exibindo conteúdo existente…'
-                    : 'Conectando ao guia…'}
-              </span>
-            )}
-            {streamStatus === 'completed' && (
-              <span className="guide-status-badge is-completed" role="status">
-                {streamMode === 'sse' ? '✓ Transmissão concluída' : '✓ Conteúdo existente exibido'}
-              </span>
-            )}
-            {streamStatus === 'idle' && streamMessage && (
-              <span className="guide-status-badge" role="status">
-                {streamMessage}
-              </span>
-            )}
-            {streamStatus === 'error' && (
-              <span className="guide-status-badge is-error" role="status">
-                ⚠️ Falha na transmissão
-              </span>
-            )}
-          </div>
-        </div>
-
-        {streamStatus === 'error' && <p role="alert">{streamMessage}</p>}
-        {textoGuia &&
-          (streamStatus === 'error' || (streamStatus === 'streaming' && !streamText)) && (
-            <p role="status">Exibindo o guia recebido no planejamento.</p>
-          )}
-
-        {/* Área de Texto em Streaming */}
-        <div className="guide-content-area" role="region" aria-label="Conteúdo do guia">
-          {secoesParsed.length >= 2 ? (
-            <div className="guide-parsed-sections">
-              {secoesParsed.map((secao) => (
-                <div key={secao.titulo} className="guide-section-card">
-                  <div className="guide-section-heading">
-                    <span aria-hidden="true">{secao.icone}</span>
-                    <span>{secao.titulo}</span>
-                  </div>
-                  <p className="guide-section-text">{secao.conteudo}</p>
-                </div>
-              ))}
-              {streamStatus === 'streaming' && (
-                <span className="streaming-cursor" aria-hidden="true" />
+        <section className="guide-streaming-block" aria-labelledby="guide-title">
+          <div className="guide-header">
+            <div className="guide-title-wrapper">
+              <h3 id="guide-title" className="guide-title">
+                <span aria-hidden="true">🧭</span> <span>Guia do Viajante</span>
+              </h3>
+              {viagem.telemetria?.provedores?.gemini === 'disponivel' && (
+                <span className="guide-ai-tag">Gemini AI</span>
               )}
             </div>
-          ) : (
-            <p>
-              {textoGuia || 'Aguardando transmissão do roteiro…'}
+
+            <div className="guide-header-badges">
               {streamStatus === 'streaming' && (
-                <span className="streaming-cursor" aria-hidden="true" />
+                <span className="guide-status-badge is-streaming" role="status">
+                  <span className="pulse-dot" aria-hidden="true" />
+                  {streamMode === 'sse'
+                    ? 'Transmitindo ao vivo…'
+                    : streamMode === 'fallback'
+                      ? 'Exibindo conteúdo existente…'
+                      : 'Conectando ao guia…'}
+                </span>
               )}
-            </p>
-          )}
-        </div>
+              {streamStatus === 'completed' && (
+                <span className="guide-status-badge is-completed" role="status">
+                  {streamMode === 'sse'
+                    ? '✓ Transmissão concluída'
+                    : '✓ Conteúdo existente exibido'}
+                </span>
+              )}
+              {streamStatus === 'idle' && !streamMessage && viagem.dicas_destino.trim() && (
+                <span className="guide-status-badge is-completed" role="status">
+                  Guia recebido no planejamento
+                </span>
+              )}
+              {streamStatus === 'idle' && streamMessage && (
+                <span className="guide-status-badge" role="status">
+                  {streamMessage}
+                </span>
+              )}
+              {streamStatus === 'error' && (
+                <span className="guide-status-badge is-error" role="status">
+                  ⚠️ Falha na transmissão
+                </span>
+              )}
+            </div>
+          </div>
 
-        {/* Ações Rápidas do Guia */}
-        <div className="guide-actions-bar">
-          {streamStatus === 'streaming' && (
-            <button type="button" className="btn-guide-action" onClick={cancelarStreaming}>
-              Cancelar transmissão
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn-guide-action"
-            onClick={dispararStreaming}
-            disabled={streamStatus === 'streaming'}
-            title="Retransmitir o guia turístico pelo assistente"
+          {streamStatus === 'error' && <p role="alert">{streamMessage}</p>}
+          {textoGuia &&
+            (streamStatus === 'error' || (streamStatus === 'streaming' && !streamText)) && (
+              <p role="status">Exibindo o guia recebido no planejamento.</p>
+            )}
+
+          {/* Área de Texto em Streaming */}
+          <div
+            className="guide-content-area"
+            role="region"
+            aria-label="Conteúdo do guia"
+            hidden={!detalhesAbertos}
           >
-            <span aria-hidden="true">🔄</span>
-            <span>Retransmitir</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-guide-action"
-            onClick={copiarTextoGuia}
-            disabled={!textoGuia}
-            title="Copiar texto do guia para a área de transferência"
-          >
-            <span aria-hidden="true">{copiado ? '✓' : '📋'}</span>
-            <span>{copiado ? 'Copiado!' : 'Copiar guia'}</span>
-          </button>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------
-          4. Catálogo Interativo de Atrativos e Gastronomia - Wireframe Seção 3.3
-          ------------------------------------------------------------------ */}
-      <section className="attractions-section" aria-labelledby="attractions-title">
-        {/* TODO(integracao): reconciliar visitas com a resposta PATCH e com o histórico após recarga. */}
-        <div className="attractions-header">
-          <div className="attractions-title-box">
-            <h3 id="attractions-title">Atrativos & Gastronomia</h3>
-            <p>Descubra e marque os locais e pratos que você já conheceu.</p>
-            {viagem.atrativosFonte === 'catalogo_local' && (
-              <p>Catálogo local limitado; confirme as informações antes da visita.</p>
+            {secoesExibidas.length >= 2 ? (
+              <div className="guide-parsed-sections">
+                {secoesExibidas.map((secao) => (
+                  <div key={secao.titulo} className="guide-section-card">
+                    <div className="guide-section-heading">
+                      <span aria-hidden="true">{secao.icone}</span>
+                      <span>{secao.titulo}</span>
+                    </div>
+                    <p className="guide-section-text">{secao.conteudo}</p>
+                  </div>
+                ))}
+                {streamStatus === 'streaming' && (
+                  <span className="streaming-cursor" aria-hidden="true" />
+                )}
+              </div>
+            ) : (
+              <p>
+                {textoGuia || 'Aguardando transmissão do roteiro…'}
+                {streamStatus === 'streaming' && (
+                  <span className="streaming-cursor" aria-hidden="true" />
+                )}
+              </p>
             )}
           </div>
-        </div>
+
+          {/* Ações Rápidas do Guia */}
+          <div className="guide-actions-bar">
+            {streamStatus === 'streaming' && (
+              <button type="button" className="btn-guide-action" onClick={cancelarStreaming}>
+                Cancelar transmissão
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-guide-action"
+              onClick={dispararStreaming}
+              disabled={streamStatus === 'streaming'}
+              title="Retransmitir o guia turístico pelo assistente"
+            >
+              <span aria-hidden="true">🔄</span>
+              <span>Retransmitir</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-guide-action"
+              onClick={copiarTextoGuia}
+              disabled={!textoGuia}
+              title="Copiar texto do guia para a área de transferência"
+            >
+              <span aria-hidden="true">{copiado ? '✓' : '📋'}</span>
+              <span>{copiado ? 'Copiado!' : 'Copiar guia'}</span>
+            </button>
+            <div className="guide-collapse-row">
+              <button
+                type="button"
+                className="btn-guide-action btn-guide-collapse"
+                aria-expanded={detalhesAbertos}
+                onClick={() => setDetalhesAbertos((atual) => !atual)}
+              >
+                {detalhesAbertos ? 'Recolher detalhes do guia' : 'Mostrar detalhes do guia'}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------------------
+          4. Catálogo Interativo de Atrativos e Gastronomia - Wireframe Seção 3.3
+          ------------------------------------------------------------------ */}
+      </article>
+      <section className="attractions-section" aria-label="Atrativos e gastronomia do destino">
+        {/* TODO(integracao): reconciliar visitas com a resposta PATCH e com o histórico após recarga. */}
+        {totalAtrativos === 0 && (
+          <div className="attractions-header">
+            <div className="attractions-title-box">
+              <h3 id="attractions-title">Atrativos & Gastronomia</h3>
+              <p>Descubra e marque os locais e pratos que você já conheceu.</p>
+              <p role="status">Ainda não há atrativos catalogados para {viagem.destino}.</p>
+            </div>
+          </div>
+        )}
 
         {visitPersistenceStatus && (
           <p role="status" className="visits-persistence-status">
@@ -529,27 +583,25 @@ export function RoteiroResult({
         )}
 
         {/* Barra de Progresso de Visitas */}
-        <div className="visits-progress-container">
-          <div className="visits-progress-header">
-            <span>Seu progresso no destino</span>
-            <strong>
-              {visitadosCount} de {totalAtrativos} visitados ({progressoPct}%)
-            </strong>
+        {totalAtrativos > 0 && (
+          <div className="visits-progress-container">
+            <div className="visits-progress-header">
+              <span>Seu progresso no destino</span>
+              <strong>
+                {visitadosCount} de {totalAtrativos} visitados ({progressoPct}%)
+              </strong>
+            </div>
+            <div
+              className="visits-progress-bar"
+              role="progressbar"
+              aria-valuenow={progressoPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progresso de atrativos visitados"
+            >
+              <div className="visits-progress-fill" style={{ width: `${progressoPct}%` }} />
+            </div>
           </div>
-          <div
-            className="visits-progress-bar"
-            role="progressbar"
-            aria-valuenow={progressoPct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Progresso de atrativos visitados"
-          >
-            <div className="visits-progress-fill" style={{ width: `${progressoPct}%` }} />
-          </div>
-        </div>
-
-        {totalAtrativos === 0 && (
-          <p role="status">Ainda não há atrativos confirmados para este destino.</p>
         )}
 
         {/* Abas de Filtros */}
@@ -573,35 +625,51 @@ export function RoteiroResult({
         )}
 
         {/* Seção 1: Pontos Turísticos & Atrativos */}
-        {pontosTuristicos.length > 0 && (
+        {filtroAtrativo !== 'gastronomia' && (
           <div className="attractions-group" aria-label="Pontos Turísticos & Atrativos">
             <div className="attractions-group-header">
               <h4 className="attractions-group-title">
                 <span aria-hidden="true">📍</span> Pontos Turísticos & Atrativos
               </h4>
+              <p>Principais atrativos catalogados no destino.</p>
               <span className="attractions-count-pill">
-                {pontosTuristicos.length} {pontosTuristicos.length === 1 ? 'local' : 'locais'}
+                {totalPontos} {totalPontos === 1 ? 'local' : 'locais'}
               </span>
             </div>
-            <div className="attractions-grid">{pontosTuristicos.map(renderCard)}</div>
+            {pontosTuristicos.length > 0 ? (
+              <div className="attractions-grid">{pontosTuristicos.map(renderCard)}</div>
+            ) : (
+              <p className="attractions-group-empty">
+                {totalPontos
+                  ? 'Nenhum ponto turístico corresponde ao filtro selecionado.'
+                  : 'Sem pontos turísticos catalogados para este destino.'}
+              </p>
+            )}
           </div>
         )}
 
         {/* Seção 2: Restaurantes & Gastronomia */}
-        {gastronomia.length > 0 && (
-          <div className="attractions-group" aria-label="Restaurantes & Gastronomia">
-            <div className="attractions-group-header">
-              <h4 className="attractions-group-title">
-                <span aria-hidden="true">🍽️</span> Restaurantes & Gastronomia
-              </h4>
-              <span className="attractions-count-pill">
-                {gastronomia.length} {gastronomia.length === 1 ? 'opção' : 'opções'}
-              </span>
-            </div>
-            <div className="attractions-grid">{gastronomia.map(renderCard)}</div>
+        <div className="attractions-group" aria-label="Restaurantes & Gastronomia">
+          <div className="attractions-group-header">
+            <h4 className="attractions-group-title">
+              <span aria-hidden="true">🍽️</span> Restaurantes & Gastronomia
+            </h4>
+            <p>Opções gastronômicas catalogadas no destino.</p>
+            <span className="attractions-count-pill">
+              {totalGastronomia} {totalGastronomia === 1 ? 'opção' : 'opções'}
+            </span>
           </div>
-        )}
+          {gastronomia.length > 0 ? (
+            <div className="attractions-grid">{gastronomia.map(renderCard)}</div>
+          ) : (
+            <p className="attractions-group-empty">
+              {totalGastronomia
+                ? 'Nenhuma opção gastronômica corresponde ao filtro selecionado.'
+                : 'Sem restaurantes catalogados para este destino.'}
+            </p>
+          )}
+        </div>
       </section>
-    </article>
+    </div>
   );
 }

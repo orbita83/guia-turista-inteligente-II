@@ -25,6 +25,20 @@ GUIDE_INSTRUCTIONS = (
 )
 
 
+GUIDE_INSTRUCTIONS += (
+    " Comece a secao Pontos turisticos com uma frase sobre a identidade cultural "
+    "e historica local de ate 20 palavras. Em seguida, inclua Manha, Tarde e Noite "
+    "(ou dias numerados conforme a duracao), cada turno com exatamente uma frase "
+    "de acao direta de ate 15 palavras. Na secao Culinaria, use uma frase com "
+    "dois ou tres pratos ou sabores emblematicos e indique onde saborea-los somente "
+    "se o local vier dos dados recebidos; caso contrario, oriente a confirmar localmente. "
+    "Na Dica de ouro, use uma frase pratica que vincule temperatura e condicao do "
+    "clima recebidos ao vestuario e aos horarios; se esses dados faltarem, diga "
+    "expressamente que o clima esta indisponivel. Nao invente tradicoes, pratos "
+    "especificos nem dados meteorologicos ausentes no contexto."
+)
+
+
 def clean_guide_text(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = re.sub(r"(?m)^\s*```[^\n]*$", "", text)
@@ -55,8 +69,8 @@ def _fallback_guide(destination: str) -> str:
         "Pesquise a gastronomia regional e peça indicações de pratos locais. "
         "Confira o cardápio, os preços e ingredientes antes de pedir.\n\n"
         "💡 Dica de ouro\n"
-        "Verifique a previsão do tempo e as opções de transporte. Reserve tempo "
-        "para os deslocamentos e confirme as informações com fontes locais."
+        "Dados de clima indisponíveis nesta resposta. Consulte a previsão "
+        "antes de definir vestuário e horários, e confirme o transporte local."
     )
 
 

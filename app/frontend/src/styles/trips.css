@@ -200,3 +200,7 @@
   display: block;
   margin-top: 0.15rem;
 }
+.history-trip[role='button']:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}

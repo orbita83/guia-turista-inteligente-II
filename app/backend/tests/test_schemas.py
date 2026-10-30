@@ -53,6 +53,22 @@ from app.schemas.trips import (
 NAO_FINITOS = [float("nan"), float("inf"), float("-inf")]
 
 
+@pytest.mark.parametrize("days", [1, 5])
+def test_planning_accepts_activity_duration(days: int) -> None:
+    payload = TripCreateRequest(
+        origem_cidade="Recife", destino_cidade="Olinda", duracao_dias=days
+    )
+    assert payload.duracao_dias == days
+
+
+@pytest.mark.parametrize("days", [0, 6])
+def test_planning_rejects_duration_outside_activity(days: int) -> None:
+    with pytest.raises(ValidationError):
+        TripCreateRequest(
+            origem_cidade="Recife", destino_cidade="Olinda", duracao_dias=days
+        )
+
+
 def _erro_no_campo(exc: ValidationError, campo: str) -> bool:
     """Indica se algum erro de validação aponta para o campo informado."""
     return any(campo in erro["loc"] for erro in exc.errors())

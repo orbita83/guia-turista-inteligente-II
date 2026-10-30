@@ -87,12 +87,16 @@ describe('useApp telemetry lifecycle', () => {
       ufs: ['PE'],
       operationalTelemetry: { uptimeSeconds: 120, totalPersistedTrips: 7 },
     });
-    api.obterTelemetriaOperacional.mockRejectedValueOnce(new Error('Telemetria operacional: HTTP 404'));
+    api.obterTelemetriaOperacional.mockRejectedValueOnce(
+      new Error('Telemetria operacional: HTTP 404'),
+    );
     const { result } = renderHook(() => useApp());
-    await waitFor(() => expect(result.current.operationalTelemetry).toEqual({
-      uptimeSeconds: 120,
-      totalPersistedTrips: 7,
-    }));
+    await waitFor(() =>
+      expect(result.current.operationalTelemetry).toEqual({
+        uptimeSeconds: 120,
+        totalPersistedTrips: 7,
+      }),
+    );
     await waitFor(() => expect(result.current.operationalError).toContain('HTTP 404'));
     expect(result.current.apiHealthStatus).toBe('online');
   });

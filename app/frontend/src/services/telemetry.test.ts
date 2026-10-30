@@ -35,10 +35,14 @@ describe('providerDiagnostics', () => {
           osrm: 'disponivel',
           open_elevation: 'nao_integrado',
         },
-        duracoes_etapas_ms: { roteamento_ms: 24, guia_ms: 15 },
+        duracoes_etapas_ms: { clima_ms: 32, roteamento_ms: 24, guia_ms: 15 },
       },
     });
     expect(providers.find(({ provider }) => provider === 'open-meteo')?.state).toBe('unavailable');
+    expect(providers.find(({ provider }) => provider === 'open-meteo')?.durationMs).toEqual({
+      available: true,
+      value: 32,
+    });
     expect(providers.find(({ provider }) => provider === 'osrm')).toMatchObject({
       state: 'available',
       durationMs: { available: true, value: 24 },

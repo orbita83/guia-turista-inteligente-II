@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 import pytest
-from fastapi import Request
+from fastapi import BackgroundTasks, Request
 from fastapi.testclient import TestClient
 
 from app.core.circuit_breaker import CircuitBreaker
@@ -52,6 +52,38 @@ def test_cors_permite_patch_de_visitas_para_origem_permitida(client: TestClient)
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert "PATCH" in response.headers["access-control-allow-methods"]
     assert response.headers["access-control-allow-credentials"] == "true"
+
+
+def test_planning_persists_once_in_background_after_response(
+    client: TestClient, storage: TripStorage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.routers import trips as trips_router
+
+    async def fake_plan_trip(form, user, **kwargs):
+        assert kwargs["persist"] is False
+        assert storage.list_for_user(user["id"]) == []
+        return {
+            "id": "background-trip",
+            "origem": "Recife - PE",
+            "destino": "Olinda - PE",
+            "percurso": {"distancia": "10 km", "tempo": "20 min"},
+        }
+
+    monkeypatch.setattr(trips_router, "plan_trip", fake_plan_trip)
+    assert client.post("/api/v1/auth/visitor").status_code == 200
+    response = client.post(
+        "/api/v1/roteiros/planejar",
+        json={
+            "origem_cidade": "Recife",
+            "origem_uf": "PE",
+            "destino_cidade": "Olinda",
+            "destino_uf": "PE",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["viagem"]["id"] == "background-trip"
+    user_id = client.get("/api/v1/auth/session").json()["usuario"]["id"]
+    assert [item["id"] for item in storage.list_for_user(user_id)] == ["background-trip"]
 
 
 def test_fluxo_integrado_planejamento_guia_visitas_e_isolamento(
@@ -199,13 +231,18 @@ def test_planejamento_integra_geometria_osrm_no_contrato(
     alternative = percurso["alternativas"][0]
     assert alternative["altimetria"]["pontos"][-1]["longitude"] == -34.5
     assert alternative["custos"]["custo_propulsao"] == "0.62"
+    assert alternative["custos"]["ajuste_relevo"]["status"] == "aplicado"
+    assert alternative["custos"]["ajuste_relevo"]["variacao_consumo_percent"] == "0.14"
     assert percurso["altimetria"]["sucesso"] is True
     assert [p["elevacao_m"] for p in percurso["altimetria"]["pontos"]] == [10, 30]
     assert percurso["autonomia"]["sucesso"] is True
+    assert percurso["autonomia"]["autonomia_maxima_km"] < 120
     assert percurso["autonomia"]["paradas"]
     assert percurso["autonomia"]["paradas"][0]["origem"] == "projetado"
     assert percurso["autonomia"]["paradas"][0]["estabelecimento_verificado"] is False
     assert percurso["custos"]["custo_propulsao"] == "0.52"
+    assert percurso["custos"]["ajuste_relevo"]["status"] == "aplicado"
+    assert percurso["custos"]["ajuste_relevo"]["variacao_consumo_percent"] == "0.14"
     assert percurso["custos"]["total_completo"] is False
     assert percurso["custos"]["custo_pedagios"] is None
     assert [c["valor"] for c in percurso["custos"]["rateio"]["cotas"]] == ["0.18", "0.17", "0.17"]
@@ -502,6 +539,7 @@ async def test_client_disconnect_cancels_planning_before_persistence(
             trips_router.create_trip(
                 payload,
                 request=request,
+                background_tasks=BackgroundTasks(),
                 user={"id": "disconnect-test-user", "tipo": "visitante"},
                 client=client,
                 storage=storage,
@@ -662,6 +700,7 @@ async def test_external_route_cancellation_cleans_planning_and_disconnect_tasks(
             trips_router.create_trip(
                 payload,
                 request=request,
+                background_tasks=BackgroundTasks(),
                 user={"id": "external-cancel-user", "tipo": "visitante"},
                 client=client,
                 storage=object(),
@@ -709,6 +748,7 @@ def test_operational_telemetry_requires_session_and_returns_real_numbers(
     assert payload["uptime_seconds"] >= 0
     assert isinstance(payload["total_roteiros_persistidos"], int)
     assert payload["total_roteiros_persistidos"] >= 0
+    assert payload["requisicoes_http_ativas"] >= 1
 
 
 def test_session_includes_operational_metrics_for_authenticated_visitor(

@@ -161,7 +161,10 @@ export function useViagem() {
   const [persistenceById, setPersistenceById] = useState<Record<string, PersistenceStatus>>({});
   const { toasts, addToast, dismissToast } = useToasts();
   const [telemetryState, setTelemetryState] = useState<TelemetryPanelState>({ kind: 'hidden' });
-  const [operationalTelemetry, setOperationalTelemetry] = useState<{ uptimeSeconds: number; totalPersistedTrips: number } | null>(null);
+  const [operationalTelemetry, setOperationalTelemetry] = useState<{
+    uptimeSeconds: number;
+    totalPersistedTrips: number;
+  } | null>(null);
   const [operationalError, setOperationalError] = useState<string | null>(null);
   const [apiHealthStatus, setApiHealthStatus] = useState<'checking' | 'online' | 'unavailable'>(
     'checking',
@@ -179,6 +182,7 @@ export function useViagem() {
   const visitRevision = useRef<Record<string, number>>({});
   const pendingVisitChanges = useRef<Record<string, Record<string, boolean>>>({});
   const attemptSequence = useRef(0);
+  const planningController = useRef<AbortController | null>(null);
   const sessionGeneration = useRef(0);
   const deletingRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
@@ -340,6 +344,8 @@ export function useViagem() {
 
   const runSessionAction = useCallback(
     async (action: () => Promise<unknown>): Promise<boolean> => {
+      planningController.current?.abort();
+      planningController.current = null;
       attemptSequence.current += 1;
       sessionGeneration.current += 1;
       setTelemetryState({ kind: 'hidden' });
@@ -425,11 +431,17 @@ export function useViagem() {
 
   const submitTrip = useCallback(
     async (form: RoteiroFormData) => {
+      planningController.current?.abort();
+      const controller = new AbortController();
+      planningController.current = controller;
       attemptSequence.current += 1;
       const attemptId = attemptSequence.current;
       const generation = sessionGeneration.current;
       const usuario = data.usuario;
-      if (!usuario) return;
+      if (!usuario) {
+        planningController.current = null;
+        return;
+      }
       const route = safeRoute(
         routeLabel(form.origem_cidade, form.origem_uf),
         routeLabel(form.destino_cidade, form.destino_uf),
@@ -447,7 +459,8 @@ export function useViagem() {
       setPendingRoute({ origem: route.origin, destino: route.destination });
       setIsSubmitting(true);
       try {
-        const result = await criarViagem(form);
+        const result = await criarViagem(form, controller.signal);
+        if (controller.signal.aborted) return;
         if (attemptId !== attemptSequence.current || generation !== sessionGeneration.current)
           return;
         const snapshot: TelemetrySnapshot = {
@@ -473,7 +486,9 @@ export function useViagem() {
           })
           .catch(() => {
             if (generation === sessionGeneration.current && mountedRef.current)
-              setOperationalError('Falha ao atualizar os indicadores operacionais após o planejamento.');
+              setOperationalError(
+                'Falha ao atualizar os indicadores operacionais após o planejamento.',
+              );
           });
         setActiveTrip(result.viagem);
         setActiveTripForm(form);
@@ -488,6 +503,7 @@ export function useViagem() {
         if (result.aviso) addToast(result.aviso, 'info');
         else addToast('Roteiro gerado. Confirmando salvamento.', 'sucesso');
       } catch (error: unknown) {
+        if (controller.signal.aborted) return;
         if (attemptId !== attemptSequence.current || generation !== sessionGeneration.current)
           return;
         setTelemetryState({ kind: 'error', attemptId, route, previous });
@@ -500,6 +516,7 @@ export function useViagem() {
         }
         throw new Error('Falha ao gerar roteiro.');
       } finally {
+        if (planningController.current === controller) planningController.current = null;
         if (attemptId === attemptSequence.current && generation === sessionGeneration.current) {
           setIsSubmitting(false);
           setPendingRoute(null);
@@ -518,6 +535,22 @@ export function useViagem() {
       updatePersistence,
     ],
   );
+
+  const cancelTrip = useCallback(() => {
+    if (!planningController.current) return;
+    planningController.current.abort();
+    planningController.current = null;
+    attemptSequence.current += 1;
+    setIsSubmitting(false);
+    setPendingRoute(null);
+    setTelemetryState((current) => {
+      if (current.kind !== 'loading') return current;
+      return current.previous
+        ? { kind: 'settled', snapshot: current.previous }
+        : { kind: 'hidden' };
+    });
+    addToast('Planejamento cancelado.', 'info');
+  }, [addToast]);
 
   const deleteTrip = useCallback(
     async (tripId: string) => {
@@ -549,7 +582,9 @@ export function useViagem() {
           })
           .catch(() => {
             if (generation === sessionGeneration.current && mountedRef.current)
-              setOperationalError('Falha ao atualizar os indicadores operacionais após a exclusão.');
+              setOperationalError(
+                'Falha ao atualizar os indicadores operacionais após a exclusão.',
+              );
           });
       } catch {
         if (generation === sessionGeneration.current) {
@@ -802,6 +837,7 @@ export function useViagem() {
     logout: auth.logout,
     solicitarSugestoesGps,
     submitTrip,
+    cancelTrip,
     deleteTrip,
     selectTrip,
     toggleVisitaAtrativo,

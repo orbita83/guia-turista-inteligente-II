@@ -92,24 +92,29 @@ function providerElevation(value: unknown): {
   const dadosConsumoRaw = record(result.dados_consumo);
   const penalizacao =
     number(dadosConsumoRaw?.penalizacao_consumo_estimada_percent, true) ??
-    number(result.penalizacao_consumo_pct, true) ??
-    6.9;
+    number(result.penalizacao_consumo_pct, true);
   const fatorTerrenoRaw = text(dadosConsumoRaw?.fator_terreno) ?? text(result.fator_terreno);
-  const fatorTerreno: 'plano' | 'ondulado' | 'montanhoso' =
+  const fatorTerreno: 'plano' | 'ondulado' | 'montanhoso' | null =
     fatorTerrenoRaw === 'montanhoso' ||
     fatorTerrenoRaw === 'ondulado' ||
     fatorTerrenoRaw === 'plano'
       ? fatorTerrenoRaw
-      : 'ondulado';
+      : null;
 
-  const altitudeMin = number(result.altitude_minima_m, true) ?? 5;
-  const altitudeMax = number(result.altitude_maxima_m, true) ?? 675;
-  const subida = number(result.ganho_elevacao_m, true) ?? 918;
-  const descida = number(result.perda_elevacao_m, true) ?? 1055;
-  const desnivelLiquido = number(result.desnivel_liquido_m, true) ?? subida - descida;
+  const altitudeMin = number(result.altitude_minima_m, true);
+  const altitudeMax = number(result.altitude_maxima_m, true);
+  const subida = number(result.ganho_elevacao_m, true);
+  const descida = number(result.perda_elevacao_m, true);
+  const desnivelLiquido = number(result.desnivel_liquido_m, true);
 
   const topografia: PerfilTopografico | undefined =
-    result.sucesso === true
+    result.sucesso === true &&
+    altitudeMin !== null &&
+    altitudeMax !== null &&
+    subida !== null &&
+    descida !== null &&
+    desnivelLiquido !== null &&
+    penalizacao !== null
       ? {
           altitudeMaximaM: altitudeMax,
           cotaMinimaM: altitudeMin,
@@ -120,15 +125,19 @@ function providerElevation(value: unknown): {
           subidasAcumuladasM: subida,
           descidasAcumuladasM: descida,
           penalizacaoConsumoPct: penalizacao,
-          fatorTerreno,
-          dadosConsumo: {
-            fatorTerreno,
-            penalizacaoConsumoPct: penalizacao,
-            inclinacaoMediaSubidaPct:
-              number(dadosConsumoRaw?.inclinacao_media_subida_percent, true) ?? undefined,
-            inclinacaoMediaDescidaPct:
-              number(dadosConsumoRaw?.inclinacao_media_descida_percent, true) ?? undefined,
-          },
+          ...(fatorTerreno ? { fatorTerreno } : {}),
+          ...(fatorTerreno
+            ? {
+                dadosConsumo: {
+                  fatorTerreno,
+                  penalizacaoConsumoPct: penalizacao,
+                  inclinacaoMediaSubidaPct:
+                    number(dadosConsumoRaw?.inclinacao_media_subida_percent, true) ?? undefined,
+                  inclinacaoMediaDescidaPct:
+                    number(dadosConsumoRaw?.inclinacao_media_descida_percent, true) ?? undefined,
+                },
+              }
+            : {}),
         }
       : undefined;
 
@@ -191,7 +200,7 @@ function topography(value: unknown): PerfilTopografico | null {
   const desnivelLiquidoM = number(item.desnivelLiquidoM, true);
   const cotaMinimaM = number(item.cotaMinimaM, true);
   const cotaMaximaM = number(item.cotaMaximaM, true);
-  const penalizacaoConsumoPct = number(item.penalizacaoConsumoPct);
+  const penalizacaoConsumoPct = number(item.penalizacaoConsumoPct, true);
   if (
     [
       altitudeMaximaM,

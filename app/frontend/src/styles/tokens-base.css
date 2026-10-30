@@ -141,6 +141,10 @@ select {
   font: inherit;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;

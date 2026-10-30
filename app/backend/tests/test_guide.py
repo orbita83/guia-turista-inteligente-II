@@ -14,6 +14,12 @@ VALID_GUIDE = (
 )
 
 
+def test_guide_instructions_cover_required_concise_itinerary() -> None:
+    instructions = guide.GUIDE_INSTRUCTIONS.lower()
+    for required in ("20 palavras", "manha", "tarde", "noite", "15 palavras", "clima", "indisponivel"):
+        assert required in instructions
+
+
 @pytest.mark.asyncio
 async def test_guide_receives_planning_preferences(monkeypatch) -> None:
     captured = {}

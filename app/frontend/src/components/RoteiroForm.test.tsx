@@ -7,6 +7,21 @@ import { ApiError } from '../services/api';
 import { RoteiroForm } from './RoteiroForm';
 
 describe('RoteiroForm', () => {
+  it('exige preço informado pelo usuário e abre os parâmetros ao validar', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<RoteiroForm ufs={['PE']} isSubmitting={false} onSubmit={onSubmit} />);
+    await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
+    await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
+    await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
+    await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
+    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Preço por litro')).toHaveValue(null);
+    expect(screen.getByLabelText('Preço por litro')).toHaveAttribute('aria-invalid', 'true');
+    expect(document.querySelector('.advanced-parameters')).toHaveAttribute('open');
+  });
   it('sincroniza UF de município inequívoco e mantém escolha para homônimos', () => {
     render(
       <RoteiroForm
@@ -38,6 +53,7 @@ describe('RoteiroForm', () => {
     await user.click(screen.getByText(/Personalizar parâmetros/i));
     await user.clear(screen.getByLabelText('Eficiência energética'));
     await user.type(screen.getByLabelText('Eficiência energética'), '7.2');
+    await user.type(screen.getByLabelText('Preço da energia'), '0.90');
     await user.click(screen.getByRole('button', { name: 'Econômico' }));
     await user.click(screen.getByRole('button', { name: /3 dias/i }));
     await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
@@ -66,6 +82,8 @@ describe('RoteiroForm', () => {
     await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
     await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
     await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByText(/Personalizar parâmetros/i));
+    await user.type(screen.getByLabelText('Preço por litro'), '6.10');
     const submit = screen.getByRole('button', { name: /Planejar viagem/i });
 
     fireEvent.click(submit);
@@ -85,6 +103,8 @@ describe('RoteiroForm', () => {
     await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
     await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
     await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByText(/Personalizar parâmetros/i));
+    await user.type(screen.getByLabelText('Preço por litro'), '6.10');
     await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
     expect(await screen.findByText('Cidade não encontrada')).toBeInTheDocument();
     expect(screen.getByLabelText('Cidade de origem')).toHaveAttribute('aria-invalid', 'true');
@@ -101,6 +121,8 @@ describe('RoteiroForm', () => {
     await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
     await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
     await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByText(/Personalizar parâmetros/i));
+    await user.type(screen.getByLabelText('Preço por litro'), '6.10');
     await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
     expect(await screen.findByText('Consumo inválido')).toBeInTheDocument();
     expect(screen.getByLabelText('Consumo médio')).toHaveAttribute('aria-invalid', 'true');

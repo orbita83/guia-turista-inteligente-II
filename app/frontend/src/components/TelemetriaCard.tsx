@@ -58,7 +58,9 @@ function formatUptime(seconds: number): string {
   const hours = Math.floor((whole % 86400) / 3600);
   const minutes = Math.floor((whole % 3600) / 60);
   const secs = whole % 60;
-  return [days ? `${days}d` : '', days || hours ? `${hours}h` : '', `${minutes}min`, `${secs}s`].filter(Boolean).join(' ');
+  return [days ? `${days}d` : '', days || hours ? `${hours}h` : '', `${minutes}min`, `${secs}s`]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
@@ -160,8 +162,15 @@ export function TelemetriaCard({
           ) : null}
 
           <section className="telemetry-block" aria-labelledby="telemetry-trip-title">
-            <h3 id="telemetry-trip-title">
-              ⚡ Última viagem{route ? ` (${route.origin} → ${route.destination})` : ''}
+            <h3 id="telemetry-trip-title" className="telemetry-trip-heading">
+              ⚡ Última viagem
+              {route && (
+                <span className="telemetry-route">
+                  (<span>{route.origin}</span>
+                  <span aria-hidden="true"> → </span>
+                  <span>{route.destination}</span>)
+                </span>
+              )}
             </h3>
             <dl className="telemetry-metrics">
               <Metric
@@ -169,38 +178,35 @@ export function TelemetriaCard({
                 value={displayDuration(snapshot?.totalTimeMs ?? missing)}
                 tone="total"
               />
-              {(
-                [
-                  ['Geocodificação da origem', 'geocodificacao_origem_ms'],
-                  ['Geocodificação do destino', 'geocodificacao_destino_ms'],
-                  ['Clima', 'clima_ms'],
-                  ['Roteamento', 'roteamento_ms'],
-                  ['Guia', 'guia_ms'],
-                  ['Altimetria', 'altimetria_ms'],
-                  ['Total dos serviços', 'total_servicos_ms'],
-                ] as const
-              ).map(([label, key]) => {
-                const duration = snapshot?.etapas?.[key];
-                return (
-                  <Metric
-                    key={key}
-                    label={label}
-                    value={displayDuration(
-                      duration === undefined ? missing : { available: true, value: duration },
-                    )}
-                  />
-                );
-              })}
               <Metric
-                label="Servidor local (Tempo da API)"
+                label="Geocoding"
+                value={displayDuration(
+                  snapshot?.etapas?.geocodificacao_origem_ms !== undefined &&
+                    snapshot?.etapas?.geocodificacao_destino_ms !== undefined
+                    ? {
+                        available: true,
+                        value: Math.max(
+                          snapshot.etapas.geocodificacao_origem_ms,
+                          snapshot.etapas.geocodificacao_destino_ms,
+                        ),
+                      }
+                    : missing,
+                )}
+              />
+              <Metric
+                label="APIs + IA Gemini"
+                value={displayDuration(
+                  snapshot?.etapas?.total_servicos_ms === undefined
+                    ? missing
+                    : { available: true, value: snapshot.etapas.total_servicos_ms },
+                )}
+              />
+              <Metric
+                label="Tempo da API"
                 value={displayDuration(snapshot?.apiTimeMs ?? missing)}
                 tone="server"
               />
             </dl>
-            <p>
-              O tempo total inclui a requisição e a leitura da resposta; não inclui a renderização
-              da tela.
-            </p>
             <div className="telemetry-api-detail">
               <strong>Detalhamento por API:</strong>
               {snapshot ? (
@@ -218,6 +224,38 @@ export function TelemetriaCard({
                 <span> Aguardando dados da primeira viagem.</span>
               )}
             </div>
+            <details className="telemetry-stage-details">
+              <summary>Ver etapas medidas</summary>
+              <dl aria-label="Etapas detalhadas do planejamento">
+                {(
+                  [
+                    ['Geocodificação da origem', 'geocodificacao_origem_ms'],
+                    ['Geocodificação do destino', 'geocodificacao_destino_ms'],
+                    ['Clima', 'clima_ms'],
+                    ['Roteamento', 'roteamento_ms'],
+                    ['Guia', 'guia_ms'],
+                    ['Altimetria', 'altimetria_ms'],
+                    ['Total dos serviços', 'total_servicos_ms'],
+                  ] as const
+                ).map(([label, key]) => {
+                  const duration = snapshot?.etapas?.[key];
+                  return (
+                    <Metric
+                      key={key}
+                      label={label}
+                      value={displayDuration(
+                        duration === undefined ? missing : { available: true, value: duration },
+                      )}
+                    />
+                  );
+                })}
+              </dl>
+            </details>
+            <p className="telemetry-measurement-note">
+              O tempo total inclui a leitura da resposta; o tempo da API inclui a espera por
+              provedores externos. Geocoding mostra a maior das duas etapas paralelas. O tempo até
+              renderizar a tela não é medido.
+            </p>
           </section>
 
           <section className="telemetry-block" aria-labelledby="telemetry-session-title">
@@ -245,7 +283,11 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Persistência dos dados</dt>
-                <dd>
+                <dd
+                  className={
+                    sessionData?.persistence === 'permanente' ? 'telemetry-permanent' : undefined
+                  }
+                >
                   {sessionData
                     ? sessionData.persistence === 'permanente'
                       ? 'Permanente (conta Google)'
@@ -259,7 +301,11 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Qualidade da conexão</dt>
-                <dd>
+                <dd
+                  className={
+                    currentConnectivity.rtt.available ? 'telemetry-connection-indicator' : undefined
+                  }
+                >
                   {currentConnectivity?.rtt.available
                     ? `RTT estimado: ${currentConnectivity.rtt.value === 0 ? '≤ 25' : currentConnectivity.rtt.value} ms`
                     : 'Aguardando dados'}
@@ -316,7 +362,9 @@ export function TelemetriaCard({
                 value={
                   operationalTelemetry
                     ? formatUptime(operationalTelemetry.uptimeSeconds)
-                    : operationalError ? 'Indisponível' : 'Aguardando dados'
+                    : operationalError
+                      ? 'Indisponível'
+                      : 'Aguardando dados'
                 }
               />
               <Metric
@@ -324,7 +372,9 @@ export function TelemetriaCard({
                 value={
                   operationalTelemetry
                     ? String(operationalTelemetry.totalPersistedTrips)
-                    : operationalError ? 'Indisponível' : 'Aguardando dados'
+                    : operationalError
+                      ? 'Indisponível'
+                      : 'Aguardando dados'
                 }
               />
             </dl>
@@ -335,7 +385,8 @@ export function TelemetriaCard({
               </p>
             ) : null}
             <p className="telemetry-health-note">
-              Status da API: última verificação de /healthz; não é monitoramento contínuo. Roteiros totais contam apenas viagens persistidas (não incluem sessões de visitantes).
+              Status da API: última verificação de /healthz; não é monitoramento contínuo. Roteiros
+              totais contam apenas viagens persistidas (não incluem sessões de visitantes).
             </p>
             <p className="telemetry-provider-summary">
               Provedores concorrentes:{' '}

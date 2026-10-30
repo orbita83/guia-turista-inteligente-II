@@ -13,11 +13,14 @@ import { SessionHeader } from './components/SessionHeader';
 import type { AbaViagem, RotaAlternativa } from './types/domain';
 import { useViagem } from './hooks/useViagem';
 import { useMunicipios } from './hooks/useMunicipios';
+import { baixarGpxViagem } from './services/api';
+import { geometriaValida } from './services/routeCalculator';
 
 export function App() {
   const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
-  const [rotaAtivaId, setRotaAtivaId] = useState<RotaAlternativa['id']>('principal');
-  const [alternativaAtiva, setAlternativaAtiva] = useState<number | null>(null);
+  const [routeSelection, setRouteSelection] = useState<
+    { kind: 'legacy'; id: RotaAlternativa['id'] } | { kind: 'backend'; alternative: number | null }
+  >({ kind: 'backend', alternative: null });
 
   const {
     data,
@@ -51,6 +54,7 @@ export function App() {
     logout,
     solicitarSugestoesGps,
     submitTrip,
+    cancelTrip,
     deleteTrip,
     selectTrip,
     toggleVisitaAtrativo,
@@ -60,11 +64,12 @@ export function App() {
   const { municipios, status: municipioCatalogStatus } = useMunicipios(Boolean(data.usuario));
 
   useEffect(() => {
-    setRotaAtivaId('principal');
-    setAlternativaAtiva(null);
+    setRouteSelection({ kind: 'backend', alternative: null });
   }, [activeTrip?.id]);
-  const rotaAtiva =
-    activeTrip?.rotas?.find((rota) => rota.id === rotaAtivaId) ?? activeTrip?.rotas?.[0];
+  const rotaAtivaId = routeSelection.kind === 'legacy' ? routeSelection.id : 'principal';
+  const alternativaAtiva = routeSelection.kind === 'backend' ? routeSelection.alternative : null;
+  const rotasValidas = activeTrip?.rotas?.filter((rota) => geometriaValida(rota.coordenadas)) ?? [];
+  const rotaAtiva = rotasValidas.find((rota) => rota.id === rotaAtivaId) ?? rotasValidas[0];
 
   return (
     <div className="app-shell">
@@ -98,6 +103,7 @@ export function App() {
                   suggestionStatus={suggestionStatus}
                   onRequestSuggestions={solicitarSugestoesGps}
                   onSubmit={submitTrip}
+                  onCancel={cancelTrip}
                 />
 
                 {activeTrip ? (
@@ -107,6 +113,11 @@ export function App() {
                       abaAtiva={abaViagemAtiva}
                       onAbaChange={setAbaViagemAtiva}
                       onExcluir={() => deleteTrip(activeTrip.id)}
+                      onGpxDownload={
+                        rotaAtiva
+                          ? undefined
+                          : () => baixarGpxViagem(activeTrip.id, alternativaAtiva ?? -1)
+                      }
                       rotaAtiva={rotaAtiva}
                       alternativaAtiva={
                         rotaAtiva
@@ -127,17 +138,22 @@ export function App() {
                           viagem={activeTrip}
                           formParams={activeTripForm}
                           rotaAtivaId={rotaAtivaId}
-                          onRotaChange={(rota) => setRotaAtivaId(rota.id)}
+                          onRotaChange={(rota) =>
+                            setRouteSelection({ kind: 'legacy', id: rota.id })
+                          }
                           alternativaAtiva={alternativaAtiva}
-                          onAlternativaChange={setAlternativaAtiva}
+                          onAlternativaChange={(alternative) =>
+                            setRouteSelection({ kind: 'backend', alternative })
+                          }
                         />
                       </div>
                     )}
 
-                    {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'guia') && (
+                    {
                       <div
                         id="panel-guia"
                         role="tabpanel"
+                        hidden={abaViagemAtiva === 'mapa'}
                         aria-labelledby={
                           abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-guia'
                         }
@@ -159,7 +175,7 @@ export function App() {
                           onRetryVisitas={() => retryLocalVisits(activeTrip.id)}
                         />
                       </div>
-                    )}
+                    }
                   </>
                 ) : null}
               </section>

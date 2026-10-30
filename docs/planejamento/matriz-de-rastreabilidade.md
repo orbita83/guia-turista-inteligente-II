@@ -50,7 +50,7 @@ controlados; elas não substituem validação visual da SPA em execução.
 ## Lacunas de cobertura conhecidas
 
 1. Nem todo requisito funcional possui critério de aceite individual; os critérios atuais cobrem jornadas e riscos principais por capacidade.
-2. `API-AUT-001`, `API-CST-001`, `API-EXP-001`, `API-EXP-002` e `API-TEL-001` ainda dependem da estabilização de métodos, caminhos ou schemas; o painel atual usa apenas os headers e o payload já existentes em `API-PLN-001`.
+2. `API-AUT-001`, `API-CST-001`, `API-EXP-002` e `API-TEL-001` ainda dependem da estabilização de métodos, caminhos ou schemas. A exportação GPX backend foi definida em `docs/api/contratos.md` e cobre `RF-EXP-003`/`CA-EXP-001`/`CA-EXP-003` pelo endpoint autenticado `GET /api/v1/roteiros/{trip_id}/exportar/gpx`.
 3. Metas de latência ainda não possuem ambiente, volume e percentis definidos; portanto não são SLOs de produção.
 4. Emissões (`RF-CST-005`), estado online/offline (`RNF-UX-006`) e encerramento com `sendBeacon` (`RF-AUT-005`) precisam de critérios específicos antes da homologação final.
 5. O histórico já usa exclusivamente a sessão assinada; `X-User-Id` não autentica

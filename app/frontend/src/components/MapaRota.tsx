@@ -14,6 +14,15 @@ export interface MapaRotaProps {
   onAlternativaChange?: (index: number | null) => void;
 }
 
+function coordenadaValida([latitude, longitude]: CoordenadaGPS): boolean {
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 &&
+    Math.abs(longitude) <= 180
+  );
+}
+
 export function MapaRota({
   viagem,
   formParams,
@@ -44,66 +53,89 @@ export function MapaRota({
       ? alternativa.autonomia
       : viagem.percurso.autonomia;
   const custos = rotaAtiva ? undefined : alternativa ? alternativa.custos : viagem.percurso.custos;
+  const distanciaAtiva = rotaAtiva
+    ? `${rotaAtiva.distanciaKm} km`
+    : (alternativa?.distancia ?? viagem.percurso.distancia);
+  const tempoAtivo = rotaAtiva?.tempoFormatado ?? alternativa?.tempo ?? viagem.percurso.tempo;
+  const paradasAtivas = rotaAtiva?.paradas ?? autonomia?.paradas;
+  const autonomiaAtiva = rotaAtiva?.autonomiaKm ?? autonomia?.autonomiaMaximaKm;
   const dinheiro = (valor: string) =>
     Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const paradas = autonomia?.paradas;
   const [expandirPerfil, setExpandirPerfil] = useState(true);
 
-  const topografiaObj =
-    rotaAtiva?.topografia ?? alternativa?.topografia ?? viagem.percurso.topografia;
+  const topografiaObj = rotaAtiva
+    ? rotaAtiva.topografia
+    : alternativa
+      ? alternativa.topografia
+      : viagem.percurso.topografia;
 
   const elevations = elevation?.map((point) => point.altitudeM) ?? [];
   const minAltitude = elevations.reduce((min, altitude) => Math.min(min, altitude), Infinity);
   const maxAltitude = elevations.reduce((max, altitude) => Math.max(max, altitude), -Infinity);
   const distanceEnd = elevation?.[elevation.length - 1]?.distanciaKm ?? 0;
 
-  const cotaMinExibida = minAltitude !== Infinity ? minAltitude : (topografiaObj?.cotaMinimaM ?? 5);
-  const cotaMaxExibida =
-    maxAltitude !== -Infinity ? maxAltitude : (topografiaObj?.cotaMaximaM ?? 675);
+  const cotaMinExibida = minAltitude !== Infinity ? minAltitude : topografiaObj?.cotaMinimaM;
+  const cotaMaxExibida = maxAltitude !== -Infinity ? maxAltitude : topografiaObj?.cotaMaximaM;
 
   const subidasM =
     topografiaObj?.subidasAcumuladasM ??
     topografiaObj?.desnivelSubidaM ??
-    (elevations.length >= 2 && maxAltitude > minAltitude ? maxAltitude - minAltitude : 918);
-  const descidasM = topografiaObj?.descidasAcumuladasM ?? topografiaObj?.desnivelDescidaM ?? 1055;
-  const desnivelLiquidoM = topografiaObj?.desnivelLiquidoM ?? subidasM - descidasM;
+    (elevations.length >= 2
+      ? elevations
+          .slice(1)
+          .reduce((sum, altitude, index) => sum + Math.max(0, altitude - elevations[index]), 0)
+      : undefined);
+  const descidasM =
+    topografiaObj?.descidasAcumuladasM ??
+    topografiaObj?.desnivelDescidaM ??
+    (elevations.length >= 2
+      ? elevations
+          .slice(1)
+          .reduce((sum, altitude, index) => sum + Math.max(0, elevations[index] - altitude), 0)
+      : undefined);
+  const desnivelLiquidoM =
+    topografiaObj?.desnivelLiquidoM ??
+    (subidasM !== undefined && descidasM !== undefined ? subidasM - descidasM : undefined);
 
   const penalizacaoPct =
-    topografiaObj?.penalizacaoConsumoPct ??
-    topografiaObj?.dadosConsumo?.penalizacaoConsumoPct ??
-    6.9;
+    topografiaObj?.penalizacaoConsumoPct ?? topografiaObj?.dadosConsumo?.penalizacaoConsumoPct;
 
-  const fatorTerreno =
-    topografiaObj?.fatorTerreno ?? topografiaObj?.dadosConsumo?.fatorTerreno ?? 'ondulado';
+  const fatorTerreno = topografiaObj?.fatorTerreno ?? topografiaObj?.dadosConsumo?.fatorTerreno;
   const rotuloTerreno =
     fatorTerreno === 'montanhoso'
       ? 'Terreno Montanhoso'
       : fatorTerreno === 'plano'
         ? 'Terreno Plano'
-        : 'Terreno Ondulado';
+        : fatorTerreno === 'ondulado'
+          ? 'Terreno Ondulado'
+          : 'Terreno não informado';
 
-  const propulsao = formParams?.propulsao ?? 'combustao';
+  const propulsao = formParams?.propulsao;
   const isEletrico = propulsao === 'eletrico';
-  const consumoNominalValor = isEletrico
-    ? (formParams?.eficiencia_km_kwh ?? 6.0)
-    : (formParams?.consumo_km_l ?? 12.0);
+  const consumoNominalValor = isEletrico ? formParams?.eficiencia_km_kwh : formParams?.consumo_km_l;
   const unidadeConsumo = isEletrico ? 'km/kWh' : 'km/l';
-  const consumoNominalFormatado = `${consumoNominalValor.toFixed(1)} ${unidadeConsumo}`;
+  const consumoNominalFormatado =
+    consumoNominalValor === undefined
+      ? 'Indisponível'
+      : `${consumoNominalValor.toFixed(1)} ${unidadeConsumo}`;
 
   const rendimentoRealValor =
     topografiaObj?.rendimentoRealKmL !== undefined
       ? topografiaObj.rendimentoRealKmL
-      : penalizacaoPct > 0
+      : penalizacaoPct !== undefined && penalizacaoPct > -100 && consumoNominalValor !== undefined
         ? consumoNominalValor / (1 + penalizacaoPct / 100)
-        : consumoNominalValor;
-  const rendimentoRealFormatado = `${rendimentoRealValor.toFixed(1)} ${unidadeConsumo}`;
+        : undefined;
+  const rendimentoRealFormatado =
+    rendimentoRealValor === undefined
+      ? 'Indisponível'
+      : `${rendimentoRealValor.toFixed(1)} ${unidadeConsumo}`;
 
   const penalizacaoTexto =
-    penalizacaoPct % 1 === 0 ? penalizacaoPct.toFixed(0) : penalizacaoPct.toFixed(1);
+    penalizacaoPct === undefined
+      ? null
+      : `${penalizacaoPct > 0 ? '+' : ''}${penalizacaoPct % 1 === 0 ? penalizacaoPct.toFixed(0) : penalizacaoPct.toFixed(1)}`;
 
-  const textoDescritivoRelevo =
-    topografiaObj?.descricaoRelevo ??
-    `Terreno ${fatorTerreno} com relevo dinâmico (+${subidasM}m de subidas / -${descidasM}m de descidas). Acréscimo de consumo de +${penalizacaoTexto}% devido a retomadas de aceleração.`;
+  const textoDescritivoRelevo = topografiaObj?.descricaoRelevo;
 
   const hasElevationPoints = Boolean(elevation && elevation.length >= 2);
   const chartPoints = hasElevationPoints
@@ -128,10 +160,34 @@ export function MapaRota({
       maxZoom: 19,
     }).addTo(map);
     const line = L.polyline(geometria, { color: '#0284c7', weight: 5 }).addTo(map);
-    for (const parada of paradas ?? []) {
+    L.circleMarker(geometria[0], {
+      radius: 8,
+      color: '#15803d',
+      fillColor: '#16a34a',
+      fillOpacity: 1,
+    })
+      .bindTooltip('Origem')
+      .addTo(map);
+    L.circleMarker(geometria[geometria.length - 1], {
+      radius: 8,
+      color: '#b91c1c',
+      fillColor: '#dc2626',
+      fillOpacity: 1,
+    })
+      .bindTooltip('Destino')
+      .addTo(map);
+    for (const [index, parada] of (paradasAtivas ?? []).entries()) {
+      if (!coordenadaValida(parada.coordenadas)) continue;
       const tooltip = document.createElement('span');
-      tooltip.textContent = `${parada.nome} — ${parada.origem === 'verificado' ? 'estabelecimento verificado' : 'ponto projetado, não confirmado'}`;
-      L.circleMarker(parada.coordenadas, { radius: 7, color: '#b45309' })
+      tooltip.textContent = `${index + 1}. ${parada.nome} — ${parada.origem === 'verificado' ? 'estabelecimento verificado' : 'ponto projetado, não confirmado'}`;
+      L.marker(parada.coordenadas, {
+        icon: L.divIcon({
+          className: 'route-stop-marker',
+          html: `<span>${index + 1}</span>`,
+          iconSize: [32, 38],
+          iconAnchor: [16, 38],
+        }),
+      })
         .bindTooltip(tooltip)
         .addTo(map);
     }
@@ -139,7 +195,7 @@ export function MapaRota({
     return () => {
       map.remove();
     };
-  }, [geometria, paradas]);
+  }, [geometria, paradasAtivas]);
 
   return (
     <section className="mapa-card" aria-labelledby={titleId}>
@@ -149,49 +205,127 @@ export function MapaRota({
         </span>
         <div>
           <h2 id={titleId}>Mapa da Rota & Paradas</h2>
-          <p>Traçado disponível apenas quando a viagem traz geometria válida.</p>
+          <p>Traçado rodoviário e paradas calculadas por autonomia.</p>
         </div>
       </header>
 
+      <div className="map-vehicle-label">
+        Veículo:{' '}
+        <strong>
+          {propulsao === 'eletrico'
+            ? '100% Elétrico'
+            : propulsao === 'combustao'
+              ? 'Combustão'
+              : 'Não informado'}
+        </strong>
+      </div>
+
+      <div className="metrics-grid" aria-label="Indicadores da rota ativa">
+        {[
+          ['Distância', distanciaAtiva],
+          ['Duração', tempoAtivo],
+          ['Paradas', paradasAtivas ? String(paradasAtivas.length) : 'Indisponível'],
+          ['Autonomia', autonomiaAtiva === undefined ? 'Indisponível' : `${autonomiaAtiva} km`],
+          [
+            'Sugestão de rota',
+            rotaAtiva?.titulo ??
+              (alternativa ? `Alternativa ${(alternativaAtiva ?? 0) + 1}` : 'Rota principal'),
+          ],
+          [
+            'Topografia',
+            topografiaObj?.fatorTerreno ??
+              (elevation?.length ? 'Perfil disponível' : 'Indisponível'),
+          ],
+        ].map(([label, value]) => (
+          <div className="metric-card" key={label}>
+            <span className="metric-card-label">{label}</span>
+            <strong className="metric-card-value">{value}</strong>
+          </div>
+        ))}
+      </div>
+
       {geometriaValida(geometria) && geometria ? (
         <>
-          {rotas.length > 1 && (
-            <div className="control-button-group" role="group" aria-label="Rotas disponíveis">
-              {rotas.map((rota) => (
-                <button
-                  key={rota.id}
-                  type="button"
-                  className={`btn-pill-control${rotaAtiva?.id === rota.id ? ' is-active' : ''}`}
-                  aria-pressed={rotaAtiva?.id === rota.id}
-                  onClick={() => onRotaChange?.(rota)}
-                >
-                  {rota.titulo}
-                </button>
-              ))}
-            </div>
-          )}
-          {rotas.length === 0 && alternativas.length > 0 && (
-            <div className="control-button-group" role="group" aria-label="Rotas disponíveis">
-              <button
-                type="button"
-                className={`btn-pill-control${alternativaAtiva === null ? ' is-active' : ''}`}
-                aria-pressed={alternativaAtiva === null}
-                onClick={() => onAlternativaChange?.(null)}
-              >
-                Rota principal
-              </button>
-              {alternativas.map((rota, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className={`btn-pill-control${alternativaAtiva === index ? ' is-active' : ''}`}
-                  aria-pressed={alternativaAtiva === index}
-                  onClick={() => onAlternativaChange?.(index)}
-                >
-                  Alternativa {index + 1} ({rota.distancia})
-                </button>
-              ))}
-            </div>
+          {(rotas.length > 1 || alternativas.length > 0) && (
+            <section
+              className="route-suggestions-panel"
+              aria-label="Sugestões de trajeto rodoviário"
+            >
+              <div className="suggestions-panel-header">
+                <div className="suggestions-panel-title-row">
+                  <h3>
+                    Sugestões de trajeto rodoviário ({rotas.length || alternativas.length + 1}{' '}
+                    opções disponíveis)
+                  </h3>
+                </div>
+                <p className="suggestions-panel-subtitle">
+                  Selecione a rota para atualizar mapa, relevo, paradas e custos.
+                </p>
+              </div>
+              <div className="route-suggestions-list">
+                {rotas.map((rota) => (
+                  <button
+                    key={rota.id}
+                    type="button"
+                    className={`route-suggestion-row${rotaAtiva?.id === rota.id ? ' is-active' : ''}`}
+                    aria-label={rota.titulo}
+                    aria-pressed={rotaAtiva?.id === rota.id}
+                    onClick={() => onRotaChange?.(rota)}
+                  >
+                    <span className="suggestion-row-content">
+                      <strong className="suggestion-row-name">{rota.titulo}</strong>
+                      <span className="suggestion-row-meta">
+                        {rota.distanciaKm} km · {rota.tempoFormatado}
+                      </span>
+                    </span>
+                    {rotaAtiva?.id === rota.id && (
+                      <span className="in-display-badge">Em exibição</span>
+                    )}
+                  </button>
+                ))}
+                {rotas.length === 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className={`route-suggestion-row${alternativaAtiva === null ? ' is-active' : ''}`}
+                      aria-label="Rota principal"
+                      aria-pressed={alternativaAtiva === null}
+                      onClick={() => onAlternativaChange?.(null)}
+                    >
+                      <span className="suggestion-row-content">
+                        <strong className="suggestion-row-name">Rota principal</strong>
+                        <span className="suggestion-row-meta">
+                          {viagem.percurso.distancia} · {viagem.percurso.tempo}
+                        </span>
+                      </span>
+                      {alternativaAtiva === null && (
+                        <span className="in-display-badge">Em exibição</span>
+                      )}
+                    </button>
+                    {alternativas.map((rota, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        className={`route-suggestion-row${alternativaAtiva === index ? ' is-active' : ''}`}
+                        aria-label={`Alternativa ${index + 1} (${rota.distancia})`}
+                        aria-pressed={alternativaAtiva === index}
+                        onClick={() => onAlternativaChange?.(index)}
+                      >
+                        <span className="suggestion-row-content">
+                          <strong className="suggestion-row-name">Alternativa {index + 1}</strong>
+                          <span className="suggestion-row-meta">
+                            {rota.distancia} · {rota.tempo}
+                          </span>
+                        </span>
+                        {alternativaAtiva === index && (
+                          <span className="in-display-badge">Em exibição</span>
+                        )}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            </section>
           )}
           <div className="map-container-wrapper">
             <div
@@ -200,6 +334,22 @@ export function MapaRota({
               role="img"
               aria-label={`Traçado de ${viagem.origem} até ${viagem.destino}`}
             />
+            <div className="map-floating-legend" aria-label="Legenda do mapa">
+              <span className="legend-item">
+                <i className="legend-dot origin-color" />
+                Origem
+              </span>
+              <span className="legend-item">
+                <i className="legend-dot dest-color" />
+                Destino
+              </span>
+              {paradasAtivas?.length ? (
+                <span className="legend-item">
+                  <i className="legend-dot stop-color" />
+                  Paradas
+                </span>
+              ) : null}
+            </div>
           </div>
           <div role="region" aria-label="Descrição textual da rota">
             <p>
@@ -212,12 +362,8 @@ export function MapaRota({
               . Duração: {rotaAtiva?.tempoFormatado ?? alternativa?.tempo ?? viagem.percurso.tempo}.
             </p>
           </div>
-          {rotaAtiva && (
+          {rotaAtiva && rotaAtiva.paradas.length > 0 && (
             <div className="metrics-grid" aria-label="Métricas da rota ativa">
-              <p>Autonomia: {rotaAtiva.autonomiaKm} km</p>
-              <p>Pedágios: R$ {rotaAtiva.pedagios.toFixed(2)}</p>
-              <p>Custo total: R$ {rotaAtiva.custos.total.toFixed(2)}</p>
-              <p>Paradas: {rotaAtiva.paradas.length}</p>
               {rotaAtiva.paradas.map((parada) => (
                 <p key={parada.id}>
                   {parada.nome}: km {parada.km}
@@ -250,26 +396,6 @@ export function MapaRota({
               ))}
             </div>
           )}
-          {custos && (
-            <div className="metrics-grid" aria-label="Custos estimados da rota">
-              <p>Combustível ou energia: {dinheiro(custos.custoPropulsao)}</p>
-              <p>
-                {custos.totalCompleto
-                  ? 'Total estimado'
-                  : 'Total parcial, pedágios incompletos ou indisponíveis'}
-                : {dinheiro(custos.custoTotal)}
-              </p>
-              {!custos.totalCompleto && (
-                <p>Os pedágios não estão completos; o valor não é o custo final da viagem.</p>
-              )}
-              <p>Rateio {custos.totalCompleto ? 'estimado' : 'parcial'}:</p>
-              {custos.cotas.map((cota) => (
-                <p key={cota.passageiro}>
-                  Passageiro {cota.passageiro}: {dinheiro(cota.valor)}
-                </p>
-              ))}
-            </div>
-          )}
         </>
       ) : (
         <div className="map-unavailable" role="status">
@@ -287,7 +413,8 @@ export function MapaRota({
             </span>
             <h4>Topografia & Relevo da Rota</h4>
             <span className="topografia-badge">
-              {rotuloTerreno} (+{penalizacaoTexto}%)
+              {rotuloTerreno}
+              {penalizacaoTexto === null ? '' : ` (${penalizacaoTexto}%)`}
             </span>
           </div>
           <button
@@ -310,31 +437,46 @@ export function MapaRota({
             </span>
           </div>
 
-          <div className="topografia-slopes-row">
-            <span>
-              Subidas acumuladas: <strong>+{subidasM}m</strong>
-            </span>
-            <span>
-              Descidas acumuladas: <strong>-{descidasM}m</strong>
-            </span>
-            <span>
-              Desnível líquido:{' '}
-              <strong>
-                {desnivelLiquidoM > 0 ? `+${desnivelLiquidoM}` : `${desnivelLiquidoM}`}m
-              </strong>
-            </span>
-          </div>
+          {(subidasM !== undefined ||
+            descidasM !== undefined ||
+            desnivelLiquidoM !== undefined) && (
+            <div className="topografia-slopes-row">
+              {subidasM !== undefined && (
+                <span>
+                  Subidas acumuladas: <strong>+{subidasM}m</strong>
+                </span>
+              )}
+              {descidasM !== undefined && (
+                <span>
+                  Descidas acumuladas: <strong>-{descidasM}m</strong>
+                </span>
+              )}
+              {desnivelLiquidoM !== undefined && (
+                <span>
+                  Desnível líquido:{' '}
+                  <strong>
+                    {desnivelLiquidoM > 0 ? '+' : ''}
+                    {desnivelLiquidoM}m
+                  </strong>
+                </span>
+              )}
+            </div>
+          )}
 
-          <p className="topografia-text-desc">{textoDescritivoRelevo}</p>
+          {textoDescritivoRelevo && <p className="topografia-text-desc">{textoDescritivoRelevo}</p>}
 
           {expandirPerfil && (
             <div className="elevation-chart-container">
               <div className="elevation-chart-header">
-                <span className="cota-min-badge">Cota Mín: {cotaMinExibida}m</span>
+                {cotaMinExibida !== undefined && (
+                  <span className="cota-min-badge">Cota Mín: {cotaMinExibida}m</span>
+                )}
                 <span className="elevation-title">
                   <span aria-hidden="true">📈</span> Perfil Topográfico de Elevação
                 </span>
-                <span className="cota-max-badge">Cota Máx: {cotaMaxExibida}m</span>
+                {cotaMaxExibida !== undefined && (
+                  <span className="cota-max-badge">Cota Máx: {cotaMaxExibida}m</span>
+                )}
               </div>
 
               {hasElevationPoints ? (
@@ -363,6 +505,72 @@ export function MapaRota({
           )}
         </div>
       </div>
+
+      {(rotaAtiva || custos) && (
+        <>
+          <div className="total-cost-card" aria-label="Custos da rota selecionada">
+            <div className="total-cost-main">
+              <span className="total-cost-label">
+                {rotaAtiva || custos?.totalCompleto
+                  ? 'Custo total previsto'
+                  : 'Custo parcial: pedágios indisponíveis'}
+                {propulsao ? ` (${propulsao})` : ''}
+              </span>
+              <strong className="total-cost-value">
+                {dinheiro(rotaAtiva ? String(rotaAtiva.custos.total) : custos!.custoTotal)}
+              </strong>
+            </div>
+            <div className="total-cost-pills">
+              <span className="cost-pill">
+                {isEletrico ? 'Energia' : 'Combustível'}:{' '}
+                <strong>
+                  {dinheiro(
+                    rotaAtiva
+                      ? String(rotaAtiva.custos.combustivelOuEnergia)
+                      : custos!.custoPropulsao,
+                  )}
+                </strong>
+              </span>
+              {rotaAtiva && (
+                <span className="cost-pill">
+                  Pedágios: <strong>{dinheiro(String(rotaAtiva.pedagios))}</strong>
+                </span>
+              )}
+              {autonomiaAtiva !== undefined && (
+                <span className="cost-pill">
+                  Autonomia: <strong>{autonomiaAtiva} km</strong>
+                </span>
+              )}
+            </div>
+          </div>
+          {custos && !custos.totalCompleto && (
+            <p role="status">
+              Os pedágios não estão completos; o valor não é o custo final da viagem.
+            </p>
+          )}
+          <section
+            className="passenger-sharing-card"
+            aria-label="Divisão de custos entre passageiros"
+          >
+            <div className="passenger-sharing-header">
+              <div className="passenger-sharing-title">
+                <h4>Divisão de Custos entre Passageiros</h4>
+              </div>
+              {rotaAtiva && (
+                <span className="passenger-sharing-badge">
+                  {rotaAtiva.custos.passageiros} pessoa(s) ·{' '}
+                  {dinheiro(String(rotaAtiva.custos.valorPorPassageiro))}/pessoa
+                </span>
+              )}
+            </div>
+            {custos?.cotas.map((cota) => (
+              <p key={cota.passageiro}>
+                Passageiro {cota.passageiro}: {dinheiro(cota.valor)}
+              </p>
+            ))}
+          </section>
+        </>
+      )}
     </section>
   );
 }

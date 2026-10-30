@@ -110,7 +110,7 @@ class TripCreateRequest(BaseModel):
         max_length=2,
         description="Sigla da UF de destino; vazio mantém compatibilidade legada",
     )
-    duracao_dias: int | None = Field(default=None, ge=1, le=365, strict=True)
+    duracao_dias: int | None = Field(default=None, ge=1, le=5, strict=True)
     perfis: list[Literal['cultural', 'gastronomico', 'ecoturismo-aventura', 'familia', 'economico']] | None = Field(default=None, min_length=1, max_length=5)
     propulsao: Literal['combustao', 'eletrico'] | None = None
     consumo_km_l: float | None = Field(default=None, gt=0, allow_inf_nan=False)

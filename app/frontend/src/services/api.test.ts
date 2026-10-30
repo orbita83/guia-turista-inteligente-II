@@ -9,6 +9,7 @@ import {
   verificarSaudeApi,
   obterTelemetriaOperacional,
   carregarSessao,
+  baixarGpxViagem,
 } from './api';
 
 describe('saúde da API', () => {
@@ -22,6 +23,34 @@ describe('saúde da API', () => {
 
     fetchMock.mockResolvedValueOnce(Response.json({ status: 'degraded' }));
     await expect(verificarSaudeApi()).resolves.toBe(false);
+  });
+});
+
+describe('download GPX protegido por sessão', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('solicita o GPX da alternativa e baixa o arquivo recebido', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response('<gpx/>', {
+          status: 200,
+          headers: { 'Content-Type': 'application/gpx+xml' },
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    await baixarGpxViagem('trip/1', 0);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/roteiros\/trip%2F1\/exportar\/gpx\?alternative=0$/),
+      expect.objectContaining({ credentials: 'include' }),
+    );
+    expect(click).toHaveBeenCalledOnce();
   });
 });
 
@@ -44,9 +73,10 @@ describe('telemetria operacional', () => {
   });
 
   it('rejeita respostas inválidas em vez de inventar métricas', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () =>
-      Response.json({ uptime_seconds: -1, total_roteiros_persistidos: '42' }),
-    ));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ uptime_seconds: -1, total_roteiros_persistidos: '42' })),
+    );
     await expect(obterTelemetriaOperacional()).rejects.toBeInstanceOf(ApiContractError);
   });
 });
@@ -55,22 +85,32 @@ describe('métricas vindas do bootstrap de sessão', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('interpreta os indicadores da mesma resposta que autentica o usuário', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
-      usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
-      google_client_id: '',
-      ufs: ['PE'],
-      telemetria_operacional: { uptime_seconds: 101.25, total_roteiros_persistidos: 0 },
-    })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
+          google_client_id: '',
+          ufs: ['PE'],
+          telemetria_operacional: { uptime_seconds: 101.25, total_roteiros_persistidos: 0 },
+        }),
+      ),
+    );
     const session = await carregarSessao();
     expect(session.operationalTelemetry).toEqual({ uptimeSeconds: 101.25, totalPersistedTrips: 0 });
   });
 
   it('não inventa métricas quando uma sessão antiga não fornece o contrato', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
-      usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
-      google_client_id: '',
-      ufs: ['PE'],
-    })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
+          google_client_id: '',
+          ufs: ['PE'],
+        }),
+      ),
+    );
     expect((await carregarSessao()).operationalTelemetry).toBeUndefined();
   });
 });

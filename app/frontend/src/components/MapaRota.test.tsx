@@ -91,7 +91,7 @@ describe('F02 — geometria confirmada', () => {
     expect(screen.getByRole('region', { name: 'Descrição textual da rota' })).toHaveTextContent(
       '9 km',
     );
-    expect(screen.getByText('Custo total: R$ 7.00')).toBeInTheDocument();
+    expect(screen.getByLabelText('Custos da rota selecionada')).toHaveTextContent(/R\$\s*7,00/);
   });
 
   it('mostra alternativa OSRM sem inventar custos ou relevo', async () => {
@@ -204,9 +204,10 @@ describe('F02 — geometria confirmada', () => {
         }}
       />,
     );
-    expect(
-      screen.getByText(/Total parcial, pedágios incompletos ou indisponíveis/),
-    ).toHaveTextContent('100,00');
+    expect(screen.getByLabelText('Custos da rota selecionada')).toHaveTextContent(
+      'Custo parcial: pedágios indisponíveis',
+    );
+    expect(screen.getByLabelText('Custos da rota selecionada')).toHaveTextContent('100,00');
     expect(screen.getByText(/Passageiro 1:/)).toHaveTextContent('33,34');
     expect(screen.getByText(/Passageiro 2:/)).toHaveTextContent('33,33');
     expect(screen.getByText(/não é o custo final/)).toBeInTheDocument();

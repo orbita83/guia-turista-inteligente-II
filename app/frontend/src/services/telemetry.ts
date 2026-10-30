@@ -144,7 +144,7 @@ export function providerDiagnostics(viagem: Viagem): ProviderDiagnostic[] {
     {
       provider: 'open-meteo',
       state: meteoState,
-      durationMs: unavailableValue(),
+      durationMs: duration(durations?.clima_ms),
     },
     {
       provider: 'osrm',

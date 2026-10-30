@@ -5,6 +5,7 @@ import re
 import uuid
 from collections.abc import Awaitable
 from datetime import UTC, datetime
+from decimal import Decimal
 from time import perf_counter
 from typing import Any, TypeVar
 
@@ -12,6 +13,7 @@ import httpx
 
 from app.core.circuit_breaker import CircuitBreaker
 from app.core.storage import TripStorage
+from app.schemas.roteiros import AjusteRelevo
 from app.services.altimetria_service import obter_perfil_topografico
 from app.services.atrativos import atrativos_por_destino, enriquecer_viagem_legada
 from app.services.custos_service import calcular_custos_viagem
@@ -68,8 +70,9 @@ async def plan_trip(
     gemini_api_key: str,
     gemini_timeout_seconds: float,
     circuit_breakers: dict[str, CircuitBreaker],
+    persist: bool = True,
 ) -> dict[str, Any]:
-    """Planeja e persiste uma viagem usando as mesmas integrações e respostas do Flask."""
+    """Planeja a viagem; permite ao router adiar a persistência para BackgroundTasks."""
     planning_started_at = perf_counter()
     user_id = str(user["id"])
     origin_city = (
@@ -223,8 +226,24 @@ async def plan_trip(
             geometry = candidate.get("geometria") if isinstance(candidate, dict) else None
             if not isinstance(geometry, list) or len(geometry) < 2:
                 continue
+            profile = candidate.get("altimetria")
+            relief_percent: float | None = None
+            relief_adjustment: AjusteRelevo | None = None
+            if isinstance(profile, dict) and profile.get("sucesso") is True:
+                consumption_data = profile.get("dados_consumo")
+                if isinstance(consumption_data, dict):
+                    raw_percent = consumption_data.get("penalizacao_consumo_estimada_percent")
+                    if isinstance(raw_percent, (int, float)) and not isinstance(raw_percent, bool):
+                        relief_percent = float(raw_percent)
+                        relief_adjustment = AjusteRelevo(
+                            variacao_consumo_percent=Decimal(str(raw_percent)),
+                            metodo="estimativa do perfil topografico",
+                            fonte="Open-Elevation; modelo estimativo do servico de altimetria",
+                            limitacoes="Estimativa de consumo por relevo, nao medicao do veiculo.",
+                        )
             result = await asyncio.to_thread(
-                projetar_paradas_rota, geometry, vehicle, formato_geometria="latlon"
+                projetar_paradas_rota, geometry, vehicle, formato_geometria="latlon",
+                penalizacao_relevo_percent=relief_percent or 0.0,
             )
             candidate["autonomia"] = result.model_dump(mode="json")
             distance = candidate.get("distancia_km")
@@ -237,6 +256,7 @@ async def plan_trip(
                     eficiencia_km_por_kwh=vehicle.get("eficiencia_km_kwh"),
                     preco_energia_por_kwh=vehicle.get("preco_energia_kwh"),
                     passageiros=form.get("passageiros", 1),
+                    ajuste_relevo=relief_adjustment,
                 )
                 candidate["custos"] = costs.model_dump(mode="json")
     geocoding_available = _coordinates_available(origin_coords) and (
@@ -308,8 +328,14 @@ async def plan_trip(
     }
     if any(key in form for key in ('duracao_dias', 'perfis', 'propulsao')):
         trip['parametros'] = form.copy()
-    await asyncio.to_thread(storage.add_for_user, user_id, trip, user)
+    if persist:
+        await asyncio.to_thread(storage.add_for_user, user_id, trip, user)
     return trip
+
+
+def persist_trip(storage: TripStorage, user_id: str, trip: dict[str, Any], user: dict[str, Any]) -> None:
+    """Tarefa síncrona executada pelo threadpool de BackgroundTasks do Starlette."""
+    storage.add_for_user(user_id, trip, user)
 
 
 def list_trips(storage: TripStorage, user_id: str) -> list[dict[str, Any]]:

@@ -12,7 +12,7 @@ export interface TripNavigationTabsProps {
   abaAtiva: AbaViagem;
   onAbaChange: (aba: AbaViagem) => void;
   onExcluir?: () => void;
-  onGpxDownload?: () => void;
+  onGpxDownload?: () => void | Promise<void>;
   rotaAtiva?: RotaAlternativa;
   alternativaAtiva?: PercursoAlternativo;
 }
@@ -58,10 +58,10 @@ export function TripNavigationTabs({
     event.currentTarget.querySelector<HTMLElement>(`#tab-${tabs[next]}`)?.focus();
   };
 
-  const handleGpx = () => {
+  const handleGpx = async () => {
     if (!geometriaValida(geometria) || !geometria) return;
     try {
-      if (onGpxDownload) onGpxDownload();
+      if (onGpxDownload) await onGpxDownload();
       else
         baixarArquivoGpx(
           viagem.origem,

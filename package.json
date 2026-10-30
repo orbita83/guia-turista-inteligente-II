@@ -9,12 +9,15 @@
     "dev": "turbo run dev",
     "check": "turbo run check",
     "lint": "turbo run lint",
-    "test": "turbo run test",
+    "test": "turbo run test && npm run test:sse-latency",
     "build": "turbo run build",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "bench:sse": "node scripts/verify-sse-latency.mjs",
+    "test:sse-latency": "node --test scripts/sse-latency-result.test.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
+    "playwright": "1.64.1",
     "turbo": "2.11.10",
     "vite-plus": "1.4.0"
   },
