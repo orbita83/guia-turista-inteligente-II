@@ -46,7 +46,8 @@ export function geometriaValida(geometria?: CoordenadaGPS[]): boolean {
           (coordinate) => typeof coordinate === 'number' && Number.isFinite(coordinate),
         ) &&
         Math.abs(point[0]) <= 90 &&
-        point[1] >= -180 && point[1] < 180,
+        point[1] >= -180 &&
+        point[1] < 180,
     ),
   );
 }
@@ -72,7 +73,9 @@ function decimalGpx(value: number): string {
 
 export function gerarConteudoGpx(origem: string, destino: string, rota: GpxRoute): string {
   if (!geometriaValida(rota.coordenadas)) {
-    throw new Error('Geometria indisponível: informe pelo menos dois pontos e coordenadas válidas para GPX.');
+    throw new Error(
+      'Geometria indisponível: informe pelo menos dois pontos e coordenadas válidas para GPX.',
+    );
   }
   if (rota.paradas.some((parada) => !geometriaValida([parada.coordenadas, parada.coordenadas]))) {
     throw new Error('Não é possível exportar GPX com coordenadas inválidas.');
@@ -82,7 +85,11 @@ export function gerarConteudoGpx(origem: string, destino: string, rota: GpxRoute
   const waypoints: { coordenadas: CoordenadaGPS; nome: string; descricao?: string }[] = [
     { coordenadas: coordOrigem, nome: `Origem: ${origem}` },
     { coordenadas: coordDestino, nome: `Destino: ${destino}` },
-    ...rota.paradas.map((parada) => ({ coordenadas: parada.coordenadas, nome: parada.nome, descricao: parada.descricao })),
+    ...rota.paradas.map((parada) => ({
+      coordenadas: parada.coordenadas,
+      nome: parada.nome,
+      descricao: parada.descricao,
+    })),
   ];
   const waypointsXml = waypoints
     .map(

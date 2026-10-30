@@ -221,7 +221,13 @@ describe('TripNavigationTabs: download GPX e falha', () => {
 
   it('recusa exportação local sem geometria em vez de baixar o trajeto simulado', async () => {
     const criar = vi.spyOn(URL, 'createObjectURL');
-    render(<TripNavigationTabs viagem={{ ...MOCK_VIAGEM, percurso: { distancia: '800 km', tempo: '11h' } }} abaAtiva="mapa" onAbaChange={vi.fn()} />);
+    render(
+      <TripNavigationTabs
+        viagem={{ ...MOCK_VIAGEM, percurso: { distancia: '800 km', tempo: '11h' } }}
+        abaAtiva="mapa"
+        onAbaChange={vi.fn()}
+      />,
+    );
     expect(screen.getByRole('button', { name: /Baixar GPX/i })).toBeDisabled();
     expect(criar).not.toHaveBeenCalled();
   });

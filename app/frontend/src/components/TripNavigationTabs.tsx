@@ -188,7 +188,9 @@ export function TripNavigationTabs({
           <span>Baixar GPX</span>
         </button>
       </div>
-      {gpxFeedback && <p role={gpxFeedback.startsWith('Não') ? 'alert' : 'status'}>{gpxFeedback}</p>}
+      {gpxFeedback && (
+        <p role={gpxFeedback.startsWith('Não') ? 'alert' : 'status'}>{gpxFeedback}</p>
+      )}
     </nav>
   );
 }
