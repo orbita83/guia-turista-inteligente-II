@@ -5,6 +5,8 @@ import type {
   RoteiroFormData,
   Usuario,
   Viagem,
+  TelemetriaViagem,
+  PerfilViajante,
 } from '../types/domain';
 import { parseTripOptionalFields } from './tripOptionalFields';
 
@@ -14,6 +16,9 @@ export interface SessionResponse {
   ufs: string[];
   session_started_at?: string | null;
   session_duration_ms?: number | null;
+  visitor_remaining_ms?: number | null;
+  telemetria_operacional?: unknown;
+  operationalTelemetry?: OperationalTelemetry;
 }
 
 export interface TripsResponse {
@@ -49,6 +54,7 @@ const FORM_FIELDS = new Set([
   'eficiencia_km_kwh',
   'capacidade_bateria_kwh',
   'preco_energia_kwh',
+  'passageiros',
 ]);
 
 function parseValidationErrors(detail: unknown): Record<string, string> {
@@ -75,6 +81,52 @@ export class ApiContractError extends Error {
 
 const UNAVAILABLE = 'Aguardando dados';
 
+export async function buscarMunicipiosIbge(signal?: AbortSignal): Promise<unknown> {
+  const response = await fetch(
+    'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome',
+    {
+      signal,
+      headers: { Accept: 'application/json' },
+    },
+  );
+  if (!response.ok) throw new Error(`O catálogo do IBGE respondeu com HTTP ${response.status}.`);
+  return response.json();
+}
+
+export interface OperationalTelemetry {
+  uptimeSeconds: number;
+  totalPersistedTrips: number;
+}
+
+export function parseOperationalTelemetry(value: unknown): OperationalTelemetry {
+  const fields = recordValue(value);
+  const uptime = fields?.uptime_seconds;
+  const total = fields?.total_roteiros_persistidos;
+  if (
+    typeof uptime !== 'number' ||
+    !Number.isFinite(uptime) ||
+    uptime < 0 ||
+    typeof total !== 'number' ||
+    !Number.isSafeInteger(total) ||
+    total < 0
+  ) {
+    throw new ApiContractError('Resposta de telemetria operacional inválida.');
+  }
+  return { uptimeSeconds: uptime, totalPersistedTrips: total };
+}
+
+export async function obterTelemetriaOperacional(
+  signal?: AbortSignal,
+): Promise<OperationalTelemetry> {
+  const response = await fetch(`${API_BASE_URL}/operacao/telemetria`, {
+    signal,
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Telemetria operacional: HTTP ${response.status}`);
+  return parseOperationalTelemetry(await response.json());
+}
+
 /** Verifica apenas a saúde do processo da API; não representa provedores externos. */
 export async function verificarSaudeApi(signal?: AbortSignal): Promise<boolean> {
   const healthUrl = `${API_BASE_URL.replace(/\/api\/v1$/, '')}/healthz`;
@@ -96,6 +148,96 @@ function availableText(value: unknown, fallback = UNAVAILABLE): string {
   return normalized && normalized.toUpperCase() !== 'N/D' ? normalized : fallback;
 }
 
+function parseTelemetry(value: unknown): TelemetriaViagem | undefined {
+  const telemetry = recordValue(value);
+  if (!telemetry) return undefined;
+  const durations = recordValue(telemetry.duracoes_etapas_ms);
+  const providers = recordValue(telemetry.provedores);
+  const result: TelemetriaViagem = { duracoes_etapas_ms: {}, provedores: {} };
+  for (const key of [
+    'geocodificacao_origem_ms',
+    'geocodificacao_destino_ms',
+    'clima_ms',
+    'roteamento_ms',
+    'guia_ms',
+    'altimetria_ms',
+    'total_servicos_ms',
+    'processamento_interno_ms',
+  ] as const) {
+    const duration = durations?.[key];
+    if (typeof duration === 'number' && Number.isFinite(duration) && duration >= 0)
+      result.duracoes_etapas_ms[key] = duration;
+  }
+  for (const key of [
+    'open_meteo_geocoding',
+    'open_meteo_weather',
+    'osrm',
+    'gemini',
+    'open_elevation',
+  ] as const) {
+    const state = providers?.[key];
+    if (
+      state === 'disponivel' ||
+      state === 'indisponivel' ||
+      state === 'nao_consultado' ||
+      state === 'nao_integrado'
+    )
+      result.provedores[key] = state;
+  }
+  return result;
+}
+
+function parseParameters(value: unknown): RoteiroFormData | undefined {
+  const params = recordValue(value);
+  if (!params) return undefined;
+  const origem_cidade = availableText(params.origem_cidade, '');
+  const origem_uf = availableText(params.origem_uf, '');
+  const destino_cidade = availableText(params.destino_cidade, '');
+  const destino_uf = availableText(params.destino_uf, '');
+  if (!origem_cidade || !destino_cidade) return undefined;
+  const result: RoteiroFormData = { origem_cidade, origem_uf, destino_cidade, destino_uf };
+  if (
+    typeof params.duracao_dias === 'number' &&
+    Number.isInteger(params.duracao_dias) &&
+    params.duracao_dias >= 1 &&
+    params.duracao_dias <= 5
+  )
+    result.duracao_dias = params.duracao_dias;
+  const validProfiles: PerfilViajante[] = [
+    'cultural',
+    'gastronomico',
+    'ecoturismo-aventura',
+    'familia',
+    'economico',
+  ];
+  if (
+    Array.isArray(params.perfis) &&
+    params.perfis.every((profile) => validProfiles.includes(profile))
+  )
+    result.perfis = params.perfis;
+  if (params.propulsao === 'combustao' || params.propulsao === 'eletrico')
+    result.propulsao = params.propulsao;
+  if (
+    typeof params.passageiros === 'number' &&
+    Number.isInteger(params.passageiros) &&
+    params.passageiros >= 1 &&
+    params.passageiros <= 8
+  )
+    result.passageiros = params.passageiros;
+  for (const key of [
+    'consumo_km_l',
+    'capacidade_tanque_l',
+    'preco_combustivel_l',
+    'eficiencia_km_kwh',
+    'capacidade_bateria_kwh',
+    'preco_energia_kwh',
+  ] as const) {
+    const number = params[key];
+    if (typeof number === 'number' && Number.isFinite(number) && number > 0) result[key] = number;
+  }
+  return result;
+}
+
 export function parseTrip(value: unknown): Viagem | null {
   const trip = recordValue(value);
   if (!trip) return null;
@@ -107,8 +249,8 @@ export function parseTrip(value: unknown): Viagem | null {
   const createdAt = availableText(trip.criado_em, '');
   const optionalFields = parseTripOptionalFields(trip);
 
-  // TODO: mapear sensação térmica, condição climática, telemetria, geometria e
-  // alternativas do contrato completo da viagem.
+  const telemetry = parseTelemetry(trip.telemetria);
+  const parameters = parseParameters(trip.parametros);
   return {
     id,
     ...(createdAt ? { criado_em: createdAt } : {}),
@@ -127,8 +269,22 @@ export function parseTrip(value: unknown): Viagem | null {
     },
     dicas_destino: availableText(trip.dicas_destino, ''),
     ...(diagnostics ? { diagnostico_ia: diagnostics } : {}),
+    ...(telemetry ? { telemetria: telemetry } : {}),
+    ...(parameters ? { parametros: parameters } : {}),
     ...(optionalFields.rotas ? { rotas: optionalFields.rotas } : {}),
     ...(optionalFields.atrativos ? { atrativos: optionalFields.atrativos } : {}),
+    ...(trip.atrativos_fonte === 'catalogo_local' ||
+    trip.atrativos_fonte === 'openstreetmap' ||
+    trip.atrativos_fonte === 'catalogo_local+openstreetmap' ||
+    trip.atrativos_fonte === 'guia_regional'
+      ? { atrativosFonte: trip.atrativos_fonte }
+      : {}),
+    ...(trip.atrativos_status === 'disponivel' ||
+    trip.atrativos_status === 'sem_resultados' ||
+    trip.atrativos_status === 'municipio_nao_identificado' ||
+    trip.atrativos_status === 'indisponivel'
+      ? { atrativosStatus: trip.atrativos_status }
+      : {}),
     ...(optionalFields.atrativosVisitadosIds
       ? { atrativosVisitadosIds: optionalFields.atrativosVisitadosIds }
       : {}),
@@ -217,8 +373,19 @@ export function parseRequestId(value: string | null): AvailableValue<string> {
   return { available: true, value: normalized };
 }
 
-export function carregarSessao(signal?: AbortSignal): Promise<SessionResponse> {
-  return request('/auth/session', { signal });
+export async function carregarSessao(signal?: AbortSignal): Promise<SessionResponse> {
+  // A própria sessão já é consultada no bootstrap; aproveita as métricas do mesmo backend.
+  const session = await request<SessionResponse>('/auth/session', { signal });
+  if (!session.telemetria_operacional) return session;
+  try {
+    return {
+      ...session,
+      operationalTelemetry: parseOperationalTelemetry(session.telemetria_operacional),
+    };
+  } catch {
+    // Contrato legado ou inválido: uma consulta independente pode diagnosticar a falha.
+    return session;
+  }
 }
 
 export function autenticarComGoogle(credential: string): Promise<{ usuario: Usuario }> {
@@ -232,6 +399,10 @@ export function entrarComoVisitante(): Promise<{ usuario: Usuario }> {
   return request('/auth/visitor', { method: 'POST' });
 }
 
+export function restaurarGoogle(): Promise<{ usuario: Usuario }> {
+  return request('/auth/restore-google', { method: 'POST' });
+}
+
 export function encerrarSessao(): Promise<void> {
   return request('/auth/logout', { method: 'POST' });
 }
@@ -240,11 +411,15 @@ export function listarViagens(signal?: AbortSignal): Promise<TripsResponse> {
   return request<unknown>('/roteiros/minhas-viagens', { signal }).then(parseTripsResponse);
 }
 
-export async function criarViagem(data: RoteiroFormData): Promise<PlanTripResponse> {
+export async function criarViagem(
+  data: RoteiroFormData,
+  signal?: AbortSignal,
+): Promise<PlanTripResponse> {
   const startedAt = performance.now();
   const init: RequestInit = {
     method: 'POST',
     body: JSON.stringify(data),
+    signal,
   };
   const response = await fetch(`${API_BASE_URL}/roteiros/planejar`, {
     ...init,
@@ -267,26 +442,72 @@ export function excluirViagem(tripId: string): Promise<void> {
   return request(`/roteiros/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
 }
 
-// TODO: conectar o consumo do guia por streaming quando o endpoint SSE estiver disponível.
+export async function baixarGpxViagem(tripId: string, alternative = -1): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/roteiros/${encodeURIComponent(tripId)}/exportar/gpx?alternative=${alternative}`,
+    { credentials: 'include', headers: { Accept: 'application/gpx+xml' } },
+  );
+  if (!response.ok) {
+    let message = `Não foi possível exportar a viagem (HTTP ${response.status}).`;
+    try {
+      const payload: unknown = await response.json();
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        'detail' in payload &&
+        typeof payload.detail === 'string'
+      ) {
+        message = payload.detail;
+      }
+    } catch {
+      // Mantém mensagem segura se a resposta de erro não for JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  try {
+    link.href = url;
+    link.download = `rota-${tripId.replace(/[^a-zA-Z0-9_-]/g, '-')}.gpx`;
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+}
+
+// TODO(integracao): validar o consumo SSE existente em streamingGuide.ts contra o backend real.
 
 export async function atualizarVisitaAtrativo(
   tripId: string,
   atrativoId: string,
   visitado: boolean,
-): Promise<boolean> {
+): Promise<string[] | null> {
   try {
-    await request(`/roteiros/${encodeURIComponent(tripId)}/visitas`, {
-      method: 'PATCH',
-      body: JSON.stringify({ atrativo_id: atrativoId, visitado }),
-    });
-    return true;
-  } catch (error) {
-    // Se o backend ainda não expõe a rota (404/405/501), permitimos persistência otimista no frontend
+    const response = recordValue(
+      await request<unknown>(`/roteiros/${encodeURIComponent(tripId)}/visitas`, {
+        method: 'PATCH',
+        body: JSON.stringify({ atrativo_id: atrativoId, visitado }),
+      }),
+    );
+    const ids = response?.atrativos_visitados_ids;
     if (
-      error instanceof ApiError &&
-      (error.status === 404 || error.status === 405 || error.status === 501)
+      response?.roteiro_id !== tripId ||
+      response?.atrativo_id !== atrativoId ||
+      response?.visitado !== visitado ||
+      !Array.isArray(ids) ||
+      !ids.every((id) => typeof id === 'string' && id.trim().length > 0) ||
+      ids.some((id: string) => id.trim() === atrativoId) !== visitado
     ) {
-      return false;
+      throw new ApiContractError('A API retornou uma confirmação de visita inválida.');
+    }
+    return [...new Set(ids.map((id: string) => id.trim()))];
+  } catch (error) {
+    // Apenas respostas que indicam método não implementado permitem modo local.
+    if (error instanceof ApiError && (error.status === 405 || error.status === 501)) {
+      return null;
     }
     throw error;
   }

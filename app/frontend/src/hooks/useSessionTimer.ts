@@ -6,6 +6,7 @@ export function useSessionTimer(expiresAt: number | null) {
 
   useEffect(() => {
     if (expiresAt === null) return;
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [expiresAt]);

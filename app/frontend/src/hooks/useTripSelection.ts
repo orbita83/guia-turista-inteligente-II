@@ -9,7 +9,7 @@ export function useTripSelection() {
 
   const selectTrip = useCallback((trip: Viagem) => {
     setActiveTrip(trip);
-    setActiveTripForm(formByTripId.current[trip.id] ?? null);
+    setActiveTripForm(trip.parametros ?? formByTripId.current[trip.id] ?? null);
   }, []);
 
   const reset = useCallback(() => {

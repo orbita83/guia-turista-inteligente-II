@@ -142,6 +142,15 @@ export async function obterCoordenadasNavegador(): Promise<CoordenadasGps> {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (
+          !Number.isFinite(position.coords.latitude) ||
+          Math.abs(position.coords.latitude) > 90 ||
+          !Number.isFinite(position.coords.longitude) ||
+          Math.abs(position.coords.longitude) > 180
+        ) {
+          reject(new Error('Localização inválida. O preenchimento manual continua disponível.'));
+          return;
+        }
         resolve({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -202,7 +211,7 @@ export function obterSugestoesDestino(
   distanciaMinimaKm = DISTANCIA_MINIMA_GEOGRAFICA_KM,
 ): SugestaoDestino[] {
   const destinosComDistancia = DESTINOS_TURISTICOS.map((destino) => {
-    const distanciaKm = calcularHaversineKm(
+    const distanciaExataKm = calcularHaversineExatoKm(
       latitude,
       longitude,
       destino.latitude,
@@ -211,14 +220,16 @@ export function obterSugestoesDestino(
     return {
       nome: destino.nome,
       uf: destino.uf,
-      distanciaKm,
+      distanciaKm: Math.round(distanciaExataKm),
+      distanciaExataKm,
     };
   });
 
   return destinosComDistancia
-    .filter((d) => d.distanciaKm >= distanciaMinimaKm)
-    .sort((a, b) => a.distanciaKm - b.distanciaKm)
-    .slice(0, limite);
+    .filter((d) => d.distanciaExataKm > distanciaMinimaKm)
+    .sort((a, b) => a.distanciaExataKm - b.distanciaExataKm)
+    .slice(0, limite)
+    .map(({ distanciaExataKm: _distance, ...destino }) => destino);
 }
 
 /**

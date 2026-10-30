@@ -1,4 +1,5 @@
 import json
+import secrets
 import shutil
 from functools import lru_cache
 from pathlib import Path
@@ -18,11 +19,13 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    secret_key: str = "guia-turista-secret-key-2026-python"
+    secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(48), min_length=32)
     google_client_id: str = (
         "776335673676-dk7od4ljhh43bio4bppf94i8ou0u9v9i.apps.googleusercontent.com"
     )
     gemini_api_key: str = ""
+    open_elevation_api_key: str = ""
+    overpass_url: str = "https://overpass-api.de/api/interpreter"
     gemini_timeout_seconds: float = Field(
         default=60.0,
         validation_alias=AliasChoices(

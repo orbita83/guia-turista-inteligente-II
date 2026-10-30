@@ -5,6 +5,20 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { assessLatency } from './sse-latency-result.mjs';
 
+function diagnosticFromSse(body) {
+  for (const frame of body.split(/\r?\n\r?\n/)) {
+    const lines = frame.split(/\r?\n/);
+    if (!lines.some((line) => line.trim() === 'event: done')) continue;
+    const data = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trimStart()).join('\n');
+    try {
+      return JSON.parse(data).diagnostico_ia;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 const { values } = parseArgs({
   options: {
     url: { type: 'string', default: 'http://localhost:5173' },
@@ -66,18 +80,20 @@ try {
       };
       window.__sseSamples.push(sample);
       current = sample;
-      const response = await originalFetch(...args);
+      const sampledUrl = new URL(url, location.href);
+      sampledUrl.searchParams.set('__sse_benchmark', String(sample.id));
+      const input = args[0] instanceof Request
+        ? new Request(sampledUrl, args[0])
+        : sampledUrl.toString();
+      const response = await originalFetch(input, ...args.slice(1));
+      sample.responseAt = performance.now();
       sample.httpStatus = response.status;
       sample.controlled = response.headers.get('X-QA-Provider') === 'controlled';
       return response;
     };
-    window.addEventListener('guia:stream-telemetry', (event) => {
-      if (current && event.detail?.update?.stage === 'completed') {
-        current.diagnostic = event.detail.update.diagnosticoIa;
-      }
-    });
     new MutationObserver(() => {
       if (!current || current.contentAt !== undefined) return;
+      if (current.responseAt === undefined) return;
       const area = document.querySelector('.guide-content-area');
       const text = area?.textContent?.trim();
       if (!isContent(text)) {
@@ -113,10 +129,21 @@ try {
     { timeout },
   );
   const before = await page.evaluate(() => window.__sseSamples.length);
+  const streamedResponse = page.waitForResponse(
+    (response) => {
+      const url = new URL(response.url());
+      return url.pathname.endsWith('/roteiros/stream-guia')
+        && url.searchParams.get('__sse_benchmark') === String(before)
+        && response.request().method() === 'POST';
+    },
+    { timeout },
+  );
   await retry.click();
+  const response = await streamedResponse;
+  const diagnostic = diagnosticFromSse(await response.text());
   await page.waitForFunction(
     (count) =>
-      window.__sseSamples.length > count && window.__sseSamples.at(-1).diagnostic !== undefined,
+      window.__sseSamples.length > count && window.__sseSamples.at(-1).contentAt !== undefined,
     before,
     { timeout },
   );
@@ -125,15 +152,18 @@ try {
     return {
       id: item.id,
       requestAt: item.requestAt,
+      responseAt: item.responseAt,
       contentAt: item.contentAt,
       controlled: item.controlled,
-      diagnostic: item.diagnostic,
       httpStatus: item.httpStatus,
     };
   });
   const capture = captures.get(sample.id);
   if (capture) await capture;
   sample.screenshotAt = await page.evaluate(() => window.__sseSamples.at(-1).screenshotAt);
+  sample.diagnostic = diagnostic;
+  sample.httpStatus = response.status();
+  sample.controlled ||= (await response.headerValue('X-QA-Provider')) === 'controlled';
   result = {
     ...assessLatency(sample, { controlled: values.controlled }),
     sample,

@@ -23,6 +23,52 @@ const renderPanel = (state = settledTelemetryFixture()) =>
   );
 
 describe('TelemetriaCard', () => {
+  it('separa o processamento interno da espera longa no servidor', () => {
+    renderPanel(
+      settledTelemetryFixture(
+        telemetrySnapshotFixture({
+          totalTimeMs: available(6200),
+          apiTimeMs: available(6000),
+          etapas: { processamento_interno_ms: 12.345, guia_ms: 5900 },
+        }),
+      ),
+    );
+    expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent(
+      '12,35 ms',
+    );
+    expect(
+      screen.getByText('Duração da requisição no servidor').nextElementSibling,
+    ).toHaveTextContent('6.000 ms');
+    expect(screen.queryByText('Tempo da API')).not.toBeInTheDocument();
+  });
+
+  it.each([undefined, -1, NaN, Infinity])(
+    'não substitui medição interna inválida (%s) pelo header',
+    (duration) => {
+      renderPanel(
+        settledTelemetryFixture(
+          telemetrySnapshotFixture({
+            apiTimeMs: available(6000),
+            etapas: { processamento_interno_ms: duration },
+          }),
+        ),
+      );
+      expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent(
+        'Indisponível',
+      );
+      expect(screen.queryByText('Aviso de latência')).not.toBeInTheDocument();
+    },
+  );
+
+  it('aceita uma medição interna de zero milissegundos', () => {
+    renderPanel(
+      settledTelemetryFixture(
+        telemetrySnapshotFixture({ etapas: { processamento_interno_ms: 0 } }),
+      ),
+    );
+    expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent('0 ms');
+  });
+
   it('aparece antes da primeira viagem com uma orientação apropriada', () => {
     renderPanel(hiddenTelemetryFixture());
     expect(screen.getByRole('region', { name: 'Telemetria & Desempenho' })).toBeInTheDocument();
@@ -31,15 +77,26 @@ describe('TelemetriaCard', () => {
   });
 
   it('organiza as métricas e seções como no wireframe sem inventar valores', () => {
-    renderPanel();
+    const { container } = renderPanel();
+    expect(container.querySelectorAll('.telemetry-metrics > .telemetry-metric')).toHaveLength(4);
     expect(screen.getByText('Tempo total').nextElementSibling).toHaveTextContent('620 ms');
     expect(screen.getByText('Geocoding').nextElementSibling).toHaveTextContent('Aguardando dados');
     expect(screen.getByText('APIs + IA Gemini').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
-    expect(screen.getByText('Servidor local (Tempo da API)').nextElementSibling).toHaveTextContent(
-      '480 ms',
+    expect(screen.getByText('Ver etapas medidas').parentElement).not.toHaveAttribute('open');
+    expect(screen.getByText('Geocodificação da origem').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
     );
+    expect(screen.getByText('Total dos serviços').nextElementSibling).toHaveTextContent(
+      'Aguardando dados',
+    );
+    expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent(
+      'Indisponível',
+    );
+    expect(
+      screen.getByText('Duração da requisição no servidor').nextElementSibling,
+    ).toHaveTextContent('480 ms');
     expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
@@ -58,6 +115,35 @@ describe('TelemetriaCard', () => {
     );
   });
 
+  it('mostra uptime e quantidade global reais quando o contrato está disponível', () => {
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture()}
+        apiHealthStatus="online"
+        operationalTelemetry={{ uptimeSeconds: 3661, totalPersistedTrips: 12 }}
+        onCopyRequestId={vi.fn(async () => true)}
+      />,
+    );
+    expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent('1h 1min 1s');
+    expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent('12');
+  });
+
+  it('mostra falha operacional sem mascarar o problema com carregamento infinito', () => {
+    render(
+      <TelemetriaCard
+        state={settledTelemetryFixture()}
+        apiHealthStatus="online"
+        operationalError="Não foi possível atualizar a telemetria operacional (HTTP 404)."
+        onCopyRequestId={vi.fn(async () => true)}
+      />,
+    );
+    expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent('Indisponível');
+    expect(screen.getByText('Roteiros totais').nextElementSibling).toHaveTextContent(
+      'Indisponível',
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('HTTP 404');
+  });
+
   it('usa fallback para medição ausente e não declara provedor desconhecido como disponível', () => {
     const snapshot = telemetrySnapshotFixture({
       apiTimeMs: unavailable('missing'),
@@ -69,9 +155,9 @@ describe('TelemetriaCard', () => {
       ],
     });
     renderPanel(settledTelemetryFixture(snapshot));
-    expect(screen.getByText('Servidor local (Tempo da API)').nextElementSibling).toHaveTextContent(
-      'Aguardando dados',
-    );
+    expect(
+      screen.getByText('Duração da requisição no servidor').nextElementSibling,
+    ).toHaveTextContent('Aguardando dados');
     expect(screen.getByText('Degradado').closest('li')).toHaveTextContent('OSRM');
     expect(screen.getAllByText('Sem dados')[0].closest('li')).toHaveTextContent('Open-Meteo');
   });
@@ -121,7 +207,7 @@ describe('TelemetriaCard', () => {
       ),
     );
     expect(screen.getByRole('status')).toHaveTextContent('Aviso de latência');
-    expect(screen.getByRole('status')).toHaveTextContent('Tempo total e Tempo da API');
+    expect(screen.getByRole('status')).toHaveTextContent('Tempo total ultrapassou');
     expect(screen.getByRole('status')).not.toHaveTextContent('rede externa');
   });
 

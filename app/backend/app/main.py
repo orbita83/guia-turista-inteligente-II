@@ -1,15 +1,16 @@
 import re
+import threading
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib import import_module
-from time import perf_counter
+from time import monotonic, perf_counter
 from typing import Any
 from uuid import uuid4
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     CollectorRegistry,
@@ -18,12 +19,15 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.circuit_breaker import CircuitBreaker, CircuitState
 from app.core.config import get_settings
+from app.core.dependencies import get_current_user
+from app.core.operational import operational_snapshot
 from app.core.storage import TripStorage
 from app.routers import auth, streaming, trips
 
@@ -66,6 +70,25 @@ BREAKER_FALLBACKS = Gauge(
     ["name"],
     registry=METRICS,
 )
+HTTP_IN_FLIGHT = Gauge(
+    "http_requests_in_flight",
+    "Requisições HTTP em andamento neste processo, incluindo a leitura desta métrica.",
+    registry=METRICS,
+)
+_active_http_lock = threading.Lock()
+_active_http_requests = 0
+
+
+def _adjust_active_http_requests(delta: int) -> None:
+    global _active_http_requests
+    with _active_http_lock:
+        _active_http_requests += delta
+        HTTP_IN_FLIGHT.set(_active_http_requests)
+
+
+def _current_active_http_requests() -> int:
+    with _active_http_lock:
+        return _active_http_requests
 
 
 def build_circuit_breakers() -> dict[str, CircuitBreaker]:
@@ -93,6 +116,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # O try começa logo após criar o client: se algo abaixo falhar,
         # o pool de conexões ainda é fechado.
         app.state.trip_storage = TripStorage(settings.trips_file)
+        app.state.started_at = monotonic()
         app.state.circuit_breakers = build_circuit_breakers()
         app.state.stream_observer = STREAM_METRICS
         yield
@@ -118,7 +142,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-Request-ID"],
     expose_headers=["X-Process-Time", "X-Request-ID"],
 )
@@ -153,6 +177,7 @@ class RequestObservabilityMiddleware:
             return
 
         started_at = perf_counter()
+        _adjust_active_http_requests(1)
         request_id = _request_id(scope)
         scope.setdefault("state", {})["request_id"] = request_id
         status_code = 500
@@ -197,6 +222,7 @@ class RequestObservabilityMiddleware:
             await self.app(scope, receive, send_with_observability)
         finally:
             record_metrics()
+            _adjust_active_http_requests(-1)
 
 
 app.add_middleware(RequestObservabilityMiddleware)
@@ -208,8 +234,31 @@ async def healthz() -> dict[str, str]:
 
 
 @app.get("/readyz", tags=["operação"])
-async def readyz() -> dict[str, str]:
-    return {"status": "ready"}
+async def readyz(request: Request) -> JSONResponse:
+    """Prontidão local: recursos inicializados, sem alegar saúde dos provedores."""
+    client = getattr(request.app.state, "http_client", None)
+    storage = getattr(request.app.state, "trip_storage", None)
+    breakers = getattr(request.app.state, "circuit_breakers", None)
+    if client is None or client.is_closed or storage is None or not isinstance(breakers, dict):
+        return JSONResponse({"status": "unavailable"}, status_code=503)
+    return JSONResponse({"status": "ready"})
+
+
+@app.get("/api/v1/operacao/telemetria", tags=["operação"])
+async def operational_telemetry(
+    request: Request,
+    _user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+) -> dict[str, Any]:
+    """Métricas operacionais: uptime deste processo e roteiros persistidos globalmente.
+
+    Roteiros voláteis de visitantes não entram no contador.
+    """
+    return await run_in_threadpool(
+        operational_snapshot,
+        request.app.state.trip_storage,
+        request.app.state.started_at,
+        active_http_requests=_current_active_http_requests(),
+    )
 
 
 @app.get("/circuits", tags=["operação"])

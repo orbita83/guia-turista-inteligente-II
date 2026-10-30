@@ -36,7 +36,17 @@ export function ViagemCard({
     <article
       className={`history-trip${isActive ? ' is-active-trip' : ''}`}
       aria-label={`Viagem de ${routeLabel}`}
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      aria-pressed={onSelect ? isActive : undefined}
       onClick={() => onSelect?.(viagem)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect?.(viagem);
+        }
+      }}
       style={{ cursor: onSelect ? 'pointer' : undefined }}
     >
       <div className="history-trip-topline">

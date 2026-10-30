@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { ApiContractError, criarViagem, listarViagens, parseTrip, verificarSaudeApi } from './api';
+import {
+  ApiContractError,
+  atualizarVisitaAtrativo,
+  criarViagem,
+  listarViagens,
+  parseTrip,
+  verificarSaudeApi,
+  obterTelemetriaOperacional,
+  carregarSessao,
+  baixarGpxViagem,
+} from './api';
 
 describe('saúde da API', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -13,6 +23,121 @@ describe('saúde da API', () => {
 
     fetchMock.mockResolvedValueOnce(Response.json({ status: 'degraded' }));
     await expect(verificarSaudeApi()).resolves.toBe(false);
+  });
+});
+
+describe('download GPX protegido por sessão', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('solicita o GPX da alternativa e baixa o arquivo recebido', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response('<gpx/>', {
+          status: 200,
+          headers: { 'Content-Type': 'application/gpx+xml' },
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    await baixarGpxViagem('trip/1', 0);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/roteiros\/trip%2F1\/exportar\/gpx\?alternative=0$/),
+      expect.objectContaining({ credentials: 'include' }),
+    );
+    expect(click).toHaveBeenCalledOnce();
+  });
+});
+
+describe('telemetria operacional', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('lê o uptime e a contagem retornados pela API com sessão', async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({ uptime_seconds: 65.2, total_roteiros_persistidos: 3 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(obterTelemetriaOperacional()).resolves.toEqual({
+      uptimeSeconds: 65.2,
+      totalPersistedTrips: 3,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/operacao\/telemetria$/),
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
+
+  it('rejeita respostas inválidas em vez de inventar métricas', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ uptime_seconds: -1, total_roteiros_persistidos: '42' })),
+    );
+    await expect(obterTelemetriaOperacional()).rejects.toBeInstanceOf(ApiContractError);
+  });
+});
+
+describe('métricas vindas do bootstrap de sessão', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('interpreta os indicadores da mesma resposta que autentica o usuário', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
+          google_client_id: '',
+          ufs: ['PE'],
+          telemetria_operacional: { uptime_seconds: 101.25, total_roteiros_persistidos: 0 },
+        }),
+      ),
+    );
+    const session = await carregarSessao();
+    expect(session.operationalTelemetry).toEqual({ uptimeSeconds: 101.25, totalPersistedTrips: 0 });
+  });
+
+  it('não inventa métricas quando uma sessão antiga não fornece o contrato', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          usuario: { id: 'visitor-1', nome: 'Visitante', tipo: 'visitante' },
+          google_client_id: '',
+          ufs: ['PE'],
+        }),
+      ),
+    );
+    expect((await carregarSessao()).operationalTelemetry).toBeUndefined();
+  });
+});
+
+describe('visitas persistidas', () => {
+  afterEach(() => vi.restoreAllMocks());
+  it('valida a confirmação e trata 404 como roteiro inexistente', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      Response.json({
+        roteiro_id: 't',
+        atrativo_id: 'a',
+        visitado: true,
+        atrativos_visitados_ids: ['a', 'b'],
+      }),
+    );
+    await expect(atualizarVisitaAtrativo('t', 'a', true)).resolves.toEqual(['a', 'b']);
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    await expect(atualizarVisitaAtrativo('t', 'a', true)).rejects.toMatchObject({ status: 404 });
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        roteiro_id: 'outro',
+        atrativo_id: 'a',
+        visitado: true,
+        atrativos_visitados_ids: [],
+      }),
+    );
+    await expect(atualizarVisitaAtrativo('t', 'a', true)).rejects.toBeInstanceOf(ApiContractError);
   });
 });
 
@@ -33,6 +158,58 @@ const trip = {
 };
 
 describe('F01 — campos opcionais da viagem', () => {
+  it('preserva a origem do catálogo de atrativos retornado pelo backend', () => {
+    expect(parseTrip({ ...trip, atrativos: [], atrativos_fonte: 'catalogo_local' })).toMatchObject({
+      atrativos: [],
+      atrativosFonte: 'catalogo_local',
+    });
+  });
+  it('recupera parâmetros válidos de um roteiro persistido', () => {
+    const parametros = {
+      ...form,
+      duracao_dias: 3,
+      perfis: ['cultural'],
+      propulsao: 'combustao',
+      consumo_km_l: 12,
+      capacidade_tanque_l: 50,
+    };
+    expect(parseTrip({ ...trip, parametros })?.parametros).toEqual(parametros);
+    expect(
+      parseTrip({ ...trip, parametros: { ...parametros, duracao_dias: -1, perfis: ['inválido'] } })
+        ?.parametros,
+    ).not.toHaveProperty('duracao_dias');
+  });
+  it('lê visitas persistidas no formato do backend', () => {
+    expect(
+      parseTrip({ ...trip, atrativos_visitados_ids: ['poi-1'] })?.atrativosVisitadosIds,
+    ).toEqual(['poi-1']);
+    expect(parseTrip({ ...trip, atrativos_visitados_ids: [] })?.atrativosVisitadosIds).toEqual([]);
+    expect(
+      parseTrip({ ...trip, atrativos_visitados_ids: [1] })?.atrativosVisitadosIds,
+    ).toBeUndefined();
+  });
+  it('valida a telemetria do backend por campo', () => {
+    const parsed = parseTrip({
+      ...trip,
+      telemetria: {
+        duracoes_etapas_ms: { geocodificacao_origem_ms: 10, clima_ms: -1, guia_ms: '20' },
+        provedores: { osrm: 'disponivel', gemini: 'inventado' },
+      },
+    });
+    expect(parsed?.telemetria).toEqual({
+      duracoes_etapas_ms: { geocodificacao_origem_ms: 10 },
+      provedores: { osrm: 'disponivel' },
+    });
+  });
+  it('normaliza a sensação térmica do backend e preserva o formato antigo', () => {
+    expect(parseTrip({ ...trip, clima: { sensacao_termica: ' 29 °C ' } })?.clima.sensacao).toBe(
+      '29 °C',
+    );
+    expect(
+      parseTrip({ ...trip, clima: { sensacao_termica: 'N/D', sensacao: '28 °C' } })?.clima.sensacao,
+    ).toBe('28 °C');
+    expect(parseTrip({ ...trip, clima: { sensacao_termica: 29 } })?.clima.sensacao).toBeUndefined();
+  });
   const route = {
     id: 'principal',
     titulo: 'Rota principal',
@@ -153,6 +330,21 @@ describe('F01 — campos opcionais da viagem', () => {
 
 describe('criarViagem telemetry metadata', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it.each([0, 12.345, undefined, -1, '12ms', Infinity, NaN])(
+    'valida processamento interno sem inferir valores ausentes: %s',
+    (duration) => {
+      const parsed = parseTrip({
+        ...trip,
+        telemetria: { duracoes_etapas_ms: { processamento_interno_ms: duration } },
+      });
+      const expected =
+        typeof duration === 'number' && Number.isFinite(duration) && duration >= 0
+          ? duration
+          : undefined;
+      expect(parsed?.telemetria?.duracoes_etapas_ms.processamento_interno_ms).toBe(expected);
+    },
+  );
 
   it('reads valid operational headers and measures monotonic total time', async () => {
     vi.spyOn(performance, 'now').mockReturnValueOnce(100).mockReturnValueOnce(355.5);

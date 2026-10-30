@@ -12,10 +12,15 @@ import {
 import { SessionHeader } from './components/SessionHeader';
 import type { AbaViagem, RotaAlternativa } from './types/domain';
 import { useViagem } from './hooks/useViagem';
+import { useMunicipios } from './hooks/useMunicipios';
+import { baixarGpxViagem } from './services/api';
+import { geometriaValida } from './services/routeCalculator';
 
 export function App() {
   const [abaViagemAtiva, setAbaViagemAtiva] = useState<AbaViagem>('visao-geral');
-  const [rotaAtivaId, setRotaAtivaId] = useState<RotaAlternativa['id']>('principal');
+  const [routeSelection, setRouteSelection] = useState<
+    { kind: 'legacy'; id: RotaAlternativa['id'] } | { kind: 'backend'; alternative: number | null }
+  >({ kind: 'backend', alternative: null });
 
   const {
     data,
@@ -34,6 +39,8 @@ export function App() {
     persistenceById,
     telemetryState,
     apiHealthStatus,
+    operationalTelemetry,
+    operationalError,
     sugestoes,
     suggestionStatus,
     visitasPorViagem,
@@ -47,17 +54,22 @@ export function App() {
     logout,
     solicitarSugestoesGps,
     submitTrip,
+    cancelTrip,
     deleteTrip,
     selectTrip,
     toggleVisitaAtrativo,
     retryLocalVisits,
+    updateStreamSession,
   } = useViagem();
+  const { municipios, status: municipioCatalogStatus } = useMunicipios(Boolean(data.usuario));
 
   useEffect(() => {
-    setRotaAtivaId('principal');
+    setRouteSelection({ kind: 'backend', alternative: null });
   }, [activeTrip?.id]);
-  const rotaAtiva =
-    activeTrip?.rotas?.find((rota) => rota.id === rotaAtivaId) ?? activeTrip?.rotas?.[0];
+  const rotaAtivaId = routeSelection.kind === 'legacy' ? routeSelection.id : 'principal';
+  const alternativaAtiva = routeSelection.kind === 'backend' ? routeSelection.alternative : null;
+  const rotasValidas = activeTrip?.rotas?.filter((rota) => geometriaValida(rota.coordenadas)) ?? [];
+  const rotaAtiva = rotasValidas.find((rota) => rota.id === rotaAtivaId) ?? rotasValidas[0];
 
   return (
     <div className="app-shell">
@@ -82,14 +94,16 @@ export function App() {
           <>
             <div className="planning-layout planning-layout-with-sidebar">
               <section className="planning-column" aria-label="Planejamento da viagem">
-                {/* TODO(backend): ligar o catálogo de municípios quando a API expuser esses dados. */}
                 <RoteiroForm
                   ufs={data.ufs}
                   isSubmitting={isSubmitting}
+                  municipios={municipios}
+                  municipioCatalogStatus={municipioCatalogStatus}
                   sugestoes={sugestoes}
                   suggestionStatus={suggestionStatus}
                   onRequestSuggestions={solicitarSugestoesGps}
                   onSubmit={submitTrip}
+                  onCancel={cancelTrip}
                 />
 
                 {activeTrip ? (
@@ -99,7 +113,17 @@ export function App() {
                       abaAtiva={abaViagemAtiva}
                       onAbaChange={setAbaViagemAtiva}
                       onExcluir={() => deleteTrip(activeTrip.id)}
+                      onGpxDownload={
+                        rotaAtiva
+                          ? undefined
+                          : () => baixarGpxViagem(activeTrip.id, alternativaAtiva ?? -1)
+                      }
                       rotaAtiva={rotaAtiva}
+                      alternativaAtiva={
+                        rotaAtiva
+                          ? undefined
+                          : activeTrip.percurso.alternativas?.[alternativaAtiva ?? -1]
+                      }
                     />
 
                     {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'mapa') && (
@@ -114,23 +138,31 @@ export function App() {
                           viagem={activeTrip}
                           formParams={activeTripForm}
                           rotaAtivaId={rotaAtivaId}
-                          onRotaChange={(rota) => setRotaAtivaId(rota.id)}
+                          onRotaChange={(rota) =>
+                            setRouteSelection({ kind: 'legacy', id: rota.id })
+                          }
+                          alternativaAtiva={alternativaAtiva}
+                          onAlternativaChange={(alternative) =>
+                            setRouteSelection({ kind: 'backend', alternative })
+                          }
                         />
                       </div>
                     )}
 
-                    {(abaViagemAtiva === 'visao-geral' || abaViagemAtiva === 'guia') && (
+                    {
                       <div
                         id="panel-guia"
                         role="tabpanel"
+                        hidden={abaViagemAtiva === 'mapa'}
                         aria-labelledby={
                           abaViagemAtiva === 'visao-geral' ? 'tab-visao-geral' : 'tab-guia'
                         }
                       >
-                        {/* TODO(backend): integrar streaming SSE do guia e marcação persistida de visitas no fluxo completo da viagem. */}
+                        {/* TODO(integracao): validar SSE e visitas persistidas no fluxo real, inclusive erros e recarga. */}
                         <RoteiroResult
                           viagem={activeTrip}
                           formParams={activeTripForm}
+                          onStreamTelemetry={updateStreamSession}
                           visitPersistenceStatus={visitPersistenceByTrip[activeTrip.id]}
                           visitasIds={
                             visitasPorViagem[activeTrip.id] ??
@@ -143,7 +175,7 @@ export function App() {
                           onRetryVisitas={() => retryLocalVisits(activeTrip.id)}
                         />
                       </div>
-                    )}
+                    }
                   </>
                 ) : null}
               </section>
@@ -151,6 +183,8 @@ export function App() {
                 <TelemetriaCard
                   state={telemetryState}
                   apiHealthStatus={apiHealthStatus}
+                  operationalTelemetry={operationalTelemetry}
+                  operationalError={operationalError}
                   connectivity={connectivity}
                   onCopyRequestId={copyTelemetryRequestId}
                 />

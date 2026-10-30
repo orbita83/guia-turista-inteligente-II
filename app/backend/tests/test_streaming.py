@@ -130,6 +130,7 @@ async def test_stream_authentication_validation_and_no_trip_write(monkeypatch):
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
         assert (await client.post('/api/v1/roteiros/stream-guia', json={'destino':' '})).status_code == 422
         assert (await client.post('/api/v1/roteiros/stream-guia', json={'destino':'Recife', 'dias_estadia':0})).status_code == 422
+        assert (await client.post('/api/v1/roteiros/stream-guia', json={'destino':'Recife', 'dias_estadia':6})).status_code == 422
         result = await client.post('/api/v1/roteiros/stream-guia', json={'destino':'Recife'})
     assert result.status_code == 200
     assert result.headers['content-type'].startswith('text/event-stream')

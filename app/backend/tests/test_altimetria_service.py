@@ -13,6 +13,7 @@ from typing import Any
 
 import httpx
 import pytest
+
 from app.schemas.roteiros import (
     AltimetriaInfo,
     Coordenada,
@@ -382,6 +383,27 @@ def test_falha_resposta_http_erro():
     # Não cria dados fictícios
     assert res.altitude_minima_m is None
     assert res.pontos == []
+
+
+def test_cota_excedida_retorna_estado_seguro_sem_pontos():
+    """HTTP 429 não expõe o corpo do provedor nem fabrica topografia."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["X-API-Key"] == "chave-de-teste"
+        return httpx.Response(429, text='{"code":"quota_exceeded","secret":"nao-expor"}')
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await obter_perfil_topografico(
+                [(-8.0, -35.0), (-8.1, -35.1)], client=client, api_key="chave-de-teste"
+            )
+
+    result = asyncio.run(run())
+    assert result.status == StatusAltimetria.COTA_EXCEDIDA
+    assert result.sucesso is False
+    assert result.pontos == []
+    assert result.dados_consumo is None
+    assert "HTTP 429" in (result.mensagem or "")
+    assert "nao-expor" not in result.model_dump_json()
 
 
 def test_falha_timeout():

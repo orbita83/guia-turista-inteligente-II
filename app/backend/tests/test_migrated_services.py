@@ -169,6 +169,7 @@ async def test_weather_and_route_retain_legacy_output_shapes() -> None:
     }
     assert route == {
         "distancia": "1674.6 km",
+        "distancia_km": 1674.6,
         "tempo": "21h 38min de carro",
         "modal": "carro",
         "status": "disponivel",
@@ -245,6 +246,7 @@ async def test_route_requests_full_geojson_geometry_and_real_alternatives() -> N
 
     assert route == {
         "distancia": "1.0 km",
+        "distancia_km": 1.0,
         "tempo": "0h 1min de carro",
         "modal": "carro",
         "status": "disponivel",
@@ -254,6 +256,7 @@ async def test_route_requests_full_geojson_geometry_and_real_alternatives() -> N
             {
                 "geometria": [[-8.05, -34.9], [-9.1, -35.2]],
                 "distancia": "1.2 km",
+                "distancia_km": 1.2,
                 "tempo": "0h 2min de carro",
             }
         ],
@@ -376,7 +379,7 @@ def test_storage_keeps_visitor_in_memory_and_persistent_user_isolated(tmp_path) 
 def test_storage_updates_visits_atomically_without_cross_user_access(tmp_path) -> None:
     storage_path = tmp_path / "viagens.json"
     storage = TripStorage(storage_path)
-    trip = {"id": "trip-1", "atrativos_visitados_ids": []}
+    trip = {"id": "trip-1", "atrativos": [{"id": "poi-1"}], "atrativos_visitados_ids": []}
     other_trip = {"id": "private-trip", "atrativos_visitados_ids": []}
     storage.add_for_user("google-1", trip, {"id": "google-1", "tipo": "google"})
     storage.add_for_user("google-2", other_trip, {"id": "google-2", "tipo": "google"})
@@ -394,13 +397,13 @@ def test_storage_updates_visits_atomically_without_cross_user_access(tmp_path) -
     )
     assert storage.list_for_user("google-2") == [other_trip]
     assert TripStorage(storage_path).list_for_user("google-1") == [
-        {"id": "trip-1", "atrativos_visitados_ids": []}
+        {"id": "trip-1", "atrativos": [{"id": "poi-1"}], "atrativos_visitados_ids": []}
     ]
 
     storage.ensure_visitor("visitante_1")
     storage.add_for_user(
         "visitante_1",
-        {"id": "visitor-trip"},
+        {"id": "visitor-trip", "atrativos": [{"id": "poi-visitor"}]},
         {"tipo": "visitante"},
     )
     assert storage.update_attraction_visit(
@@ -522,13 +525,15 @@ async def test_plan_trip_keeps_trip_fields_and_persists_result(monkeypatch) -> N
         "geocodificacao_destino_ms",
         "clima_ms",
         "roteamento_ms",
+        "atrativos_ms",
         "guia_ms",
         "total_servicos_ms",
+        "processamento_interno_ms",
     }
     assert all(
         duration >= 0 for duration in trip["telemetria"]["duracoes_etapas_ms"].values()
     )
-    assert trip["telemetria"]["provedores"]["open_elevation"] == "nao_integrado"
+    assert trip["telemetria"]["provedores"]["open_elevation"] == "nao_consultado"
     assert storage.trips == [trip]
 
 

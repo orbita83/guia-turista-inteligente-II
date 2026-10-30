@@ -25,6 +25,20 @@ GUIDE_INSTRUCTIONS = (
 )
 
 
+GUIDE_INSTRUCTIONS += (
+    " Comece a secao Pontos turisticos com uma frase sobre a identidade cultural "
+    "e historica local de ate 20 palavras. Em seguida, inclua Manha, Tarde e Noite "
+    "(ou dias numerados conforme a duracao), cada turno com exatamente uma frase "
+    "de acao direta de ate 15 palavras. Na secao Culinaria, use uma frase com "
+    "dois ou tres pratos ou sabores emblematicos e indique onde saborea-los somente "
+    "se o local vier dos dados recebidos; caso contrario, oriente a confirmar localmente. "
+    "Na Dica de ouro, use uma frase pratica que vincule temperatura e condicao do "
+    "clima recebidos ao vestuario e aos horarios; se esses dados faltarem, diga "
+    "expressamente que o clima esta indisponivel. Nao invente tradicoes, pratos "
+    "especificos nem dados meteorologicos ausentes no contexto."
+)
+
+
 def clean_guide_text(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = re.sub(r"(?m)^\s*```[^\n]*$", "", text)
@@ -55,8 +69,8 @@ def _fallback_guide(destination: str) -> str:
         "Pesquise a gastronomia regional e peça indicações de pratos locais. "
         "Confira o cardápio, os preços e ingredientes antes de pedir.\n\n"
         "💡 Dica de ouro\n"
-        "Verifique a previsão do tempo e as opções de transporte. Reserve tempo "
-        "para os deslocamentos e confirme as informações com fontes locais."
+        "Dados de clima indisponíveis nesta resposta. Consulte a previsão "
+        "antes de definir vestuário e horários, e confirme o transporte local."
     )
 
 
@@ -71,7 +85,7 @@ def fallback_guide_with_diagnostics(
     }
 
 
-def _request_guide(destination: str, api_key: str, timeout_seconds: float) -> str:
+def _request_guide(destination: str, api_key: str, timeout_seconds: float, context: dict[str, Any] | None = None) -> str:
     with genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
@@ -81,7 +95,7 @@ def _request_guide(destination: str, api_key: str, timeout_seconds: float) -> st
     ) as client:
         response = client.models.generate_content(
             model=MODEL,
-            contents=json.dumps({"destino": destination}, ensure_ascii=False),
+            contents=json.dumps({**(context or {}), "destino": destination}, ensure_ascii=False),
             config=types.GenerateContentConfig(
                 system_instruction=GUIDE_INSTRUCTIONS,
                 thinking_config=types.ThinkingConfig(
@@ -229,7 +243,7 @@ async def stream_guide_with_diagnostics(
 
 
 async def get_guide_with_diagnostics(
-    destination: str, *, api_key: str, timeout_seconds: float
+    destination: str, *, api_key: str, timeout_seconds: float, context: dict[str, Any] | None = None
 ) -> tuple[str, dict[str, Any]]:
     diagnostics: dict[str, Any] = {
         "status": "fallback",
@@ -241,13 +255,10 @@ async def get_guide_with_diagnostics(
 
     task: asyncio.Future[str] | None = None
     try:
-        task = asyncio.get_running_loop().run_in_executor(
-            None,
-            _request_guide,
-            destination,
-            api_key,
-            timeout_seconds,
-        )
+        arguments: tuple[Any, ...] = (destination, api_key, timeout_seconds)
+        if context:
+            arguments += (context,)
+        task = asyncio.get_running_loop().run_in_executor(None, _request_guide, *arguments)
         text = await asyncio.wait_for(
             task,
             timeout=timeout_seconds,

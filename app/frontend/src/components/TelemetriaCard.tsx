@@ -19,6 +19,8 @@ import {
 interface TelemetriaCardProps {
   state: TelemetryPanelState;
   apiHealthStatus: 'checking' | 'online' | 'unavailable';
+  operationalTelemetry?: { uptimeSeconds: number; totalPersistedTrips: number } | null;
+  operationalError?: string | null;
   onCopyRequestId: (requestId: string) => Promise<boolean>;
   connectivity?: ConnectivityCondition;
 }
@@ -50,6 +52,17 @@ function connectivityLabel(connectivity?: ConnectivityCondition): string {
   return 'Aguardando dados';
 }
 
+function formatUptime(seconds: number): string {
+  const whole = Math.floor(seconds);
+  const days = Math.floor(whole / 86400);
+  const hours = Math.floor((whole % 86400) / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const secs = whole % 60;
+  return [days ? `${days}d` : '', days || hours ? `${hours}h` : '', `${minutes}min`, `${secs}s`]
+    .filter(Boolean)
+    .join(' ');
+}
+
 function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="telemetry-metric">
@@ -62,6 +75,8 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: s
 export function TelemetriaCard({
   state,
   apiHealthStatus,
+  operationalTelemetry,
+  operationalError,
   connectivity,
   onCopyRequestId,
 }: TelemetriaCardProps) {
@@ -81,7 +96,8 @@ export function TelemetriaCard({
   const sessionData =
     snapshot?.session ??
     (state.kind === 'loading' || state.kind === 'error' ? state.session : undefined);
-  const trigger = snapshot ? latencyAlertLabel(snapshot.totalTimeMs, snapshot.apiTimeMs) : null;
+  const trigger = snapshot ? latencyAlertLabel(snapshot.totalTimeMs) : null;
+  const internalTimeMs = snapshot?.etapas?.processamento_interno_ms;
   const effectiveConnectivity = connectivity ?? snapshot?.connectivity;
   const currentConnectivity: ConnectivityCondition = {
     state: effectiveConnectivity?.state ?? connectivity?.state ?? 'unknown',
@@ -147,8 +163,15 @@ export function TelemetriaCard({
           ) : null}
 
           <section className="telemetry-block" aria-labelledby="telemetry-trip-title">
-            <h3 id="telemetry-trip-title">
-              ⚡ Última viagem{route ? ` (${route.origin} → ${route.destination})` : ''}
+            <h3 id="telemetry-trip-title" className="telemetry-trip-heading">
+              ⚡ Última viagem
+              {route && (
+                <span className="telemetry-route">
+                  (<span>{route.origin}</span>
+                  <span aria-hidden="true"> → </span>
+                  <span>{route.destination}</span>)
+                </span>
+              )}
             </h3>
             <dl className="telemetry-metrics">
               <Metric
@@ -156,13 +179,38 @@ export function TelemetriaCard({
                 value={displayDuration(snapshot?.totalTimeMs ?? missing)}
                 tone="total"
               />
-              {/* TODO: preencher a duração de geocodificação com viagem.telemetria.duracoes_etapas_ms. */}
-              <Metric label="Geocoding" value="Aguardando dados" />
-              {/* TODO: mapear durações e estados reais dos provedores; não inferir pelo tempo total. */}
-              <Metric label="APIs + IA Gemini" value="Aguardando dados" />
               <Metric
-                label="Servidor local (Tempo da API)"
-                value={displayDuration(snapshot?.apiTimeMs ?? missing)}
+                label="Geocoding"
+                value={displayDuration(
+                  snapshot?.etapas?.geocodificacao_origem_ms !== undefined &&
+                    snapshot?.etapas?.geocodificacao_destino_ms !== undefined
+                    ? {
+                        available: true,
+                        value: Math.max(
+                          snapshot.etapas.geocodificacao_origem_ms,
+                          snapshot.etapas.geocodificacao_destino_ms,
+                        ),
+                      }
+                    : missing,
+                )}
+              />
+              <Metric
+                label="APIs + IA Gemini"
+                value={displayDuration(
+                  snapshot?.etapas?.total_servicos_ms === undefined
+                    ? missing
+                    : { available: true, value: snapshot.etapas.total_servicos_ms },
+                )}
+              />
+              <Metric
+                label="Processamento interno"
+                value={formatDuration(
+                  typeof internalTimeMs === 'number' &&
+                    Number.isFinite(internalTimeMs) &&
+                    internalTimeMs >= 0
+                    ? { available: true, value: internalTimeMs }
+                    : missing,
+                )}
                 tone="server"
               />
             </dl>
@@ -174,7 +222,6 @@ export function TelemetriaCard({
                     <li key={provider.provider}>
                       {providerNames[provider.provider]}:{' '}
                       <span>{providerStates[provider.state]}</span>
-                      {/* TODO: preencher cada duração e disponibilidade com a telemetria da viagem. */}
                       {' · Tempo: '}
                       {displayDuration(provider.durationMs)}
                     </li>
@@ -184,6 +231,44 @@ export function TelemetriaCard({
                 <span> Aguardando dados da primeira viagem.</span>
               )}
             </div>
+            <details className="telemetry-stage-details">
+              <summary>Ver etapas medidas</summary>
+              <dl aria-label="Etapas detalhadas do planejamento">
+                <Metric
+                  label="Duração da requisição no servidor"
+                  value={displayDuration(snapshot?.apiTimeMs ?? missing)}
+                />
+                {(
+                  [
+                    ['Geocodificação da origem', 'geocodificacao_origem_ms'],
+                    ['Geocodificação do destino', 'geocodificacao_destino_ms'],
+                    ['Clima', 'clima_ms'],
+                    ['Roteamento', 'roteamento_ms'],
+                    ['Guia', 'guia_ms'],
+                    ['Altimetria', 'altimetria_ms'],
+                    ['Total dos serviços', 'total_servicos_ms'],
+                  ] as const
+                ).map(([label, key]) => {
+                  const duration = snapshot?.etapas?.[key];
+                  return (
+                    <Metric
+                      key={key}
+                      label={label}
+                      value={displayDuration(
+                        duration === undefined ? missing : { available: true, value: duration },
+                      )}
+                    />
+                  );
+                })}
+              </dl>
+            </details>
+            <p className="telemetry-measurement-note">
+              Processamento interno: tempo das etapas locais do planejamento, sem os blocos de
+              integração externa. Inclui a espera pelos cálculos locais em thread; não mede CPU pura
+              nem todo o ciclo HTTP. A duração da requisição no servidor inclui a espera por
+              provedores externos. O tempo total inclui a leitura da resposta. Geocoding mostra a
+              maior das duas etapas paralelas. O tempo até renderizar a tela não é medido.
+            </p>
           </section>
 
           <section className="telemetry-block" aria-labelledby="telemetry-session-title">
@@ -211,7 +296,11 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Persistência dos dados</dt>
-                <dd>
+                <dd
+                  className={
+                    sessionData?.persistence === 'permanente' ? 'telemetry-permanent' : undefined
+                  }
+                >
                   {sessionData
                     ? sessionData.persistence === 'permanente'
                       ? 'Permanente (conta Google)'
@@ -225,7 +314,11 @@ export function TelemetriaCard({
               </div>
               <div>
                 <dt>Qualidade da conexão</dt>
-                <dd>
+                <dd
+                  className={
+                    currentConnectivity.rtt.available ? 'telemetry-connection-indicator' : undefined
+                  }
+                >
                   {currentConnectivity?.rtt.available
                     ? `RTT estimado: ${currentConnectivity.rtt.value === 0 ? '≤ 25' : currentConnectivity.rtt.value} ms`
                     : 'Aguardando dados'}
@@ -277,13 +370,36 @@ export function TelemetriaCard({
                 }
                 tone={apiHealthStatus === 'online' ? 'server' : undefined}
               />
-              {/* TODO: consumir uptime da API operacional quando houver campo estável no contrato. */}
-              <Metric label="Uptime backend" value="Aguardando dados" />
-              {/* TODO: consumir a contagem global de roteiros; não confundir com 'Meus roteiros'. */}
-              <Metric label="Roteiros totais" value="Aguardando dados" />
+              <Metric
+                label="Uptime backend"
+                value={
+                  operationalTelemetry
+                    ? formatUptime(operationalTelemetry.uptimeSeconds)
+                    : operationalError
+                      ? 'Indisponível'
+                      : 'Aguardando dados'
+                }
+              />
+              <Metric
+                label="Roteiros totais"
+                value={
+                  operationalTelemetry
+                    ? String(operationalTelemetry.totalPersistedTrips)
+                    : operationalError
+                      ? 'Indisponível'
+                      : 'Aguardando dados'
+                }
+              />
             </dl>
+            {operationalError ? (
+              <p className="telemetry-notice telemetry-notice-warning" role="status">
+                {operationalError}
+                {operationalTelemetry ? ' Exibindo valores da última sessão válida.' : ''}
+              </p>
+            ) : null}
             <p className="telemetry-health-note">
-              Status da API: última verificação de /healthz; não é monitoramento contínuo.
+              Status da API: última verificação de /healthz; não é monitoramento contínuo. Roteiros
+              totais contam apenas viagens persistidas (não incluem sessões de visitantes).
             </p>
             <p className="telemetry-provider-summary">
               Provedores concorrentes:{' '}

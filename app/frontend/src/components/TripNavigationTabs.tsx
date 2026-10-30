@@ -5,15 +5,16 @@ import {
   gerarLinkWhatsApp,
   geometriaValida,
 } from '../services/routeCalculator';
-import type { AbaViagem, RotaAlternativa, Viagem } from '../types/domain';
+import type { AbaViagem, PercursoAlternativo, RotaAlternativa, Viagem } from '../types/domain';
 
 export interface TripNavigationTabsProps {
   viagem: Viagem;
   abaAtiva: AbaViagem;
   onAbaChange: (aba: AbaViagem) => void;
   onExcluir?: () => void;
-  onGpxDownload?: () => void;
+  onGpxDownload?: () => void | Promise<void>;
   rotaAtiva?: RotaAlternativa;
+  alternativaAtiva?: PercursoAlternativo;
 }
 
 export function TripNavigationTabs({
@@ -23,16 +24,18 @@ export function TripNavigationTabs({
   onExcluir,
   onGpxDownload,
   rotaAtiva,
+  alternativaAtiva,
 }: TripNavigationTabsProps) {
   const [gpxFeedback, setGpxFeedback] = useState('');
-  const geometria = rotaAtiva?.coordenadas ?? viagem.percurso.geometria;
+  const geometria =
+    rotaAtiva?.coordenadas ?? alternativaAtiva?.geometria ?? viagem.percurso.geometria;
   const podeExportar = geometriaValida(geometria);
   const linkMaps = gerarLinkGoogleMaps(viagem.origem, viagem.destino);
   const linkWhatsapp = gerarLinkWhatsApp(
     viagem.origem,
     viagem.destino,
-    rotaAtiva ?? viagem.percurso.distancia,
-    rotaAtiva ? undefined : viagem.percurso.tempo,
+    rotaAtiva ?? alternativaAtiva?.distancia ?? viagem.percurso.distancia,
+    rotaAtiva ? undefined : (alternativaAtiva?.tempo ?? viagem.percurso.tempo),
   );
 
   const handlePrint = () => {
@@ -55,18 +58,20 @@ export function TripNavigationTabs({
     event.currentTarget.querySelector<HTMLElement>(`#tab-${tabs[next]}`)?.focus();
   };
 
-  const handleGpx = () => {
+  const handleGpx = async () => {
     if (!geometriaValida(geometria) || !geometria) return;
     try {
-      if (onGpxDownload) onGpxDownload();
+      if (onGpxDownload) await onGpxDownload();
       else
         baixarArquivoGpx(
           viagem.origem,
           viagem.destino,
           rotaAtiva ?? {
-            titulo: 'Traçado principal',
+            titulo: alternativaAtiva ? 'Rota alternativa' : 'Traçado principal',
             coordenadas: geometria,
-            paradas: [],
+            paradas: alternativaAtiva
+              ? (alternativaAtiva.autonomia?.paradas ?? [])
+              : (viagem.percurso.autonomia?.paradas ?? []),
           },
         );
       setGpxFeedback('Arquivo GPX preparado para download.');

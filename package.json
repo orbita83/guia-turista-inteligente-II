@@ -13,7 +13,7 @@
     "build": "turbo run build",
     "clean": "turbo run clean",
     "bench:sse": "node scripts/verify-sse-latency.mjs",
-    "test:sse-latency": "node --test --test-isolation=none scripts/sse-latency-result.test.mjs"
+    "test:sse-latency": "node --test scripts/sse-latency-result.test.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

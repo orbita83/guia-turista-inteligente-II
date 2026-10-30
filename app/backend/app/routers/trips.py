@@ -1,9 +1,19 @@
 import asyncio
+import re
 import time
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    status,
+)
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
 from starlette.concurrency import run_in_threadpool
 
@@ -15,13 +25,15 @@ from app.core.dependencies import (
     get_http_client,
     get_storage,
 )
+from app.core.storage import UnknownAttractionError
 from app.schemas.trips import (
     TripCreateRequest,
     TripCreateResponse,
     TripListResponse,
     ViagemLegada,
 )
-from app.services.trips import delete_trip, list_trips, plan_trip
+from app.services.gpx import generate_gpx
+from app.services.trips import delete_trip, list_trips, persist_trip, plan_trip
 
 router = APIRouter(prefix="/api/v1/roteiros", tags=["roteiros"])
 _locks_guard = asyncio.Lock()
@@ -85,10 +97,19 @@ async def get_my_trips_json(
     return await run_in_threadpool(storage.data_for_user, str(user["id"]), user)
 
 
-@router.post("/planejar", response_model=TripCreateResponse)
+@router.post(
+    "/planejar",
+    response_model=TripCreateResponse,
+    responses={
+        401: {"description": "Sessão ausente ou expirada"},
+        409: {"description": "Planejamento conflitante em andamento"},
+        502: {"description": "Falha de serviço externo"},
+    },
+)
 async def create_trip(
     payload: TripCreateRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     client: httpx.AsyncClient = Depends(get_http_client),  # noqa: B008
     storage: Any = Depends(get_storage),  # noqa: B008
@@ -117,7 +138,7 @@ async def create_trip(
         _recent_requests[key] = now
 
     try:
-        form = payload.model_dump()
+        form = payload.model_dump(exclude_none=True)
         planning = asyncio.create_task(
             plan_trip(
                 form,
@@ -127,7 +148,10 @@ async def create_trip(
                 states=settings.states,
                 gemini_api_key=settings.gemini_api_key,
                 gemini_timeout_seconds=settings.gemini_timeout_seconds,
+                open_elevation_api_key=settings.open_elevation_api_key,
+                overpass_url=settings.overpass_url,
                 circuit_breakers=circuit_breakers,
+                persist=False,
             )
         )
         disconnect = asyncio.create_task(_wait_for_disconnect(request))
@@ -159,6 +183,7 @@ async def create_trip(
             _active_requests.discard(key)
 
     diagnostic = trip.get("diagnostico_ia")
+    background_tasks.add_task(persist_trip, storage, str(user["id"]), trip, user)
     warning = None
     if (
         isinstance(diagnostic, dict)
@@ -177,6 +202,37 @@ async def remove_trip(
     await run_in_threadpool(delete_trip, storage, str(user["id"]), trip_id)
 
 
+@router.get(
+    "/{trip_id}/exportar/gpx",
+    response_class=Response,
+    responses={
+        200: {"content": {"application/gpx+xml": {}}, "description": "Arquivo GPX 1.1"},
+        401: {"description": "Sessão ausente ou expirada"},
+        404: {"description": "Roteiro não encontrado para a identidade ativa"},
+    },
+)
+async def export_trip_gpx(
+    trip_id: str,
+    alternative: int = Query(default=-1, ge=-1),
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    storage: Any = Depends(get_storage),  # noqa: B008
+) -> Response:
+    trips = await run_in_threadpool(storage.list_for_user, str(user["id"]))
+    trip = next((item for item in trips if item.get("id") == trip_id), None)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="Roteiro não encontrado.")
+    try:
+        content = await run_in_threadpool(generate_gpx, trip, alternative)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    filename_id = re.sub(r"[^A-Za-z0-9_-]", "-", trip_id)[:80] or "viagem"
+    return Response(
+        content=content,
+        media_type="application/gpx+xml",
+        headers={"Content-Disposition": f'attachment; filename="rota-{filename_id}.gpx"'},
+    )
+
+
 @router.patch("/{trip_id}/visitas")
 async def update_attraction_visit(
     trip_id: str,
@@ -184,19 +240,18 @@ async def update_attraction_visit(
     user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     storage: Any = Depends(get_storage),  # noqa: B008
 ) -> dict[str, Any]:
-    # TODO(integracao): validar se o ID pertence aos atrativos do roteiro quando
-    # a coleção estruturada e seus IDs estáveis da issue #25 estiverem disponíveis.
-    visited_ids = await run_in_threadpool(
-        storage.update_attraction_visit,
-        str(user["id"]),
-        trip_id,
-        payload.atrativo_id,
-        payload.visitado,
-    )
+    try:
+        visited_ids = await run_in_threadpool(
+            storage.update_attraction_visit,
+            str(user["id"]),
+            trip_id,
+            payload.atrativo_id,
+            payload.visitado,
+        )
+    except UnknownAttractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if visited_ids is None:
         raise HTTPException(status_code=404, detail="Roteiro não encontrado.")
-    # TODO(frontend): mapear atrativos_visitados_ids no histórico e na resposta
-    # para hidratar as visitas confirmadas após recarga (issue #26).
     return {
         "roteiro_id": trip_id,
         "atrativo_id": payload.atrativo_id,

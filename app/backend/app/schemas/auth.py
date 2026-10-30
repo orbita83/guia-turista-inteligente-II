@@ -15,12 +15,19 @@ class GoogleLoginRequest(BaseModel):
     credential: str = Field(min_length=1)
 
 
+class OperationalTelemetry(BaseModel):
+    uptime_seconds: float = Field(ge=0)
+    total_roteiros_persistidos: int = Field(ge=0)
+
+
 class SessionResponse(BaseModel):
     usuario: User | None
     google_client_id: str
     ufs: list[str]
     session_started_at: str | None = None
     session_duration_ms: float | None = None
+    visitor_remaining_ms: float | None = None
+    telemetria_operacional: OperationalTelemetry | None = None
 
 
 class UserResponse(BaseModel):

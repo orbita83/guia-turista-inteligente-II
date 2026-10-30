@@ -44,6 +44,51 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
+  it('cancela a requisição de planejamento e mantém os campos preenchidos', async () => {
+    const user = userEvent.setup();
+    let planningSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (url.endsWith('/auth/session'))
+          return Response.json({
+            usuario: { id: 'visitor-1', nome: 'Visitante', email: '', foto: '', tipo: 'visitante' },
+            google_client_id: '',
+            ufs: ['PE'],
+          });
+        if (url.endsWith('/roteiros/minhas-viagens')) return Response.json({ viagens: [] });
+        if (url.endsWith('/healthz')) return Response.json({ status: 'ok' });
+        if (url.endsWith('/roteiros/planejar')) {
+          planningSignal = init?.signal ?? undefined;
+          return new Promise<Response>((_, reject) => {
+            planningSignal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            );
+          });
+        }
+        return Response.json({ detail: 'Not found' }, { status: 404 });
+      }),
+    );
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Planejador de Viagens' });
+    await user.type(screen.getByLabelText('Cidade de origem'), 'Recife');
+    await user.selectOptions(screen.getByLabelText('UF de origem'), 'PE');
+    await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
+    await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
+    await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByText(/Personalizar parâmetros/i));
+    await user.type(screen.getByLabelText('Preço por litro'), '6.10');
+    await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
+    await user.click(await screen.findByRole('button', { name: /Cancelar/i }));
+    expect(planningSignal?.aborted).toBe(true);
+    expect(screen.getByLabelText('Cidade de origem')).toHaveValue('Recife');
+    expect(screen.getByLabelText('Cidade de destino')).toHaveValue('Olinda');
+    expect(screen.getByRole('button', { name: /Planejar viagem/i })).toBeEnabled();
+  });
+
   it('mostra o painel desde a sessão e atualiza seus dados após planejamento', async () => {
     const user = userEvent.setup();
     let loggedIn = true;
@@ -107,6 +152,8 @@ describe('App', () => {
     await user.type(screen.getByLabelText('Cidade de destino'), 'Olinda');
     await user.selectOptions(screen.getByLabelText('UF de destino'), 'PE');
     await user.click(screen.getByRole('button', { name: /Cultural/i }));
+    await user.click(screen.getByText(/Personalizar parâmetros/i));
+    await user.type(screen.getByLabelText('Preço por litro'), '6.10');
     await user.click(screen.getByRole('button', { name: /Planejar viagem/i }));
 
     expect(
@@ -124,7 +171,12 @@ describe('App', () => {
     expect(await screen.findByText(/Sessão do usuário & conexão/)).toBeInTheDocument();
     expect(screen.getByText('Degradado')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: /Guia do Viajante/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Atrativos & Gastronomia/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Pontos Turísticos & Atrativos/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Restaurantes & Gastronomia/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Clima em Olinda/i })).toBeInTheDocument();
 
     const overviewTab = screen.getByRole('tab', { name: 'Visão Geral' });

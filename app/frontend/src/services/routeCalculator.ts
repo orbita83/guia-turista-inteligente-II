@@ -1,4 +1,4 @@
-import type { CoordenadaGPS, RotaAlternativa, Viagem } from '../types/domain';
+import type { CoordenadaGPS, RotaAlternativa } from '../types/domain';
 
 function normalizarChave(texto: string): string {
   return texto
@@ -7,10 +7,6 @@ function normalizarChave(texto: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-}
-
-export function gerarRotasAlternativas(viagem: Viagem): RotaAlternativa[] {
-  return viagem.rotas ?? [];
 }
 
 export function gerarLinkGoogleMaps(origem: string, destino: string): string {

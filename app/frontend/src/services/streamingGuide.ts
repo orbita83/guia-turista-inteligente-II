@@ -243,7 +243,11 @@ export async function streamGuiaTuristico(
         if (!event) continue;
         if (event.type === 'error') throw new Error(event.message);
         if (event.type === 'telemetry') {
-          const sessionPayload = event.data.session as Record<string, unknown> | undefined;
+          const rawSession = event.data.session;
+          const sessionPayload =
+            rawSession !== null && typeof rawSession === 'object' && !Array.isArray(rawSession)
+              ? (rawSession as Record<string, unknown>)
+              : undefined;
           const remoteReqId =
             typeof event.data.requestId === 'string' && event.data.requestId.trim() !== ''
               ? parseRequestId(event.data.requestId)
@@ -258,35 +262,48 @@ export async function streamGuiaTuristico(
               : undefined;
 
           callbacks.onTelemetry?.({
-            stage: (event.data.stage as any) || 'streaming',
+            stage: event.data.stage === 'connected' ? 'connected' : 'streaming',
             requestId: remoteReqId.available ? remoteReqId : requestIdHeader,
             rttMs,
             networkType: activeNetworkType,
             elapsedStreamMs: { available: true, value: Math.round(performance.now() - startedAt) },
-            session: sessionPayload
-              ? {
-                  userId:
-                    typeof sessionPayload.userId === 'string' ? sessionPayload.userId : undefined,
-                  displayName:
-                    typeof sessionPayload.displayName === 'string'
-                      ? sessionPayload.displayName
-                      : 'Viajante',
-                  kind: sessionPayload.kind === 'google' ? 'google' : 'visitante',
-                  persistence:
-                    sessionPayload.persistence === 'permanente' ? 'permanente' : 'temporaria',
-                  sessionStartedAt: formatSessionStartedAt(
-                    typeof sessionStarted === 'string' ? sessionStarted : undefined,
-                  ),
-                  sessionDuration:
-                    typeof sessionDur === 'number' && sessionDur >= 0
-                      ? { available: true, value: sessionDur }
-                      : unavailableValue(),
-                  userTripCount:
-                    typeof sessionPayload.userTripCount === 'number'
-                      ? sessionPayload.userTripCount
-                      : undefined,
-                }
-              : undefined,
+            session:
+              sessionPayload &&
+              typeof sessionPayload.userId === 'string' &&
+              sessionPayload.userId.trim() &&
+              typeof sessionPayload.displayName === 'string' &&
+              sessionPayload.displayName.trim() &&
+              (sessionPayload.kind === 'google' || sessionPayload.kind === 'visitante') &&
+              ((sessionPayload.kind === 'google' && sessionPayload.persistence === 'permanente') ||
+                (sessionPayload.kind === 'visitante' &&
+                  sessionPayload.persistence === 'temporaria'))
+                ? {
+                    userId:
+                      typeof sessionPayload.userId === 'string' ? sessionPayload.userId : undefined,
+                    displayName:
+                      typeof sessionPayload.displayName === 'string'
+                        ? sessionPayload.displayName
+                        : 'Viajante',
+                    kind: sessionPayload.kind === 'google' ? 'google' : 'visitante',
+                    persistence:
+                      sessionPayload.persistence === 'permanente' ? 'permanente' : 'temporaria',
+                    sessionStartedAt: formatSessionStartedAt(
+                      typeof sessionStarted === 'string' ? sessionStarted : undefined,
+                    ),
+                    sessionDuration:
+                      typeof sessionDur === 'number' &&
+                      Number.isFinite(sessionDur) &&
+                      sessionDur >= 0
+                        ? { available: true, value: sessionDur }
+                        : unavailableValue(),
+                    userTripCount:
+                      typeof sessionPayload.userTripCount === 'number' &&
+                      Number.isInteger(sessionPayload.userTripCount) &&
+                      sessionPayload.userTripCount >= 0
+                        ? sessionPayload.userTripCount
+                        : undefined,
+                  }
+                : undefined,
             diagnosticoIa: diag,
           });
         } else if (event.type === 'replace') {

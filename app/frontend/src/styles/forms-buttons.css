@@ -396,6 +396,19 @@ input[aria-invalid='true'] {
   font-size: 1rem;
 }
 
+.planner-cancel {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 0.65rem;
+  border: 1px solid #fda4af;
+  background: #ffe4e6;
+  color: #b91c1c;
+}
+
+.planner-cancel:hover {
+  background: #fecdd3;
+}
+
 /* Botões */
 button,
 .btn {

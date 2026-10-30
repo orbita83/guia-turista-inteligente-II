@@ -97,7 +97,7 @@ def calcular_autonomia_combustao(
         autonomia_maxima_km = capacidade_tanque_litros * consumo_km_por_litro
         autonomia_efetiva_km = autonomia_maxima_km * (nivel_inicial_percent / 100.0)
 
-    Se penalização de relevo for aplicada (> 0):
+    Se penalização de relevo for aplicada (entre -100% e infinito):
         fator_relevo = 1.0 + (penalizacao_relevo_percent / 100.0)
         autonomia_maxima_km = autonomia_maxima_km / fator_relevo
         autonomia_efetiva_km = autonomia_efetiva_km / fator_relevo
@@ -125,15 +125,15 @@ def calcular_autonomia_combustao(
         raise ParametrosVeiculoInvalidosError(
             f"Nível inicial inválido: {nivel_inicial_percent}. Deve estar entre 0.0% e 100.0%."
         )
-    if penal is None or penal < 0.0:
+    if penal is None or penal <= -100.0:
         raise ParametrosVeiculoInvalidosError(
-            f"Penalização de relevo inválida: {penalizacao_relevo_percent}. Deve ser >= 0.0%."
+            f"Penalização de relevo inválida: {penalizacao_relevo_percent}. Deve ser > -100.0%."
         )
 
     autonomia_maxima = cap * cons
     autonomia_efetiva = autonomia_maxima * (nivel / 100.0)
 
-    if penal > 0.0:
+    if penal != 0.0:
         fator = 1.0 + (penal / 100.0)
         autonomia_maxima = autonomia_maxima / fator
         autonomia_efetiva = autonomia_efetiva / fator
@@ -153,7 +153,7 @@ def calcular_autonomia_eletrico(
         autonomia_maxima_km = capacidade_bateria_kwh * eficiencia_km_por_kwh
         autonomia_efetiva_km = autonomia_maxima_km * (nivel_inicial_percent / 100.0)
 
-    Se penalização de relevo for aplicada (> 0):
+    Se penalização de relevo for aplicada (entre -100% e infinito):
         fator_relevo = 1.0 + (penalizacao_relevo_percent / 100.0)
         autonomia_maxima_km = autonomia_maxima_km / fator_relevo
         autonomia_efetiva_km = autonomia_efetiva_km / fator_relevo
@@ -181,15 +181,15 @@ def calcular_autonomia_eletrico(
         raise ParametrosVeiculoInvalidosError(
             f"Nível inicial de carga inválido: {nivel_inicial_percent}. Deve estar entre 0.0% e 100.0%."
         )
-    if penal is None or penal < 0.0:
+    if penal is None or penal <= -100.0:
         raise ParametrosVeiculoInvalidosError(
-            f"Penalização de relevo inválida: {penalizacao_relevo_percent}. Deve ser >= 0.0%."
+            f"Penalização de relevo inválida: {penalizacao_relevo_percent}. Deve ser > -100.0%."
         )
 
     autonomia_maxima = cap * efic
     autonomia_efetiva = autonomia_maxima * (nivel / 100.0)
 
-    if penal > 0.0:
+    if penal != 0.0:
         fator = 1.0 + (penal / 100.0)
         autonomia_maxima = autonomia_maxima / fator
         autonomia_efetiva = autonomia_efetiva / fator

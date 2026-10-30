@@ -3,6 +3,7 @@ import { ApiError } from '../services/api';
 
 import type {
   MunicipioOption,
+  MunicipioCatalogStatus,
   PerfilViajante,
   RoteiroFormData,
   SugestaoDestino,
@@ -22,10 +23,11 @@ const FORMULARIO_INICIAL: Required<RoteiroFormData> = {
   propulsao: 'combustao',
   consumo_km_l: 12,
   capacidade_tanque_l: 50,
-  preco_combustivel_l: 6.19,
+  preco_combustivel_l: Number.NaN,
   eficiencia_km_kwh: 6,
   capacidade_bateria_kwh: 60,
-  preco_energia_kwh: 0.95,
+  preco_energia_kwh: Number.NaN,
+  passageiros: 1,
 };
 
 const PERFIS: readonly { valor: PerfilViajante; rotulo: string; icone: string }[] = [
@@ -51,10 +53,12 @@ export interface RoteiroFormProps {
   ufs: readonly string[];
   isSubmitting: boolean;
   municipios?: readonly MunicipioOption[];
+  municipioCatalogStatus?: MunicipioCatalogStatus;
   sugestoes?: readonly SugestaoDestino[];
   suggestionStatus?: SuggestionStatus;
   onRequestSuggestions?: () => void | Promise<void>;
   onSubmit: (data: RoteiroFormData) => void | Promise<void>;
+  onCancel?: () => void;
 }
 
 function normalizar(valor: string): string {
@@ -79,10 +83,12 @@ export function RoteiroForm({
   ufs,
   isSubmitting,
   municipios = [],
+  municipioCatalogStatus,
   sugestoes = [],
   suggestionStatus = 'unavailable',
   onRequestSuggestions,
   onSubmit,
+  onCancel,
 }: RoteiroFormProps) {
   const [formData, setFormData] = useState<Required<RoteiroFormData>>(FORMULARIO_INICIAL);
   const [erros, setErros] = useState<ErrosFormulario>({});
@@ -125,7 +131,20 @@ export function RoteiroForm({
     campo: 'origem_cidade' | 'origem_uf' | 'destino_cidade' | 'destino_uf',
     valor: string,
   ) => {
-    setFormData((atual) => ({ ...atual, [campo]: valor }));
+    setFormData((atual) => {
+      if (campo !== 'origem_cidade' && campo !== 'destino_cidade')
+        return { ...atual, [campo]: valor };
+      const matches = municipios.filter(
+        (municipio) => normalizar(municipio.nome) === normalizar(valor),
+      );
+      const ufsEncontradas = [...new Set(matches.map((municipio) => municipio.uf))];
+      const ufCampo = campo === 'origem_cidade' ? 'origem_uf' : 'destino_uf';
+      return {
+        ...atual,
+        [campo]: valor,
+        ...(ufsEncontradas.length === 1 ? { [ufCampo]: ufsEncontradas[0] } : {}),
+      };
+    });
     setErros((atuais) => ({
       ...atuais,
       [campo.startsWith('origem') ? 'origem' : 'destino']: undefined,
@@ -382,13 +401,16 @@ export function RoteiroForm({
             </p>
           ) : null}
 
-          {/* TODO(backend): mostrar o catálogo real quando houver fonte de municípios;
-              a lista de UFs da sessão, sozinha, não preenche o datalist de cidades. */}
           <p
             className={`catalog-status${catalogoDisponivel ? '' : ' is-unavailable'}`}
             role="status"
           >
-            Catálogo nacional: {catalogoDisponivel ? 'Disponível' : 'Inacessível'}
+            Catálogo nacional:{' '}
+            {municipioCatalogStatus === 'loading'
+              ? 'Carregando'
+              : catalogoDisponivel
+                ? 'Disponível'
+                : 'Inacessível'}
           </p>
 
           <section className="suggestions-block" aria-labelledby="suggestions-title">
@@ -408,8 +430,8 @@ export function RoteiroForm({
                 {suggestionStatus === 'loading' ? 'Localizando…' : '⌖ Usar minha localização'}
               </button>
             </div>
-            {/* TODO(backend): preencher sugestoes e suggestionStatus com destinos e distâncias
-                reais após a integração do contrato de recomendação por localização. */}
+            {/* TODO(frontend): validar no fluxo real as sugestões GPS e as distâncias geodésicas
+                já calculadas pelo serviço local, incluindo permissão negada e erro de localização. */}
             {suggestionStatus === 'available' && sugestoes.length > 0 ? (
               <div className="suggestion-list">
                 {sugestoes.map((sugestao) => {
@@ -542,6 +564,25 @@ export function RoteiroForm({
           </details>
 
           <div className="trip-preferences">
+            <label htmlFor="passageiros">
+              Passageiros
+              <select
+                id="passageiros"
+                value={formData.passageiros}
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    passageiros: Number(event.target.value),
+                  }))
+                }
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </label>
             <fieldset className="choice-group">
               <legend>Duração da viagem</legend>
               <div className="duration-options">
@@ -606,6 +647,11 @@ export function RoteiroForm({
             )}
           </button>
         </fieldset>
+        {isSubmitting && onCancel && (
+          <button type="button" className="btn planner-cancel" onClick={onCancel}>
+            ✕ Cancelar
+          </button>
+        )}
       </form>
     </section>
   );

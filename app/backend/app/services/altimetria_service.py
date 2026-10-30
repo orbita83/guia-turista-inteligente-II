@@ -62,10 +62,9 @@ class OpenElevationConnectionError(OpenElevationError):
 class OpenElevationHTTPError(OpenElevationError):
     """Erro HTTP retornado pelo Open-Elevation (ex.: 500, 502, 503)."""
 
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(f"Open-Elevation retornou HTTP {status_code}: {detail}")
+    def __init__(self, status_code: int) -> None:
+        super().__init__(f"Open-Elevation retornou HTTP {status_code}.")
         self.status_code = status_code
-        self.detail = detail
 
 
 class OpenElevationFormatError(OpenElevationError):
@@ -280,6 +279,7 @@ async def consultar_open_elevation(
     coordenadas: list[tuple[float, float]],
     url: str = URL_OPEN_ELEVATION_PADRAO,
     timeout: float = TIMEOUT_PADRAO_S,
+    api_key: str = "",
 ) -> list[float]:
     """Consulta elevações no Open-Elevation para as coordenadas informadas.
 
@@ -303,7 +303,10 @@ async def consultar_open_elevation(
     )
 
     try:
-        response = await client.post(url, json=payload, timeout=timeout)
+        response = await client.post(
+            url, json=payload, timeout=timeout,
+            headers={"X-API-Key": api_key} if api_key else None,
+        )
     except httpx.TimeoutException as exc:
         logger.warning("Timeout (%s) na consulta ao Open-Elevation após %.1fs.", exc, timeout)
         raise OpenElevationTimeoutError(f"Timeout ao consultar Open-Elevation ({timeout}s).") from exc
@@ -312,12 +315,8 @@ async def consultar_open_elevation(
         raise OpenElevationConnectionError(f"Falha de conexão com o Open-Elevation: {exc}") from exc
 
     if response.status_code != 200:
-        logger.error(
-            "Open-Elevation retornou HTTP %d. Corpo: %.200s",
-            response.status_code,
-            response.text,
-        )
-        raise OpenElevationHTTPError(response.status_code, response.text[:200])
+        logger.error("Open-Elevation retornou HTTP %d.", response.status_code)
+        raise OpenElevationHTTPError(response.status_code)
 
     try:
         dados = response.json()
@@ -496,6 +495,7 @@ class AltimetriaService:
         *,
         max_amostras: int | None = None,
         limiar_ruido_m: float | None = None,
+        api_key: str = "",
     ) -> PerfilTopografico:
         """Processa a geometria rodoviária, consulta o Open-Elevation e retorna o perfil completo.
 
@@ -535,6 +535,7 @@ class AltimetriaService:
                 coordenadas=amostras_pontos,
                 url=self.url_provedor,
                 timeout=self.timeout_s,
+                api_key=api_key,
             )
         except OpenElevationTimeoutError as exc:
             return PerfilTopografico(
@@ -548,8 +549,19 @@ class AltimetriaService:
                 status=StatusAltimetria.INDISPONIVEL,
                 mensagem=f"Falha de conexão com Open-Elevation: {exc}",
             )
+        except OpenElevationHTTPError as exc:
+            if exc.status_code == 429:
+                return PerfilTopografico(
+                    sucesso=False,
+                    status=StatusAltimetria.COTA_EXCEDIDA,
+                    mensagem="A consulta de elevação atingiu o limite do provedor (HTTP 429).",
+                )
+            return PerfilTopografico(
+                sucesso=False,
+                status=StatusAltimetria.ERRO_PROVEDOR,
+                mensagem=str(exc),
+            )
         except (
-            OpenElevationHTTPError,
             OpenElevationFormatError,
             OpenElevationCountMismatchError,
             OpenElevationInvalidDataError,
@@ -591,6 +603,7 @@ async def obter_perfil_topografico(
     limiar_ruido_m: float = LIMIAR_RUIDO_PADRAO_M,
     timeout_s: float = TIMEOUT_PADRAO_S,
     url_provedor: str = URL_OPEN_ELEVATION_PADRAO,
+    api_key: str = "",
 ) -> PerfilTopografico:
     """Função pública de conveniência para obter o perfil topográfico de uma rota."""
     servico = AltimetriaService(
@@ -605,4 +618,5 @@ async def obter_perfil_topografico(
         client=client,
         max_amostras=max_amostras,
         limiar_ruido_m=limiar_ruido_m,
+        api_key=api_key,
     )

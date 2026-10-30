@@ -42,6 +42,15 @@ describe('geolocation service', () => {
   });
 
   describe('obterSugestoesDestino', () => {
+    it('aplica o limite à distância exata e exclui igualdade', () => {
+      const distance = calcularHaversineExatoKm(-8.0476, -34.877, -12.9777, -38.5016);
+      expect(
+        obterSugestoesDestino(-8.0476, -34.877, 100, distance).map((item) => item.nome),
+      ).not.toContain('Salvador');
+      expect(
+        obterSugestoesDestino(-8.0476, -34.877, 100, distance - 0.01).map((item) => item.nome),
+      ).toContain('Salvador');
+    });
     it('retorna exatamente 4 destinos turísticos mais próximos com distância >= 400 km', () => {
       // A partir de São Paulo (-23.5505, -46.6333)
       const sugestoes = obterSugestoesDestino(-23.5505, -46.6333);

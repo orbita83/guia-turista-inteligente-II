@@ -17,6 +17,7 @@ class StatusAltimetria(str, Enum):
     PARCIAL = "parcial"
     INDISPONIVEL = "indisponivel"
     ERRO_PROVEDOR = "erro_provedor"
+    COTA_EXCEDIDA = "cota_excedida"
     GEOMETRIA_INVALIDA = "geometria_invalida"
 
 

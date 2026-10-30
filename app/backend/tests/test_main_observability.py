@@ -1,10 +1,26 @@
 import httpx
 import pytest
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 from app import main
 from app.core.circuit_breaker import CircuitState
 from app.main import app
+
+
+@pytest.mark.asyncio
+async def test_readyz_rejects_uninitialized_resources() -> None:
+    empty_app = FastAPI()
+    request = Request({"type": "http", "app": empty_app, "path": "/readyz", "method": "GET"})
+    response = await main.readyz(request)
+    assert response.status_code == 503
+
+
+def test_readyz_accepts_initialized_resources() -> None:
+    with TestClient(app) as client:
+        response = client.get("/readyz")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
 
 
 def test_lifespan_creates_circuit_breakers() -> None:
@@ -32,6 +48,8 @@ def test_metrics_endpoint_exposes_requests_and_breakers() -> None:
         in response.text
     )
     assert 'circuit_breaker_open{name="weather"} 0.0' in response.text
+    assert "http_requests_in_flight 1.0" in response.text
+    assert main._current_active_http_requests() == 0
 
 
 def test_valid_request_id_is_preserved_and_unsafe_one_is_replaced() -> None:

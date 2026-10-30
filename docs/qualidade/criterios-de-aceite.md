@@ -20,9 +20,12 @@
 | CA-HIS-001 | A interface mantém visível a viagem retornada pelo contrato existente durante a reconciliação, sem duplicar nem afirmar persistência sem confirmação observável. | Fonte/Derivado; backend fora do escopo desta entrega |
 | CA-HIS-002 | A interface remove localmente a viagem após resposta de sucesso do contrato existente, sem recarregar a SPA; falha preserva o card. | Fonte/Implementado no frontend |
 | CA-EXP-001 | A aplicação gera GPX 1.1 válido contendo os pontos previstos da rota. | Fonte/Derivado |
+| CA-EXP-003 | A exportação backend da viagem autenticada usa sua geometria real, impede acesso cruzado e rejeita trajeto inválido sem inventar pontos. | Fonte/Derivado; contrato operacional do projeto |
 | CA-EXP-002 | Ações de Maps e WhatsApp usam a rota ativa e não dados de planejamento anterior. | Derivado |
 | CA-TEL-001 | Após o primeiro planejamento, a UI diferencia `X-Process-Time` do tempo total monotônico, mantém sinais ausentes como indisponíveis, mascara `X-Request-ID` e limpa o snapshot ao trocar identidade. | Fonte/Implementado no frontend |
 | CA-TEL-002 | `/healthz`, `/readyz` e `/metrics` respondem conforme finalidade operacional. | Fonte |
+| CA-PLN-006 | Novos planejamentos e streams aceitam duração entre 1 e 5 dias e rejeitam valores fora da faixa com `422`. | Fonte, seção 3.1 |
+| CA-HIS-003 | O planejamento agenda uma gravação por `BackgroundTasks` somente após gerar a viagem completa; cancelamento não agenda viagem incompleta. | Fonte, seções 3.4 e 4.5 |
 | CA-DES-001 | Geocodificações e consultas independentes são executadas concorrentemente. | Fonte |
 | CA-DES-002 | Desconexão interrompe o pipeline e impede salvar resultado incompleto. | Fonte |
 | CA-DES-003 | A meta de resposta de planejamento é inferior a 1.000 ms no cenário e ambiente de medição a definir. | Fonte + questão |

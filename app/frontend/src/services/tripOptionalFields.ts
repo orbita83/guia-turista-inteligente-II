@@ -7,6 +7,8 @@ import type {
   PerfilTopografico,
   RotaAlternativa,
   Viagem,
+  AutonomiaRota,
+  CustosRota,
 } from '../types/domain';
 
 type RecordValue = Record<string, unknown>;
@@ -69,6 +71,94 @@ function elevationProfile(value: unknown, maxDistanceKm?: number): PontoElevacao
   return points;
 }
 
+function providerElevation(value: unknown): {
+  perfilElevacao?: PontoElevacao[];
+  statusAltimetria?: string;
+  topografia?: PerfilTopografico;
+} {
+  const result = record(value);
+  if (!result) return {};
+  const status = text(result.status);
+  const mensagem = text(result.mensagem);
+  // Viagens já persistidas podem conter o erro HTTP antigo com o corpo do provedor.
+  // Convertemos apenas padrões conhecidos; a mensagem bruta nunca chega à interface.
+  const statusAltimetria =
+    status === 'erro_provedor' && mensagem?.includes('HTTP 429')
+      ? 'cota_excedida'
+      : status === 'indisponivel' && mensagem?.toLowerCase().includes('timeout')
+        ? 'timeout'
+        : status === 'indisponivel' && mensagem?.startsWith('Falha de conexão')
+          ? 'falha_conexao'
+          : status;
+  const profile =
+    result.sucesso === true && Array.isArray(result.pontos)
+      ? elevationProfile(
+          result.pontos.map((item: unknown) => {
+            const point = record(item);
+            return { distanciaKm: point?.distancia_km, altitudeM: point?.elevacao_m };
+          }),
+        )
+      : null;
+
+  const dadosConsumoRaw = record(result.dados_consumo);
+  const penalizacao =
+    number(dadosConsumoRaw?.penalizacao_consumo_estimada_percent, true) ??
+    number(result.penalizacao_consumo_pct, true);
+  const fatorTerrenoRaw = text(dadosConsumoRaw?.fator_terreno) ?? text(result.fator_terreno);
+  const fatorTerreno: 'plano' | 'ondulado' | 'montanhoso' | null =
+    fatorTerrenoRaw === 'montanhoso' ||
+    fatorTerrenoRaw === 'ondulado' ||
+    fatorTerrenoRaw === 'plano'
+      ? fatorTerrenoRaw
+      : null;
+
+  const altitudeMin = number(result.altitude_minima_m, true);
+  const altitudeMax = number(result.altitude_maxima_m, true);
+  const subida = number(result.ganho_elevacao_m, true);
+  const descida = number(result.perda_elevacao_m, true);
+  const desnivelLiquido = number(result.desnivel_liquido_m, true);
+
+  const topografia: PerfilTopografico | undefined =
+    result.sucesso === true &&
+    altitudeMin !== null &&
+    altitudeMax !== null &&
+    subida !== null &&
+    descida !== null &&
+    desnivelLiquido !== null &&
+    penalizacao !== null
+      ? {
+          altitudeMaximaM: altitudeMax,
+          cotaMinimaM: altitudeMin,
+          cotaMaximaM: altitudeMax,
+          desnivelSubidaM: subida,
+          desnivelDescidaM: descida,
+          desnivelLiquidoM: desnivelLiquido,
+          subidasAcumuladasM: subida,
+          descidasAcumuladasM: descida,
+          penalizacaoConsumoPct: penalizacao,
+          ...(fatorTerreno ? { fatorTerreno } : {}),
+          ...(fatorTerreno
+            ? {
+                dadosConsumo: {
+                  fatorTerreno,
+                  penalizacaoConsumoPct: penalizacao,
+                  inclinacaoMediaSubidaPct:
+                    number(dadosConsumoRaw?.inclinacao_media_subida_percent, true) ?? undefined,
+                  inclinacaoMediaDescidaPct:
+                    number(dadosConsumoRaw?.inclinacao_media_descida_percent, true) ?? undefined,
+                },
+              }
+            : {}),
+        }
+      : undefined;
+
+  return {
+    ...(profile ? { perfilElevacao: profile } : {}),
+    ...(statusAltimetria ? { statusAltimetria } : {}),
+    ...(topografia ? { topografia } : {}),
+  };
+}
+
 const categories: readonly CategoriaAtrativo[] = [
   'historico',
   'natureza',
@@ -121,7 +211,7 @@ function topography(value: unknown): PerfilTopografico | null {
   const desnivelLiquidoM = number(item.desnivelLiquidoM, true);
   const cotaMinimaM = number(item.cotaMinimaM, true);
   const cotaMaximaM = number(item.cotaMaximaM, true);
-  const penalizacaoConsumoPct = number(item.penalizacaoConsumoPct);
+  const penalizacaoConsumoPct = number(item.penalizacaoConsumoPct, true);
   if (
     [
       altitudeMaximaM,
@@ -145,6 +235,18 @@ function topography(value: unknown): PerfilTopografico | null {
     ...(number(item.rendimentoRealKmL) !== null
       ? { rendimentoRealKmL: number(item.rendimentoRealKmL)! }
       : {}),
+    ...(number(item.subidasAcumuladasM) !== null
+      ? { subidasAcumuladasM: number(item.subidasAcumuladasM)! }
+      : { subidasAcumuladasM: desnivelSubidaM! }),
+    ...(number(item.descidasAcumuladasM) !== null
+      ? { descidasAcumuladasM: number(item.descidasAcumuladasM)! }
+      : { descidasAcumuladasM: desnivelDescidaM! }),
+    ...(item.fatorTerreno === 'plano' ||
+    item.fatorTerreno === 'ondulado' ||
+    item.fatorTerreno === 'montanhoso'
+      ? { fatorTerreno: item.fatorTerreno }
+      : {}),
+    ...(text(item.descricaoRelevo) ? { descricaoRelevo: text(item.descricaoRelevo)! } : {}),
   };
 }
 
@@ -175,6 +277,109 @@ function stop(value: unknown): ParadaEstrategica | null {
     tipo: item.tipo,
     ...(text(item.descricao) ? { descricao: text(item.descricao)! } : {}),
   };
+}
+
+function autonomy(value: unknown): AutonomiaRota | undefined {
+  const item = record(value);
+  if (
+    !item ||
+    typeof item.sucesso !== 'boolean' ||
+    typeof item.solucao_segura !== 'boolean' ||
+    !Array.isArray(item.paradas)
+  )
+    return undefined;
+  const paradas: ParadaEstrategica[] = [];
+  for (const value of item.paradas) {
+    const stop = record(value);
+    const coord = record(stop?.coordenadas);
+    const coordenadas = coordinate([coord?.latitude, coord?.longitude]);
+    const id = text(stop?.id);
+    const nome = text(stop?.nome);
+    const km = number(stop?.distancia_km);
+    const nivel = number(stop?.reserva_estimada_percent);
+    const origem = stop?.origem;
+    if (
+      !id ||
+      !nome ||
+      km === null ||
+      nivel === null ||
+      nivel > 100 ||
+      !coordenadas ||
+      (stop?.tipo !== 'combustivel' && stop?.tipo !== 'recarga') ||
+      !(
+        (origem === 'projetado' &&
+          stop.eh_ponto_projetado === true &&
+          stop.estabelecimento_verificado === false) ||
+        (origem === 'verificado' &&
+          stop.eh_ponto_projetado === false &&
+          stop.estabelecimento_verificado === true &&
+          record(stop.detalhes_estabelecimento))
+      )
+    )
+      return undefined;
+    const descricao = text(stop.descricao);
+    paradas.push({
+      id,
+      nome,
+      km,
+      nivelBateriaOuTanquePct: nivel,
+      coordenadas,
+      tipo: stop.tipo,
+      origem,
+      ...(descricao ? { descricao } : {}),
+    });
+  }
+  const autonomiaMaximaKm = number(item.autonomia_maxima_km);
+  return {
+    sucesso: item.sucesso,
+    solucaoSegura: item.solucao_segura,
+    paradas,
+    ...(autonomiaMaximaKm !== null ? { autonomiaMaximaKm } : {}),
+  };
+}
+
+function routeCosts(value: unknown): CustosRota | undefined {
+  const item = record(value);
+  const rateio = record(item?.rateio);
+  const money = (value: unknown): string | null =>
+    typeof value === 'string' && /^\d{1,12}\.\d{2}$/.test(value) ? value : null;
+  const custoPropulsao = money(item?.custo_propulsao);
+  const custoTotal = money(item?.custo_total);
+  if (
+    item?.sucesso !== true ||
+    typeof item.total_completo !== 'boolean' ||
+    !custoPropulsao ||
+    !custoTotal ||
+    !Array.isArray(rateio?.cotas)
+  )
+    return undefined;
+  const cotas = rateio.cotas.flatMap((value: unknown) => {
+    const entry = record(value);
+    const valor = money(entry?.valor);
+    const passageiro = number(entry?.passageiro);
+    return valor &&
+      passageiro !== null &&
+      Number.isInteger(passageiro) &&
+      passageiro >= 1 &&
+      passageiro <= 8
+      ? [{ passageiro, valor }]
+      : [];
+  });
+  if (cotas.length !== rateio.cotas.length || cotas.length === 0 || cotas.length > 8)
+    return undefined;
+  if (
+    rateio.quantidade !== cotas.length ||
+    item.passageiros !== cotas.length ||
+    money(rateio.total_rateado) !== custoTotal ||
+    (item.total_completo && (item.status !== 'completo' || money(item.custo_pedagios) === null)) ||
+    (!item.total_completo && item.status !== 'parcial') ||
+    cotas.some((cota, index) => cota.passageiro !== index + 1)
+  )
+    return undefined;
+  const cents = (value: string) => BigInt(value.replace('.', ''));
+  if (cotas.reduce((sum, cota) => sum + cents(cota.valor), 0n) !== cents(custoTotal))
+    return undefined;
+  return { custoPropulsao, custoTotal, totalCompleto: item.total_completo, cotas };
 }
 
 function route(value: unknown): RotaAlternativa | null {
@@ -263,33 +468,64 @@ export function parseTripOptionalFields(value: RecordValue): Pick<
 } {
   const clima = record(value.clima);
   const percurso = record(value.percurso);
-  const optionalWeather = (key: 'sensacao' | 'condicao' | 'icone') =>
+  const sensacao = text(clima?.sensacao_termica) ?? text(clima?.sensacao);
+  const optionalWeather = (key: 'condicao' | 'icone') =>
     text(clima?.[key]) ? { [key]: text(clima?.[key]) } : {};
   const geometria = coordinates(percurso?.geometria);
+  const alternativas = Array.isArray(percurso?.alternativas)
+    ? percurso.alternativas.flatMap((value: unknown) => {
+        const item = record(value);
+        const distancia = text(item?.distancia);
+        const tempo = text(item?.tempo);
+        const geometriaAlternativa = coordinates(item?.geometria);
+        const autonomia = autonomy(item?.autonomia);
+        const custos = routeCosts(item?.custos);
+        const elevation = providerElevation(item?.altimetria);
+        return distancia && tempo && geometriaAlternativa
+          ? [
+              {
+                distancia,
+                tempo,
+                geometria: geometriaAlternativa,
+                ...elevation,
+                ...(autonomia ? { autonomia } : {}),
+                ...(custos ? { custos } : {}),
+              },
+            ]
+          : [];
+      })
+    : undefined;
   const distanceText = typeof percurso?.distancia === 'string' ? percurso.distancia : '';
   const distanceMatch = /^\s*(\d+(?:[.,]\d+)?)\s*km\s*$/i.exec(distanceText);
   const distanceKm = distanceMatch ? Number(distanceMatch[1].replace(',', '.')) : undefined;
   const perfilElevacao = elevationProfile(percurso?.perfilElevacao, distanceKm);
+  const altimetria = providerElevation(percurso?.altimetria);
+  const autonomia = autonomy(percurso?.autonomia);
+  const custos = routeCosts(percurso?.custos);
   const rotas = Array.isArray(value.rotas)
     ? value.rotas.map(route).filter((item): item is RotaAlternativa => item !== null)
     : null;
   const atrativos = Array.isArray(value.atrativos)
     ? value.atrativos.map(attraction).filter((item): item is AtrativoTuristico => item !== null)
     : null;
+  const rawIds = value.atrativos_visitados_ids ?? value.atrativosVisitadosIds;
   const ids =
-    Array.isArray(value.atrativosVisitadosIds) &&
-    value.atrativosVisitadosIds.every((id: unknown) => text(id) !== null)
-      ? value.atrativosVisitadosIds.map((id: string) => id.trim())
+    Array.isArray(rawIds) && rawIds.every((id: unknown) => text(id) !== null)
+      ? rawIds.map((id: string) => id.trim())
       : null;
   return {
     clima: {
-      ...optionalWeather('sensacao'),
+      ...(sensacao ? { sensacao } : {}),
       ...optionalWeather('condicao'),
       ...optionalWeather('icone'),
     },
     percurso: {
       ...(geometria ? { geometria } : {}),
+      ...(alternativas ? { alternativas } : {}),
       ...(perfilElevacao ? { perfilElevacao } : {}),
+      ...altimetria,
+      ...(autonomia ? { autonomia } : {}),
+      ...(custos ? { custos } : {}),
     },
     ...(rotas ? { rotas } : {}),
     ...(atrativos ? { atrativos } : {}),

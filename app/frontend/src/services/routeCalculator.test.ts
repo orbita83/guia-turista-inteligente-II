@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { CoordenadaGPS, RotaAlternativa, Viagem } from '../types/domain';
+import type { CoordenadaGPS, RotaAlternativa } from '../types/domain';
 import {
   gerarConteudoGpx,
   baixarArquivoGpx,
   gerarLinkGoogleMaps,
   gerarLinkWhatsApp,
-  gerarRotasAlternativas,
 } from './routeCalculator';
 
 const route: RotaAlternativa = {
@@ -35,21 +34,7 @@ const route: RotaAlternativa = {
   custos: { combustivelOuEnergia: 5, pedagios: 0, total: 5, passageiros: 1, valorPorPassageiro: 5 },
 };
 
-const trip: Viagem = {
-  id: 'trip-1',
-  origem: 'Recife - PE',
-  destino: 'Olinda - PE',
-  clima: { temperatura: '28 °C', umidade: '70%', vento: '10 km/h' },
-  percurso: { distancia: '8 km', tempo: '20 min' },
-  dicas_destino: '',
-};
-
 describe('rotas recebidas e GPX', () => {
-  it('não cria alternativas artificiais', () => {
-    expect(gerarRotasAlternativas(trip)).toEqual([]);
-    expect(gerarRotasAlternativas({ ...trip, rotas: [route] })).toEqual([route]);
-  });
-
   it('gera XML GPX 1.1 com geometria recebida e caracteres escapados', () => {
     const gpx = gerarConteudoGpx('Recife & Olinda', 'Praia <Norte>', {
       ...route,

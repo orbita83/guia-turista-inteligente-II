@@ -10,7 +10,7 @@ class GuideStreamRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     destino: ShortText
-    dias_estadia: int | None = Field(default=None, ge=1, le=365)
+    dias_estadia: int | None = Field(default=None, ge=1, le=5)
     estilo_viagem: ShortText | None = None
     clima_info: dict[str, str] | None = Field(default=None, max_length=10)
     atrativos: list[ShortText] | None = Field(default=None, max_length=30)

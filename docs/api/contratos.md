@@ -12,16 +12,35 @@ que retornam `204 No Content`.
 | Método e caminho | Contrato | Identidade |
 | --- | --- | --- |
 | `POST /api/v1/auth/restore-google` | saída `{ usuario }` | restaura identidade Google preservada enquanto o vínculo e a sessão visitante forem válidos |
-| `GET /api/v1/auth/session` | `{ usuario, google_client_id, ufs, session_started_at?, session_duration_ms? }` | cookie de sessão opcional |
+| `GET /api/v1/auth/session` | `{ usuario, google_client_id, ufs, session_started_at, session_duration_ms, visitor_remaining_ms, telemetria_operacional }` | cookie opcional; métricas presentes apenas em sessão ativa |
+| `GET /api/v1/operacao/telemetria` | `{ uptime_seconds, total_roteiros_persistidos, requisicoes_http_ativas }` | sessão obrigatória; 401 sem autenticação |
 | `POST /api/v1/auth/google` | entrada `{ credential }`; saída `{ usuario, session_started_at, session_duration_ms }` | valida credencial no Google e cria cookie |
 | `POST /api/v1/auth/visitor` | saída `{ usuario, session_started_at, session_duration_ms }` | cria sessão visitante com validade de 2 horas e preserva identidade Google autorizada |
 | `POST /api/v1/auth/logout` | `204` | encerra sessão e limpa dados temporários do visitante |
 | `GET /api/v1/roteiros/minhas-viagens` | `{ viagens: [...] }` | sessão obrigatória; lista somente os roteiros da identidade ativa |
 | `GET /api/v1/roteiros/minhas-viagens/json` | metadados legados e envelope `usuarios` contendo somente a identidade ativa | sessão obrigatória; exportação compatível e isolada |
-| `POST /api/v1/roteiros/planejar` | entrada com `origem_cidade`, `origem_uf`, `destino_cidade`, `destino_uf`; saída `{ viagem, aviso }` | sessão obrigatória |
+| `POST /api/v1/roteiros/planejar` | origem/destino e parâmetros opcionais de duração, perfis, veículo e passageiros; saída `{ viagem, aviso }` | sessão obrigatória |
 | `PATCH /api/v1/roteiros/{roteiro_id}/visitas` | entrada `{ atrativo_id, visitado }`; saída com os IDs visitados atualizados | sessão obrigatória; altera somente roteiro da identidade ativa |
 | `POST /api/v1/roteiros/stream-guia` | entrada `{ destino, dias_estadia?, estilo_viagem?, clima_info?, atrativos?, gastronomia? }`; resposta HTTP 200 `text/event-stream` | sessão obrigatória, inclusive visitante |
 | `DELETE /api/v1/roteiros/{roteiro_id}` | `204` | sessão obrigatória; exclusão limitada à identidade ativa |
+
+### Indicadores operacionais
+
+`uptime_seconds` (número não negativo, em segundos) mede o tempo desde a
+inicialização do processo FastAPI atual. Não é o uptime do host ou do conjunto de
+workers. `total_roteiros_persistidos` (inteiro não negativo) é a soma dos
+roteiros dos usuários efetivamente gravados no arquivo de persistência; viagens
+temporárias de visitantes, mantidas apenas em memória, não entram nessa soma.
+`requisicoes_http_ativas` conta as requisições HTTP em andamento neste processo,
+incluindo a própria consulta de telemetria; não é contagem de conexões TCP.
+`/metrics` exporta a mesma grandeza como `http_requests_in_flight`.
+
+Ambos os indicadores são obtidos pelo endpoint autenticado de telemetria e,
+quando há sessão ativa, também pelo `telemetria_operacional` da resposta
+de `GET /auth/session`. O frontend aproveita o contrato na inicialização e
+consulta o endpoint para atualizar os números. Falhas de acesso devem ser
+indicadas como indisponibilidade, sem inventar valores. A resposta de sessão
+sem autenticação contém `telemetria_operacional: null`.
 
 O planejamento mantém os campos de viagem já produzidos pelo Flask: `id`, `criado_em`,
 `origem`, `destino`, `clima`, `percurso`, `dicas_destino` e `diagnostico_ia`; também
@@ -33,10 +52,12 @@ O frontend aceita, quando presentes, `clima.sensacao`, `clima.condicao`,
 `[latitude, longitude]`), `rotas`, `atrativos` e `atrativosVisitadosIds`.
 Também admite `percurso.perfilElevacao` e `rotas[].perfilElevacao` como listas de
 amostras `{ distanciaKm, altitudeM }` com distâncias crescentes dentro da rota.
-Esses campos são opcionais e ainda não são garantidos pelos endpoints executáveis.
-O cliente valida seus formatos em runtime e ignora itens opcionais inválidos sem
-perder a viagem identificada. O formato estruturado de `rotas` e `atrativos` segue
-os tipos da SPA e permanece **proposto** até estabilização do contrato no backend.
+Viagens novas incluem `atrativos` e `atrativos_fonte: "catalogo_local"`, vindos do
+catálogo limitado mantido no backend; destinos não cadastrados recebem lista vazia.
+Os dados são indicativos e devem ser confirmados antes da visita. IDs são preservados
+no histórico da viagem. Viagens antigas sem lista são enriquecidas na leitura quando
+o destino corresponde exatamente ao catálogo, sem alterar os dados persistidos. O cliente
+valida campos opcionais em runtime. O formato enriquecido `rotas` segue proposto.
 Solicitações iguais da mesma identidade têm bloqueio de concorrência e cooldown de
 quatro segundos, respondendo `409`. Falhas HTTP não tratadas pelos fallbacks dos
 provedores respondem `502`.
@@ -64,10 +85,10 @@ Política aplicada:
 - **Compatibilidade legada:** a leitura de viagens históricas mantém os campos
   originais, inclusive desconhecidos, sem inventar valores nem descartar dados.
 
-Os schemas estruturados de altimetria, veículos, paradas e custos
-(`app/backend/app/schemas/roteiros.py`) ficam disponíveis para integração futura nos
-endpoints; ainda não são referenciados por rotas registradas e, por isso, não aparecem
-em `/openapi.json`.
+Os serviços usam os schemas de altimetria, veículos, paradas e custos em
+`app/backend/app/schemas/roteiros.py`. Seus resultados são incluídos nos campos
+adicionais da viagem legada; esses detalhes ainda não estão totalmente tipados no
+schema de resposta OpenAPI.
 
 `viagem.clima` mantém `temperatura`, `umidade` e `vento`, e também retorna
 `sensacao_termica` e `condicao`, consultadas no Open-Meteo. `condicao` traduz códigos
@@ -75,10 +96,9 @@ WMO suportados para descrições em português; campos ausentes, inválidos ou c
 desconhecidos são retornados como `"N/D"`, preservando as demais medições válidas.
 
 `viagem.telemetria.duracoes_etapas_ms` contém durações em milissegundos para
-geocodificação de origem/destino, clima, roteamento, guia e total dos serviços
+geocodificação de origem/destino, clima, roteamento, guia, altimetria da rota principal e total dos serviços
 integrados. `viagem.telemetria.provedores` sinaliza `disponivel`, `indisponivel` ou
-`nao_consultado`; Open-Elevation permanece `nao_integrado` até o serviço do Aluno 3
-ser entregue. A duração de uma etapa inclui o tratamento local mesmo quando o
+`nao_consultado`; Open-Elevation é consultado quando há geometria válida. A duração de uma etapa inclui o tratamento local mesmo quando o
 provedor não é consultado; tempos de etapas concorrentes se sobrepõem. O cabeçalho
 `X-Process-Time` mede o tempo até o início da resposta HTTP e inclui etapas fora
 do total de serviços; não representa o RTT nem o tempo total percebido pelo cliente.
@@ -184,7 +204,9 @@ Para falhas de consulta e respostas inválidas, a distância é apresentada como
 `Rota indisponível`; `Sem rota direta` é reservado à resposta `sem_rota` do OSRM.
 `percurso.geometria` é opcional e contém pontos `[latitude, longitude]` convertidos do
 GeoJSON retornado pelo OSRM. Sem geometria válida, o planejamento permanece disponível,
-mas o botão GPX não exporta um traçado estimado. O arquivo é gerado no navegador.
+mas o botão GPX não exporta um traçado estimado. O download da viagem persistida
+usa o endpoint autenticado de GPX abaixo; o gerador local anterior permanece como
+alternativa de compatibilidade para consumidores que o chamam diretamente.
 
 ### Streaming do guia
 
@@ -231,6 +253,61 @@ precisa de um armazenamento compartilhado e atômico para sessões e revogaçõe
 "visitado": true }` e retorna `roteiro_id`, `atrativo_id`, `visitado` e
 `atrativos_visitados_ids`. A atualização é atômica por usuário/roteiro; IDs de
 roteiros pertencentes a outra identidade retornam `404`.
+Quando a viagem possui uma lista estruturada persistida, IDs que não pertencem a
+essa lista retornam `422`; registros legados sem lista mantêm compatibilidade.
+Origens configuradas em `CORS_ORIGINS` podem realizar o preflight de `PATCH`
+com credenciais e `Content-Type: application/json`.
+
+`GET /api/v1/auth/session` retorna `visitor_remaining_ms` para visitantes ativos,
+medido pelo servidor a partir do vencimento da sessão assinada. Para outras
+identidades ou sessões ausentes, o campo é `null`. Consultar a sessão não renova
+o prazo; o contador no navegador é informativo e a expiração é validada pelo servidor.
+
+`POST /api/v1/roteiros/planejar` aceita opcionalmente `duracao_dias` (1 a 5),
+`perfis` e os parâmetros do veículo usados pelo formulário. Os campos de veículo
+são validados conforme a propulsão; parâmetros incompatíveis são rejeitados com
+`422`. Quando informados, são salvos em `viagem.parametros` e retornam no histórico.
+Viagens anteriores podem não conter esse objeto. Os parâmetros salvos ainda não
+representam, por si só, uma garantia de custo final da viagem.
+
+A nova viagem é registrada por `BackgroundTasks` após a resposta do planejamento.
+Assim, uma consulta imediata ao histórico pode anteceder a gravação. O cliente
+mantém o resultado recém-gerado até a reconciliação com o histórico; falhas de
+disco não são convertidas em sucesso de persistência.
+
+### Exportação GPX 1.1
+
+`GET /api/v1/roteiros/{trip_id}/exportar/gpx` exige a sessão ativa e busca somente
+uma viagem da identidade autenticada. `alternative=-1` (padrão) exporta a rota
+principal; índices `0..n` selecionam uma alternativa salva. A resposta `200` usa
+`Content-Type: application/gpx+xml` e `Content-Disposition: attachment`, com XML
+GPX 1.1, waypoints de origem/destino e paradas disponíveis. Amostras de elevação
+são incluídas quando a altimetria da rota selecionada está disponível. A geometria
+vem do traçado OSRM salvo; pontos ausentes ou inválidos não são inventados.
+Retorna `401` sem sessão, `404` para viagem alheia/inexistente e `422` para
+alternativa ou geometria inválida. O nome do arquivo é sanitizado no servidor.
+
+Quando a geometria rodoviária está disponível, o planejamento consulta a altimetria
+em paralelo ao guia e retorna o resultado em `percurso.altimetria` e nas respectivas
+alternativas. O status e a duração da consulta da rota principal aparecem em
+`telemetria`; falhas não substituem as amostras por
+valores fictícios e não impedem o salvamento da viagem.
+
+Quando o veículo é informado, `percurso.autonomia` e a autonomia de cada
+alternativa com geometria válida contêm o cálculo do serviço de paradas. A distância
+para projetar pontos é calculada sobre a geometria; o veículo parte com 100% de
+tanque ou bateria. As paradas projetadas não são postos confirmados. O cálculo não
+usa ajuste de relevo sem fator quantitativo validado.
+
+Com distância OSRM e parâmetros de consumo e preço válidos, `percurso.custos`
+e os custos das alternativas trazem estimativas e rateio para `passageiros` (1 a 8,
+padrão 1). Sem fonte de pedágio, `total_completo` é falso: o valor e as cotas são
+parciais. O custo de propulsão usa a distância numérica do OSRM, os preços fornecidos
+e não aplica ajuste de relevo sem fator validado.
+
+Na geração inicial do guia, duração e perfis validados são encaminhados ao
+provedor como contexto. Na retransmissão SSE, a duração e todos os perfis são
+enviados como `dias_estadia` e `estilo_viagem`; o conteúdo gerado pode variar.
 
 ### Erros e cabeçalhos
 
@@ -252,7 +329,7 @@ mensagem geral segura; essa leitura não altera o contrato do servidor.
 | Método e caminho | Resposta | Estado |
 | --- | --- | --- |
 | `GET /healthz` | `{ status: "ok" }` | executável |
-| `GET /readyz` | `{ status: "ready" }` | executável; readiness simples do processo |
+| `GET /readyz` | `{ status: "ready" }` ou `503 { status: "unavailable" }` | verifica recursos locais do lifespan; não afirma saúde de provedores externos |
 | `GET /metrics` | métricas HTTP, circuit breakers e ciclo SSE | executável; registro local ao processo |
 | `GET /circuits` | `{ circuit_breakers: [...] }` | diagnóstico dos circuitos |
 | `GET /docs`, `GET /redoc` | OpenAPI interativo | executável |
@@ -279,7 +356,6 @@ correspondente no frontend monolítico atual; ficam fora desta migração:
 | --- | --- | --- |
 | `POST /api/v1/roteiros/mapa-rota` | mapa e alternativas | futuro |
 | método pendente `/api/v1/roteiros/custos` | calculadora de custos | futuro |
-| método pendente `/api/v1/roteiros/exportar/gpx` | exportação no servidor | futuro; download atual é local no navegador |
 | método pendente `/api/v1/roteiros/compartilhar` | compartilhamento | futuro |
 | `/api/v1/telemetria` | diagnóstico de provedores/circuit breakers | futuro |
 

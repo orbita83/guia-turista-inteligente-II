@@ -1,6 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { autenticarComGoogle, encerrarSessao, entrarComoVisitante } from '../services/api';
+import {
+  autenticarComGoogle,
+  encerrarSessao,
+  entrarComoVisitante,
+  restaurarGoogle,
+} from '../services/api';
 import {
   clearSavedGoogleUser,
   readSavedGoogleUser,
@@ -11,22 +16,34 @@ import { useSessionTimer } from './useSessionTimer';
 
 interface UseAuthOptions {
   usuario: Usuario | null;
+  visitorRemainingMs?: number | null;
   runSessionAction: (action: () => Promise<unknown>) => Promise<boolean>;
   addToast: (message: string, type?: ToastMessage['tipo']) => void;
 }
 
-export function useAuth({ usuario, runSessionAction, addToast }: UseAuthOptions) {
+export function useAuth({
+  usuario,
+  visitorRemainingMs,
+  runSessionAction,
+  addToast,
+}: UseAuthOptions) {
   const [savedGoogleUser, setSavedGoogleUser] = useState(readSavedGoogleUser);
-  const googleCredential = useRef<string | null>(null);
-  // TODO: consumir POST /auth/restore-google para restaurar pela sessão assinada,
-  // sem exigir uma credencial Google mantida apenas em memória.
-  const sessionTimer = useSessionTimer(null);
+  const expiresAt = useMemo(
+    () =>
+      usuario?.tipo === 'visitante' &&
+      typeof visitorRemainingMs === 'number' &&
+      Number.isFinite(visitorRemainingMs) &&
+      visitorRemainingMs >= 0
+        ? Date.now() + visitorRemainingMs
+        : null,
+    [usuario?.id, usuario?.tipo, visitorRemainingMs],
+  );
+  const sessionTimer = useSessionTimer(expiresAt);
 
   const loginWithGoogle = useCallback(
     async (credential: string) => {
       await runSessionAction(async () => {
         await autenticarComGoogle(credential);
-        googleCredential.current = credential;
         clearSavedGoogleUser();
         setSavedGoogleUser(null);
       });
@@ -47,13 +64,7 @@ export function useAuth({ usuario, runSessionAction, addToast }: UseAuthOptions)
 
   const restoreGoogleUser = useCallback(async () => {
     if (!savedGoogleUser || usuario?.tipo !== 'visitante') return;
-    const credential = googleCredential.current;
-    if (!credential) {
-      addToast('Saia do modo visitante e entre novamente com Google.');
-      return;
-    }
-    const succeeded = await runSessionAction(() => autenticarComGoogle(credential));
-    googleCredential.current = null;
+    const succeeded = await runSessionAction(() => restaurarGoogle());
     if (succeeded) {
       clearSavedGoogleUser();
       setSavedGoogleUser(null);
@@ -65,7 +76,6 @@ export function useAuth({ usuario, runSessionAction, addToast }: UseAuthOptions)
   const logout = useCallback(async () => {
     await runSessionAction(async () => {
       await encerrarSessao();
-      googleCredential.current = null;
       clearSavedGoogleUser();
       setSavedGoogleUser(null);
     });

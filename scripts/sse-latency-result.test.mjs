@@ -6,6 +6,7 @@ const sample = (ms) => ({
   requestAt: 10,
   contentAt: 20,
   screenshotAt: 10 + ms,
+  httpStatus: 200,
   diagnostic: { status: 'sucesso', fallback_utilizado: false },
 });
 
@@ -25,6 +26,7 @@ test('C18: modo controlado, contingência e diagnóstico ausente nunca aprovam',
     2,
   );
   assert.equal(assessLatency({ ...sample(50), diagnostic: undefined }).exitCode, 2);
+  assert.equal(assessLatency({ ...sample(50), httpStatus: 409 }).exitCode, 2);
 });
 test('C18: telemetry sem texto, sem captura ou relógio inválido não certificam', () => {
   for (const invalid of [

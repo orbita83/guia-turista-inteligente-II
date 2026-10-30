@@ -78,15 +78,9 @@ export function formatSessionDuration(value: AvailableValue<number>): string {
   return remainingMinutes === 0 ? `${hours} h` : `${hours} h ${remainingMinutes} min`;
 }
 
-export function latencyAlertLabel(
-  totalTimeMs: AvailableValue<number>,
-  apiTimeMs: AvailableValue<number>,
-): string | null {
+export function latencyAlertLabel(totalTimeMs: AvailableValue<number>): string | null {
   const totalSlow = totalTimeMs.available && totalTimeMs.value > 1_000;
-  const apiSlow = apiTimeMs.available && apiTimeMs.value > 1_000;
-  if (totalSlow && apiSlow) return 'Tempo total e Tempo da API';
   if (totalSlow) return 'Tempo total';
-  if (apiSlow) return 'Tempo da API';
   return null;
 }
 
@@ -98,24 +92,11 @@ export function safeRoute(origin: string, destination: string): RouteSummary {
 }
 
 export function defaultProviders(): ProviderDiagnostic[] {
-  // TODO(backend): substituir durações desconhecidas quando o planejamento retornar métricas por provedor.
   return (['open-meteo', 'osrm', 'open-elevation', 'gemini'] as const).map((provider) => ({
     provider,
     state: 'unknown',
     durationMs: unavailableValue(),
   }));
-}
-
-function hasOperationData(values: string[]): boolean {
-  return values.every((value) => {
-    const normalized = value.trim().toLocaleLowerCase('pt-BR');
-    return (
-      normalized !== '' &&
-      normalized !== 'n/d' &&
-      normalized !== 'indisponível' &&
-      normalized !== 'aguardando dados'
-    );
-  });
 }
 
 function geminiDiagnostic(value: unknown): ProviderDiagnostic {
@@ -136,33 +117,48 @@ function geminiDiagnostic(value: unknown): ProviderDiagnostic {
 }
 
 export function providerDiagnostics(viagem: Viagem): ProviderDiagnostic[] {
-  // TODO(backend): trocar os estados inferidos do resultado por diagnósticos explícitos quando vierem no contrato.
-  // TODO(backend): incluir dados reais de Open-Elevation; o payload atual não confirma sua execução.
-  const climateAvailable = hasOperationData([
-    viagem.clima.temperatura,
-    viagem.clima.umidade,
-    viagem.clima.vento,
-  ]);
-  const routeAvailable = hasOperationData([viagem.percurso.distancia, viagem.percurso.tempo]);
+  const states = viagem.telemetria?.provedores;
+  const durations = viagem.telemetria?.duracoes_etapas_ms;
+  const state = (value: string | undefined): ProviderDiagnostic['state'] =>
+    value === 'disponivel' ? 'available' : value === 'indisponivel' ? 'unavailable' : 'unknown';
+  const duration = (value: number | undefined): AvailableValue<number> =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0
+      ? { available: true, value }
+      : unavailableValue('missing');
+  const weatherState = state(states?.open_meteo_weather);
+  const geocodingState = state(states?.open_meteo_geocoding);
+  const meteoState =
+    weatherState === 'unavailable' || geocodingState === 'unavailable'
+      ? 'unavailable'
+      : weatherState === 'available' && geocodingState === 'available'
+        ? 'available'
+        : 'unknown';
+  const gemini = geminiDiagnostic(viagem.diagnostico_ia);
   return [
     {
       provider: 'open-meteo',
-      state: climateAvailable ? 'available' : 'unknown',
-      durationMs: unavailableValue(),
-      ...(climateAvailable ? { reason: 'operation-data' as const } : {}),
+      state: meteoState,
+      durationMs: duration(durations?.clima_ms),
     },
     {
       provider: 'osrm',
-      state: routeAvailable ? 'available' : 'unknown',
-      durationMs: unavailableValue(),
-      ...(routeAvailable ? { reason: 'operation-data' as const } : {}),
+      state: state(states?.osrm),
+      durationMs: duration(durations?.roteamento_ms),
     },
     {
       provider: 'open-elevation',
-      state: 'unknown',
-      durationMs: unavailableValue(),
+      state: state(states?.open_elevation),
+      durationMs: duration(durations?.altimetria_ms),
     },
-    geminiDiagnostic(viagem.diagnostico_ia),
+    {
+      ...gemini,
+      state: states?.gemini
+        ? states.gemini === 'indisponivel' && gemini.state === 'degraded'
+          ? 'degraded'
+          : state(states.gemini)
+        : gemini.state,
+      durationMs: duration(durations?.guia_ms),
+    },
   ];
 }
 
@@ -177,6 +173,7 @@ export function sessionSummary(
   const duration: AvailableValue<number> =
     timing?.sessionDurationMs !== undefined &&
     timing?.sessionDurationMs !== null &&
+    Number.isFinite(timing.sessionDurationMs) &&
     timing.sessionDurationMs >= 0
       ? { available: true, value: timing.sessionDurationMs }
       : unavailableValue();

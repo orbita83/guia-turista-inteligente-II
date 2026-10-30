@@ -5,6 +5,7 @@ export function assessLatency(sample, { controlled = false, limitMs = 300 } = {}
   if (
     controlled ||
     sample.controlled ||
+    sample.httpStatus !== 200 ||
     sample.diagnostic?.fallback_utilizado !== false ||
     sample.diagnostic?.status !== 'sucesso'
   ) {

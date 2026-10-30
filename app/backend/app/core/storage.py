@@ -2,11 +2,20 @@
 
 import json
 import threading
+from contextlib import AbstractContextManager, nullcontext
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+from filelock import FileLock
+
+from app.services.atrativos import enriquecer_viagem_legada
+
+
+class UnknownAttractionError(ValueError):
+    """Atrativo não pertence à lista persistida da viagem."""
 
 
 def default_trips_data() -> dict[str, Any]:
@@ -32,6 +41,7 @@ class TripStorage:
     def __init__(self, path: Path | str) -> None:
         self.path = Path(path)
         self._lock = threading.RLock()
+        self._file_lock = FileLock(str(self.path) + ".lock")
         self._visitor_trips: dict[str, list[dict[str, Any]]] = {}
         self._active_sessions: dict[str, tuple[str, str]] = {}
 
@@ -58,11 +68,21 @@ class TripStorage:
     def _is_visitor(user_id: str) -> bool:
         return user_id.startswith("visitante_")
 
+    def _transaction_lock(
+        self, user_id: str, profile: dict[str, Any] | None = None
+    ) -> AbstractContextManager[Any]:
+        if (
+            user_id in self._visitor_trips
+            or (profile or {}).get("tipo") == "visitante"
+            or self._is_visitor(user_id)
+        ):
+            return nullcontext()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        return self._file_lock
+
     def _read_unlocked(self) -> dict[str, Any]:
         if not self.path.exists():
-            data = default_trips_data()
-            self._write_unlocked(data)
-            return data
+            return default_trips_data()
         try:
             with self.path.open("r", encoding="utf-8") as file:
                 data = json.load(file)
@@ -127,6 +147,22 @@ class TripStorage:
             trips = user.get("roteiros", [])
             return list(trips) if isinstance(trips, list) else []
 
+    def count_all_persisted(self) -> int:
+        """Conta viagens persistidas de todas as contas, sem criar arquivos nem expor usuários."""
+        with self._lock:
+            if not self.path.exists():
+                return 0
+            with self.path.open("r", encoding="utf-8") as file:
+                data = json.load(file)
+            if not isinstance(data, dict) or not isinstance(data.get("usuarios"), dict):
+                raise TypeError("Formato de persistência inválido.")
+            users = data["usuarios"]
+            return sum(
+                len(user["roteiros"])
+                for user in users.values()
+                if isinstance(user, dict) and isinstance(user.get("roteiros"), list)
+            )
+
     def count_for_user(self, user_id: str) -> int:
         """Contagem somente-leitura de viagens sem criar ou gravar arquivos em disco."""
         with self._lock:
@@ -153,7 +189,7 @@ class TripStorage:
         item: dict[str, Any],
         profile: dict[str, Any] | None = None,
     ) -> None:
-        with self._lock:
+        with self._lock, self._transaction_lock(user_id, profile):
             if (
                 user_id in self._visitor_trips
                 or (profile or {}).get("tipo") == "visitante"
@@ -175,7 +211,7 @@ class TripStorage:
             self._write_unlocked(data)
 
     def delete_for_user(self, user_id: str, trip_id: str) -> bool:
-        with self._lock:
+        with self._lock, self._transaction_lock(user_id):
             if user_id in self._visitor_trips or self._is_visitor(user_id):
                 trips = self._visitor_trips.get(user_id, [])
                 filtered = [trip for trip in trips if trip.get("id") != trip_id]
@@ -206,7 +242,7 @@ class TripStorage:
         visited: bool,
     ) -> list[str] | None:
         """Atualiza a marcação de um atrativo somente na viagem do usuário ativo."""
-        with self._lock:
+        with self._lock, self._transaction_lock(user_id):
             is_visitor = user_id in self._visitor_trips or self._is_visitor(user_id)
             if is_visitor:
                 trips = self._visitor_trips.get(user_id, [])
@@ -229,6 +265,13 @@ class TripStorage:
             )
             if trip is None:
                 return None
+
+            attractions = enriquecer_viagem_legada(trip).get("atrativos")
+            if not isinstance(attractions, list) or not any(
+                isinstance(item, dict) and item.get("id") == attraction_id
+                for item in attractions
+            ):
+                raise UnknownAttractionError("Atrativo não pertence ao roteiro.")
 
             ids = trip.get("atrativos_visitados_ids")
             visited_ids = (
