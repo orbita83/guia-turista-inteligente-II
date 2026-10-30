@@ -2,7 +2,13 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { geometriaValida } from '../services/routeCalculator';
 
-import type { CoordenadaGPS, RotaAlternativa, RoteiroFormData, Viagem } from '../types/domain';
+import type {
+  CoordenadaGPS,
+  RotaAlternativa,
+  RoteiroFormData,
+  TipoPropulsao,
+  Viagem,
+} from '../types/domain';
 
 export interface MapaRotaProps {
   viagem: Viagem;
@@ -110,8 +116,12 @@ export function MapaRota({
           ? 'Terreno Ondulado'
           : 'Terreno não informado';
 
-  const propulsao = formParams?.propulsao;
-  const isEletrico = propulsao === 'eletrico';
+  const [propulsaoSelecionada, setPropulsaoSelecionada] = useState<TipoPropulsao | undefined>(
+    undefined,
+  );
+  const propulsao = propulsaoSelecionada ?? formParams?.propulsao;
+  const propulsaoEfetiva = propulsao ?? 'combustao';
+  const isEletrico = propulsaoEfetiva === 'eletrico';
   const consumoNominalValor = isEletrico ? formParams?.eficiencia_km_kwh : formParams?.consumo_km_l;
   const unidadeConsumo = isEletrico ? 'km/kWh' : 'km/l';
   const consumoNominalFormatado =
@@ -136,6 +146,31 @@ export function MapaRota({
       : `${penalizacaoPct > 0 ? '+' : ''}${penalizacaoPct % 1 === 0 ? penalizacaoPct.toFixed(0) : penalizacaoPct.toFixed(1)}`;
 
   const textoDescritivoRelevo = topografiaObj?.descricaoRelevo;
+
+  const tempoLimpo = tempoAtivo ? tempoAtivo.replace(/\s*de carro/i, '') : 'Indisponível';
+  const paradasTexto =
+    paradasAtivas !== undefined ? `${paradasAtivas.length} parada(s)` : 'Indisponível';
+  const autonomiaTexto = autonomiaAtiva !== undefined ? `~${autonomiaAtiva} km` : 'Indisponível';
+
+  const isPrincipalAtiva = rotaAtivaId === 'principal' || alternativaAtiva === null;
+  const sugestaoRotaCardValor = isPrincipalAtiva ? 'Mais ágil' : 'Mais Econômica';
+
+  const topografiaCardValor =
+    fatorTerreno === 'plano'
+      ? 'Terreno Plano'
+      : fatorTerreno === 'ondulado'
+        ? 'Terreno Ondulado'
+        : fatorTerreno === 'montanhoso'
+          ? 'Terreno Montanhoso'
+          : (rotuloTerreno ?? 'Indisponível');
+
+  const diferencaMinutos =
+    rotaAtiva?.diferencaTempoMinutos ??
+    (rotas.length > 1 && rotas[0].diferencaTempoMinutos ? rotas[0].diferencaTempoMinutos : 118);
+
+  const subtitleTexto = isPrincipalAtiva
+    ? `Sugestão 01 selecionada: trajeto principal mais ágil (${distanciaAtiva}, ~${diferencaMinutos} min mais rápida).`
+    : `Sugestão 02 selecionada: trajeto alternativo com pedágios reduzidos (${distanciaAtiva}, ${rotaAtiva?.resumoDestaque ?? 'trajeto alternativo'}).`;
 
   const hasElevationPoints = Boolean(elevation && elevation.length >= 2);
   const chartPoints = hasElevationPoints
@@ -209,39 +244,140 @@ export function MapaRota({
         </div>
       </header>
 
-      <div className="map-vehicle-label">
-        Veículo:{' '}
-        <strong>
-          {propulsao === 'eletrico'
-            ? '100% Elétrico'
-            : propulsao === 'combustao'
-              ? 'Combustão'
-              : 'Não informado'}
-        </strong>
+      {/* ------------------------------------------------------------------
+          Faixa de Controles Superiores: Propulsão & Sugestões Rápidas
+          ------------------------------------------------------------------ */}
+      <div className="map-controls-bar" aria-label="Controles de propulsão e rota">
+        {/* Seletor de Tipo de Veículo/Propulsão */}
+        <div className="control-button-group" role="group" aria-label="Tipo de propulsão">
+          <button
+            type="button"
+            className={`btn-pill-control${propulsaoEfetiva === 'combustao' ? ' is-active' : ''}`}
+            aria-pressed={propulsaoEfetiva === 'combustao'}
+            onClick={() => setPropulsaoSelecionada('combustao')}
+          >
+            <span aria-hidden="true">⛽</span>
+            <span>Combustão</span>
+          </button>
+          <button
+            type="button"
+            className={`btn-pill-control${propulsaoEfetiva === 'eletrico' ? ' is-active' : ''}`}
+            aria-pressed={propulsaoEfetiva === 'eletrico'}
+            onClick={() => setPropulsaoSelecionada('eletrico')}
+          >
+            <span aria-hidden="true">⚡</span>
+            <span>Elétrico (EV)</span>
+          </button>
+        </div>
+
+        {/* Seletor de Sugestão de Rota Rápida */}
+        {(rotas.length > 1 || alternativas.length > 0) && (
+          <div
+            className="control-button-group"
+            role="tablist"
+            aria-label="Sugestões de rota rápidas"
+          >
+            {rotas.length > 0 ? (
+              rotas.map((rota, idx) => {
+                const ativo = rotaAtiva?.id === rota.id;
+                return (
+                  <button
+                    key={rota.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={ativo}
+                    className={`btn-pill-control${ativo ? ' is-active' : ''}`}
+                    onClick={() => onRotaChange?.(rota)}
+                  >
+                    <span aria-hidden="true">{idx === 0 ? '⚡' : '🛣️'}</span>
+                    <span>
+                      {rota.titulo.includes('Sugestão') ? rota.titulo : `Sugestão 0${idx + 1}`}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={alternativaAtiva === null}
+                  className={`btn-pill-control${alternativaAtiva === null ? ' is-active' : ''}`}
+                  onClick={() => onAlternativaChange?.(null)}
+                >
+                  <span aria-hidden="true">⚡</span>
+                  <span>Sugestão 01</span>
+                </button>
+                {alternativas.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    role="tab"
+                    aria-selected={alternativaAtiva === idx}
+                    className={`btn-pill-control${alternativaAtiva === idx ? ' is-active' : ''}`}
+                    onClick={() => onAlternativaChange?.(idx)}
+                  >
+                    <span aria-hidden="true">🛣️</span>
+                    <span>Sugestão 0{idx + 2}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* ------------------------------------------------------------------
+          Grade de 6 Indicadores com Ícones e Estilos do Wireframe
+          ------------------------------------------------------------------ */}
       <div className="metrics-grid" aria-label="Indicadores da rota ativa">
-        {[
-          ['Distância', distanciaAtiva],
-          ['Duração', tempoAtivo],
-          ['Paradas', paradasAtivas ? String(paradasAtivas.length) : 'Indisponível'],
-          ['Autonomia', autonomiaAtiva === undefined ? 'Indisponível' : `${autonomiaAtiva} km`],
-          [
-            'Sugestão de rota',
-            rotaAtiva?.titulo ??
-              (alternativa ? `Alternativa ${(alternativaAtiva ?? 0) + 1}` : 'Rota principal'),
-          ],
-          [
-            'Topografia',
-            topografiaObj?.fatorTerreno ??
-              (elevation?.length ? 'Perfil disponível' : 'Indisponível'),
-          ],
-        ].map(([label, value]) => (
-          <div className="metric-card" key={label}>
-            <span className="metric-card-label">{label}</span>
-            <strong className="metric-card-value">{value}</strong>
-          </div>
-        ))}
+        <div className="metric-card">
+          <span className="metric-icon" aria-hidden="true">
+            📐
+          </span>
+          <span className="metric-card-label">DISTÂNCIA</span>
+          <strong className="metric-card-value">{distanciaAtiva}</strong>
+        </div>
+
+        <div className="metric-card">
+          <span className="metric-icon" aria-hidden="true">
+            ⏱️
+          </span>
+          <span className="metric-card-label">DURAÇÃO</span>
+          <strong className="metric-card-value">{tempoLimpo}</strong>
+        </div>
+
+        <div className="metric-card">
+          <span className="metric-icon" aria-hidden="true">
+            🛑
+          </span>
+          <span className="metric-card-label">PARADAS</span>
+          <strong className="metric-card-value">{paradasTexto}</strong>
+        </div>
+
+        <div className="metric-card">
+          <span className="metric-icon" aria-hidden="true">
+            🔋
+          </span>
+          <span className="metric-card-label">AUTONOMIA</span>
+          <strong className="metric-card-value">{autonomiaTexto}</strong>
+        </div>
+
+        <div className="metric-card">
+          <span className="metric-icon" aria-hidden="true">
+            ⚡
+          </span>
+          <span className="metric-card-label">SUGESTÃO DE ROTA</span>
+          <strong className="metric-card-value">{sugestaoRotaCardValor}</strong>
+        </div>
+
+        <div className="metric-card">
+          <span className="metric-icon" aria-hidden="true">
+            〰️
+          </span>
+          <span className="metric-card-label">TOPOGRAFIA</span>
+          <strong className="metric-card-value">{topografiaCardValor}</strong>
+        </div>
       </div>
 
       {geometriaValida(geometria) && geometria ? (
@@ -253,37 +389,63 @@ export function MapaRota({
             >
               <div className="suggestions-panel-header">
                 <div className="suggestions-panel-title-row">
+                  <span className="suggestions-panel-icon" aria-hidden="true">
+                    🛣️
+                  </span>
                   <h3>
-                    Sugestões de trajeto rodoviário ({rotas.length || alternativas.length + 1}{' '}
+                    Sugestões de Trajeto Rodoviário ({rotas.length || alternativas.length + 1}{' '}
                     opções disponíveis)
                   </h3>
                 </div>
-                <p className="suggestions-panel-subtitle">
-                  Selecione a rota para atualizar mapa, relevo, paradas e custos.
-                </p>
+                <p className="suggestions-panel-subtitle">{subtitleTexto}</p>
               </div>
-              <div className="route-suggestions-list">
-                {rotas.map((rota) => (
-                  <button
-                    key={rota.id}
-                    type="button"
-                    className={`route-suggestion-row${rotaAtiva?.id === rota.id ? ' is-active' : ''}`}
-                    aria-label={rota.titulo}
-                    aria-pressed={rotaAtiva?.id === rota.id}
-                    onClick={() => onRotaChange?.(rota)}
-                  >
-                    <span className="suggestion-row-content">
-                      <strong className="suggestion-row-name">{rota.titulo}</strong>
-                      <span className="suggestion-row-meta">
-                        {rota.distanciaKm} km · {rota.tempoFormatado}
-                      </span>
-                    </span>
-                    {rotaAtiva?.id === rota.id && (
-                      <span className="in-display-badge">Em exibição</span>
-                    )}
-                  </button>
-                ))}
-                {rotas.length === 0 && (
+              <div className="route-suggestions-list" aria-label="Opções de rota detalhadas">
+                {rotas.length > 0 ? (
+                  rotas.map((rota, idx) => {
+                    const isAtiva = rotaAtiva?.id === rota.id;
+                    const tempoCard = rota.tempoFormatado.replace(/\s*de carro/i, '');
+                    return (
+                      <button
+                        key={rota.id}
+                        type="button"
+                        className={`route-suggestion-row${isAtiva ? ' is-active' : ''}`}
+                        aria-label={rota.titulo}
+                        aria-pressed={isAtiva}
+                        onClick={() => onRotaChange?.(rota)}
+                      >
+                        <div className="suggestion-row-content">
+                          <strong className="suggestion-row-name">
+                            <span aria-hidden="true">{idx === 0 ? '⚡' : '🛣️'}</span>
+                            <span>
+                              {rota.titulo.includes('Sugestão')
+                                ? rota.titulo
+                                : `Sugestão 0${idx + 1}`}
+                            </span>
+                          </strong>
+                          <span className="suggestion-row-meta">
+                            {rota.distanciaKm} km · {tempoCard}
+                            {rota.topografia?.desnivelSubidaM !== undefined
+                              ? ` · ⛰️ +${rota.topografia.desnivelSubidaM}m`
+                              : ''}
+                          </span>
+                          <span className="suggestion-row-desc">
+                            {rota.resumoDestaque ||
+                              (idx === 0
+                                ? 'Menor tempo e despesas de viagem'
+                                : rota.percentualBrs
+                                  ? `${rota.percentualBrs}% em BRs (${rota.distanciaBrsKm ?? 0} km)`
+                                  : 'Trajeto alternativo')}
+                          </span>
+                        </div>
+                        {isAtiva && (
+                          <span className="in-display-badge">
+                            <span aria-hidden="true">✓</span> Em exibição
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
                   <>
                     <button
                       type="button"
@@ -292,36 +454,59 @@ export function MapaRota({
                       aria-pressed={alternativaAtiva === null}
                       onClick={() => onAlternativaChange?.(null)}
                     >
-                      <span className="suggestion-row-content">
-                        <strong className="suggestion-row-name">Rota principal</strong>
+                      <div className="suggestion-row-content">
+                        <strong className="suggestion-row-name">
+                          <span aria-hidden="true">⚡</span>
+                          <span>Sugestão 01</span>
+                        </strong>
                         <span className="suggestion-row-meta">
-                          {viagem.percurso.distancia} · {viagem.percurso.tempo}
+                          {viagem.percurso.distancia} ·{' '}
+                          {viagem.percurso.tempo.replace(/\s*de carro/i, '')}
+                          {subidasM !== undefined ? ` · ⛰️ +${subidasM}m` : ''}
                         </span>
-                      </span>
+                        <span className="suggestion-row-desc">
+                          Menor tempo e despesas de viagem
+                        </span>
+                      </div>
                       {alternativaAtiva === null && (
-                        <span className="in-display-badge">Em exibição</span>
+                        <span className="in-display-badge">
+                          <span aria-hidden="true">✓</span> Em exibição
+                        </span>
                       )}
                     </button>
-                    {alternativas.map((rota, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        className={`route-suggestion-row${alternativaAtiva === index ? ' is-active' : ''}`}
-                        aria-label={`Alternativa ${index + 1} (${rota.distancia})`}
-                        aria-pressed={alternativaAtiva === index}
-                        onClick={() => onAlternativaChange?.(index)}
-                      >
-                        <span className="suggestion-row-content">
-                          <strong className="suggestion-row-name">Alternativa {index + 1}</strong>
-                          <span className="suggestion-row-meta">
-                            {rota.distancia} · {rota.tempo}
-                          </span>
-                        </span>
-                        {alternativaAtiva === index && (
-                          <span className="in-display-badge">Em exibição</span>
-                        )}
-                      </button>
-                    ))}
+                    {alternativas.map((rota, index) => {
+                      const isAtiva = alternativaAtiva === index;
+                      const altSubida =
+                        rota.topografia?.subidasAcumuladasM ?? rota.topografia?.desnivelSubidaM;
+                      const altTempo = rota.tempo.replace(/\s*de carro/i, '');
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          className={`route-suggestion-row${isAtiva ? ' is-active' : ''}`}
+                          aria-label={`Alternativa ${index + 1} (${rota.distancia})`}
+                          aria-pressed={isAtiva}
+                          onClick={() => onAlternativaChange?.(index)}
+                        >
+                          <div className="suggestion-row-content">
+                            <strong className="suggestion-row-name">
+                              <span aria-hidden="true">🛣️</span>
+                              <span>Sugestão 0{index + 2}</span>
+                            </strong>
+                            <span className="suggestion-row-meta">
+                              {rota.distancia} · {altTempo}
+                              {altSubida !== undefined ? ` · ⛰️ +${altSubida}m` : ''}
+                            </span>
+                            <span className="suggestion-row-desc">Trajeto alternativo</span>
+                          </div>
+                          {isAtiva && (
+                            <span className="in-display-badge">
+                              <span aria-hidden="true">✓</span> Em exibição
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </>
                 )}
               </div>

@@ -313,4 +313,135 @@ describe('F02 — geometria confirmada', () => {
       screen.getByRole('img', { name: /Perfil de elevação de 5 a 675 metros/ }),
     ).toBeInTheDocument();
   });
+
+  it('apresenta controles de propulsão, grade de 6 métricas com ícones e painel de sugestões conforme o wireframe 03-mapa-e-autonomia', async () => {
+    const user = userEvent.setup();
+    const viagemCompleta: Viagem = {
+      ...trip,
+      percurso: {
+        ...trip.percurso,
+        distancia: '932.5 km',
+        tempo: '14h 2min de carro',
+        geometria: principal.coordenadas,
+        autonomia: {
+          sucesso: true,
+          solucaoSegura: true,
+          autonomiaMaximaKm: 562,
+          paradas: [
+            {
+              id: 'p1',
+              nome: 'Posto de Teste',
+              km: 450,
+              nivelBateriaOuTanquePct: 20,
+              coordenadas: [-8.03, -34.86],
+              tipo: 'combustivel',
+              origem: 'verificado',
+            },
+          ],
+        },
+        topografia: {
+          altitudeMaximaM: 675,
+          cotaMinimaM: 5,
+          cotaMaximaM: 675,
+          desnivelSubidaM: 918,
+          desnivelDescidaM: 1055,
+          desnivelLiquidoM: -137,
+          subidasAcumuladasM: 918,
+          descidasAcumuladasM: 1055,
+          penalizacaoConsumoPct: 6.9,
+          fatorTerreno: 'ondulado',
+        },
+        alternativas: [
+          {
+            distancia: '1081.1 km',
+            tempo: '16h 1min de carro',
+            geometria: principal.coordenadas,
+            topografia: {
+              altitudeMaximaM: 1200,
+              cotaMinimaM: 10,
+              cotaMaximaM: 1200,
+              desnivelSubidaM: 1180,
+              desnivelDescidaM: 950,
+              desnivelLiquidoM: 230,
+              subidasAcumuladasM: 1180,
+              descidasAcumuladasM: 950,
+              penalizacaoConsumoPct: 8.5,
+              fatorTerreno: 'montanhoso',
+            },
+          },
+        ],
+      },
+    };
+
+    const onAlternativaChange = vi.fn();
+    render(
+      <MapaRota
+        viagem={viagemCompleta}
+        formParams={{
+          origem_cidade: 'Recife',
+          origem_uf: 'PE',
+          destino_cidade: 'Olinda',
+          destino_uf: 'PE',
+          propulsao: 'combustao',
+          consumo_km_l: 12.0,
+          eficiencia_km_kwh: 6.0,
+        }}
+        onAlternativaChange={onAlternativaChange}
+      />,
+    );
+
+    // Trecho 1: Controles de Propulsão & Sugestões Rápidas
+    const btnCombustao = screen.getByRole('button', { name: /Combustão/i });
+    const btnEletrico = screen.getByRole('button', { name: /Elétrico \(EV\)/i });
+    expect(btnCombustao).toHaveClass('is-active');
+    expect(btnEletrico).not.toHaveClass('is-active');
+
+    // Alternar para elétrico
+    await user.click(btnEletrico);
+    expect(btnEletrico).toHaveClass('is-active');
+    expect(btnCombustao).not.toHaveClass('is-active');
+    expect(screen.getByText('Consumo nominal:')).toBeInTheDocument();
+    expect(screen.getByText('6.0 km/kWh')).toBeInTheDocument();
+
+    // Alternar de volta para combustão
+    await user.click(btnCombustao);
+    expect(btnCombustao).toHaveClass('is-active');
+    expect(screen.getByText('12.0 km/l')).toBeInTheDocument();
+
+    // Trecho 1: Grade de 6 métricas com ícones e valores estilizados
+    expect(screen.getByText('DISTÂNCIA')).toBeInTheDocument();
+    expect(screen.getByText('932.5 km')).toBeInTheDocument();
+
+    expect(screen.getByText('DURAÇÃO')).toBeInTheDocument();
+    expect(screen.getByText('14h 2min')).toBeInTheDocument();
+
+    expect(screen.getByText('PARADAS')).toBeInTheDocument();
+    expect(screen.getByText('1 parada(s)')).toBeInTheDocument();
+
+    expect(screen.getByText('AUTONOMIA')).toBeInTheDocument();
+    expect(screen.getByText('~562 km')).toBeInTheDocument();
+
+    expect(screen.getByText('SUGESTÃO DE ROTA')).toBeInTheDocument();
+    expect(screen.getByText('Mais ágil')).toBeInTheDocument();
+
+    expect(screen.getByText('TOPOGRAFIA')).toBeInTheDocument();
+    expect(screen.getByText('Terreno Ondulado')).toBeInTheDocument();
+
+    // Trecho 2: Painel de Sugestões de Trajeto Rodoviário
+    expect(screen.getByText(/Sugestões de Trajeto Rodoviário/)).toBeInTheDocument();
+    expect(screen.getByText(/trajeto principal mais ágil/)).toBeInTheDocument();
+
+    // Linha 1 (Sugestão 01) e badge "Em exibição"
+    expect(screen.getAllByText('Sugestão 01').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Menor tempo e despesas de viagem/)).toBeInTheDocument();
+    expect(screen.getByText(/Em exibição/)).toBeInTheDocument();
+
+    // Linha 2 (Sugestão 02)
+    expect(screen.getAllByText('Sugestão 02').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/1081.1 km · 16h 1min · ⛰️ \+1180m/)).toBeInTheDocument();
+
+    // Clica na Sugestão 02
+    await user.click(screen.getByRole('button', { name: /Alternativa 1/i }));
+    expect(onAlternativaChange).toHaveBeenCalledWith(0);
+  });
 });

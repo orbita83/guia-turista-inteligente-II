@@ -270,14 +270,19 @@
 
 .suggestion-row-content {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  flex: 1;
 }
 
 .suggestion-row-name {
   font-size: 0.98rem;
   font-weight: 800;
   color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 [data-theme='dark'] .suggestion-row-name {
@@ -291,8 +296,13 @@
 }
 
 .suggestion-row-desc {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
+  font-size: 0.84rem;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+[data-theme='dark'] .suggestion-row-desc {
+  color: #60a5fa;
 }
 
 .in-display-badge {
