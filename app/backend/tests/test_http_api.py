@@ -464,6 +464,10 @@ def test_planning_endpoint_meets_mocked_latency_target_with_concurrent_stages(
 
     assert response.status_code == 200
     assert float(response.headers["X-Process-Time"].removesuffix("ms")) < 1000
+    durations = response.json()["viagem"]["telemetria"]["duracoes_etapas_ms"]
+    assert 0 <= durations["processamento_interno_ms"] < durations["total_servicos_ms"]
+    saved = client.get("/api/v1/roteiros/minhas-viagens").json()["viagens"][0]
+    assert saved["telemetria"]["duracoes_etapas_ms"] == durations
     percurso = response.json()["viagem"]["percurso"]
     assert percurso.pop("altimetria")["sucesso"] is False
     assert percurso == {

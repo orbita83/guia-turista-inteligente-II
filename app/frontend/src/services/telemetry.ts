@@ -78,15 +78,9 @@ export function formatSessionDuration(value: AvailableValue<number>): string {
   return remainingMinutes === 0 ? `${hours} h` : `${hours} h ${remainingMinutes} min`;
 }
 
-export function latencyAlertLabel(
-  totalTimeMs: AvailableValue<number>,
-  apiTimeMs: AvailableValue<number>,
-): string | null {
+export function latencyAlertLabel(totalTimeMs: AvailableValue<number>): string | null {
   const totalSlow = totalTimeMs.available && totalTimeMs.value > 1_000;
-  const apiSlow = apiTimeMs.available && apiTimeMs.value > 1_000;
-  if (totalSlow && apiSlow) return 'Tempo total e Tempo da API';
   if (totalSlow) return 'Tempo total';
-  if (apiSlow) return 'Tempo da API';
   return null;
 }
 

@@ -23,6 +23,52 @@ const renderPanel = (state = settledTelemetryFixture()) =>
   );
 
 describe('TelemetriaCard', () => {
+  it('separa o processamento interno da espera longa no servidor', () => {
+    renderPanel(
+      settledTelemetryFixture(
+        telemetrySnapshotFixture({
+          totalTimeMs: available(6200),
+          apiTimeMs: available(6000),
+          etapas: { processamento_interno_ms: 12.345, guia_ms: 5900 },
+        }),
+      ),
+    );
+    expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent(
+      '12,35 ms',
+    );
+    expect(
+      screen.getByText('Duração da requisição no servidor').nextElementSibling,
+    ).toHaveTextContent('6.000 ms');
+    expect(screen.queryByText('Tempo da API')).not.toBeInTheDocument();
+  });
+
+  it.each([undefined, -1, NaN, Infinity])(
+    'não substitui medição interna inválida (%s) pelo header',
+    (duration) => {
+      renderPanel(
+        settledTelemetryFixture(
+          telemetrySnapshotFixture({
+            apiTimeMs: available(6000),
+            etapas: { processamento_interno_ms: duration },
+          }),
+        ),
+      );
+      expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent(
+        'Indisponível',
+      );
+      expect(screen.queryByText('Aviso de latência')).not.toBeInTheDocument();
+    },
+  );
+
+  it('aceita uma medição interna de zero milissegundos', () => {
+    renderPanel(
+      settledTelemetryFixture(
+        telemetrySnapshotFixture({ etapas: { processamento_interno_ms: 0 } }),
+      ),
+    );
+    expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent('0 ms');
+  });
+
   it('aparece antes da primeira viagem com uma orientação apropriada', () => {
     renderPanel(hiddenTelemetryFixture());
     expect(screen.getByRole('region', { name: 'Telemetria & Desempenho' })).toBeInTheDocument();
@@ -45,7 +91,12 @@ describe('TelemetriaCard', () => {
     expect(screen.getByText('Total dos serviços').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
-    expect(screen.getByText('Tempo da API').nextElementSibling).toHaveTextContent('480 ms');
+    expect(screen.getByText('Processamento interno').nextElementSibling).toHaveTextContent(
+      'Indisponível',
+    );
+    expect(
+      screen.getByText('Duração da requisição no servidor').nextElementSibling,
+    ).toHaveTextContent('480 ms');
     expect(screen.getByText('Uptime backend').nextElementSibling).toHaveTextContent(
       'Aguardando dados',
     );
@@ -104,9 +155,9 @@ describe('TelemetriaCard', () => {
       ],
     });
     renderPanel(settledTelemetryFixture(snapshot));
-    expect(screen.getByText('Tempo da API').nextElementSibling).toHaveTextContent(
-      'Aguardando dados',
-    );
+    expect(
+      screen.getByText('Duração da requisição no servidor').nextElementSibling,
+    ).toHaveTextContent('Aguardando dados');
     expect(screen.getByText('Degradado').closest('li')).toHaveTextContent('OSRM');
     expect(screen.getAllByText('Sem dados')[0].closest('li')).toHaveTextContent('Open-Meteo');
   });
@@ -156,7 +207,7 @@ describe('TelemetriaCard', () => {
       ),
     );
     expect(screen.getByRole('status')).toHaveTextContent('Aviso de latência');
-    expect(screen.getByRole('status')).toHaveTextContent('Tempo total e Tempo da API');
+    expect(screen.getByRole('status')).toHaveTextContent('Tempo total ultrapassou');
     expect(screen.getByRole('status')).not.toHaveTextContent('rede externa');
   });
 

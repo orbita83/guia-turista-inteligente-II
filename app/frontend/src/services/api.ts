@@ -162,6 +162,7 @@ function parseTelemetry(value: unknown): TelemetriaViagem | undefined {
     'guia_ms',
     'altimetria_ms',
     'total_servicos_ms',
+    'processamento_interno_ms',
   ] as const) {
     const duration = durations?.[key];
     if (typeof duration === 'number' && Number.isFinite(duration) && duration >= 0)
