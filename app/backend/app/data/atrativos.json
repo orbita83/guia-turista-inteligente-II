@@ -532,5 +532,257 @@
       "icone": "🧀",
       "visitado": false
     }
+  ],
+  "Fortaleza - CE": [
+    {
+      "id": "fort-1",
+      "nome": "Praia do Futuro",
+      "categoria": "natureza",
+      "descricao": "Famosa praia com mega barracas de gastronomia, piscinas e estrutura à beira-mar.",
+      "destaque": "Barracas de praia e caranguejada",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20do%20Futuro%2C%20Fortaleza%20-%20CE",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "fort-2",
+      "nome": "Centro Dragão do Mar de Arte e Cultura",
+      "categoria": "cultura",
+      "descricao": "Espaço cultural icônico com museus, cinemas de arte, planetário e shows.",
+      "destaque": "Arquitetura e Planetário",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Dragao%20do%20Mar%2C%20Fortaleza%20-%20CE",
+      "icone": "🎭",
+      "visitado": false
+    },
+    {
+      "id": "fort-3",
+      "nome": "Mercado Central de Fortaleza",
+      "categoria": "cultura",
+      "descricao": "Tradicional centro de compras de rendas, castanhas e artesanato cearense.",
+      "destaque": "Rendas e artesanato regional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Central%2C%20Fortaleza%20-%20CE",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "fort-4",
+      "nome": "Parque Estadual do Cocó",
+      "categoria": "mirante",
+      "descricao": "Maior parque natural urbano do Norte e Nordeste com trilhas ecológicas.",
+      "destaque": "Trilhas no manguezal",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20do%20Coco%2C%20Fortaleza%20-%20CE",
+      "icone": "🌿",
+      "visitado": false
+    },
+    {
+      "id": "fort-g1",
+      "nome": "Coco Bambu Meireles",
+      "categoria": "gastronomia",
+      "descricao": "Referência em frutos do mar com porções generosas de camarão e peixes.",
+      "destaque": "Camarão Internacional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Coco%20Bambu%20Meireles%2C%20Fortaleza%20-%20CE",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "fort-g2",
+      "nome": "Caranguejo do Assis",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional quiosque de caranguejada e caldinhos às quintas e fins de semana.",
+      "destaque": "Caranguejo toc-toc",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Caranguejo%20do%20Assis%2C%20Fortaleza%20-%20CE",
+      "icone": "🦀",
+      "visitado": false
+    }
+  ],
+  "João Pessoa - PB": [
+    {
+      "id": "jp-1",
+      "nome": "Ponta do Seixas e Farol do Cabo Branco",
+      "categoria": "mirante",
+      "descricao": "Ponto mais oriental das Américas, onde o sol nasce primeiro no continente.",
+      "destaque": "Extremo Oriental das Américas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Farol%20do%20Cabo%20Branco%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🌅",
+      "visitado": false
+    },
+    {
+      "id": "jp-2",
+      "nome": "Centro Cultural São Francisco",
+      "categoria": "historico",
+      "descricao": "Um dos mais importantes complexos barrocos franciscanos do Brasil colonial.",
+      "destaque": "Arte sacra e talha dourada",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Centro%20Cultural%20Sao%20Francisco%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "jp-3",
+      "nome": "Praia de Tambaú e Piscinas de Picãozinho",
+      "categoria": "natureza",
+      "descricao": "Orla arborizada com passeios de catamarã para os corais e piscinas mornas.",
+      "destaque": "Piscinas naturais de corais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20de%20Tambau%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "jp-g1",
+      "nome": "Restaurante Mangai João Pessoa",
+      "categoria": "gastronomia",
+      "descricao": "Buffet monumental de culinária sertaneja e nordestina com queijos e doces caseiros.",
+      "destaque": "Culinária sertaneja no buffet",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mangai%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "jp-g2",
+      "nome": "Nau Frutos do Mar",
+      "categoria": "gastronomia",
+      "descricao": "Gastronomia contemporânea com foco em peixes, polvos e camarões de alta qualidade.",
+      "destaque": "Camarões e peixes nobres",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Nau%20Frutos%20do%20Mar%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🍽️",
+      "visitado": false
+    }
+  ],
+  "Maceió - AL": [
+    {
+      "id": "mac-1",
+      "nome": "Praia de Pajuçara e Piscinas Naturais",
+      "categoria": "natureza",
+      "descricao": "Orla calma onde jangadas levam turistas aos arrecifes de corais em maré baixa.",
+      "destaque": "Passeio de jangada tradicional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20de%20Pajucara%2C%20Maceio%20-%20AL",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "mac-2",
+      "nome": "Praia de Ponta Verde e Farol",
+      "categoria": "natureza",
+      "descricao": "Orla com coqueirais inclinados, calçadão gastronômico e vista para o Farol da Ponta Verde.",
+      "destaque": "Farol e coqueiral histórico",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Farol%20da%20Ponta%20Verde%2C%20Maceio%20-%20AL",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "mac-g1",
+      "nome": "Restaurante Bodega do Sertão",
+      "categoria": "gastronomia",
+      "descricao": "Arquitetura com bule gigante na entrada e buffet autêntico de baião e carne de sol.",
+      "destaque": "Carne de sol na nata e baião de dois",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bodega%20do%20Sertao%2C%20Maceio%20-%20AL",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "mac-g2",
+      "nome": "Parmegianno Pajuçara",
+      "categoria": "gastronomia",
+      "descricao": "Pratos tradicionais de camarão e filés com excelente custo-benefício em frente ao mar.",
+      "destaque": "Chiclete de camarão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parmegianno%20Pajucara%2C%20Maceio%20-%20AL",
+      "icone": "🍽️",
+      "visitado": false
+    }
+  ],
+  "Belo Horizonte - MG": [
+    {
+      "id": "bh-1",
+      "nome": "Conjunto Arquitetônico da Pampulha",
+      "categoria": "cultura",
+      "descricao": "Patrimônio Mundial da UNESCO projetado por Oscar Niemeyer com jardins de Burle Marx.",
+      "destaque": "Igrejinha de São Francisco",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Igrejinha%20da%20Pampulha%2C%20Belo%20Horizonte%20-%20MG",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "bh-2",
+      "nome": "Praça da Liberdade e Circuito Cultural",
+      "categoria": "historico",
+      "descricao": "Palácio histórico com jardins inspirados em Versalhes e museus integrados ao redor.",
+      "destaque": "Circuito Liberdade",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praca%20da%20Liberdade%2C%20Belo%20Horizonte%20-%20MG",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "bh-g1",
+      "nome": "Mercado Central de Belo Horizonte",
+      "categoria": "gastronomia",
+      "descricao": "Polo supremo de queijos artesanais, cachaças, doces de leite e fígado com jiló na chapa.",
+      "destaque": "Fígado com jiló e queijo Canastra",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Central%2C%20Belo%20Horizonte%20-%20MG",
+      "icone": "🧀",
+      "visitado": false
+    }
+  ],
+  "Curitiba - PR": [
+    {
+      "id": "cwb-1",
+      "nome": "Jardim Botânico de Curitiba",
+      "categoria": "natureza",
+      "descricao": "Cartão-postal com estufa de ferro e vidro inspirada no Palácio de Cristal de Londres.",
+      "destaque": "Estufa de vidro e jardins geométricos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Jardim%20Botanico%2C%20Curitiba%20-%20PR",
+      "icone": "🌿",
+      "visitado": false
+    },
+    {
+      "id": "cwb-2",
+      "nome": "Museu Oscar Niemeyer (MON)",
+      "categoria": "cultura",
+      "descricao": "Conhecido como Museu do Olho, abriga exposições de artes visuais, design e arquitetura.",
+      "destaque": "Edifício icônico do Olho",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Museu%20Oscar%20Niemeyer%2C%20Curitiba%20-%20PR",
+      "icone": "👁️",
+      "visitado": false
+    },
+    {
+      "id": "cwb-g1",
+      "nome": "Restaurante Madalosso",
+      "categoria": "gastronomia",
+      "descricao": "Maior restaurante das Américas localizado em Santa Felicidade, com rodízio de massas e frango.",
+      "destaque": "Rodízio italiano tradicional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Madalosso%2C%20Curitiba%20-%20PR",
+      "icone": "🍝",
+      "visitado": false
+    }
+  ],
+  "Olinda - PE": [
+    {
+      "id": "oli-1",
+      "nome": "Alto da Sé e Mirante",
+      "categoria": "mirante",
+      "descricao": "Vista panorâmica para o Recife Antigo e oceano, com feira de tapiocas e artesanato.",
+      "destaque": "Mirante da Sé e Igreja Matriz",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Alto%20da%20Se%2C%20Olinda%20-%20PE",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "oli-2",
+      "nome": "Convento e Igreja de São Francisco",
+      "categoria": "historico",
+      "descricao": "Primeiro convento franciscano do Brasil com claustro adornado de azulejos portugueses.",
+      "destaque": "Azulejos portugueses históricos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Convento%20de%20Sao%20Francisco%2C%20Olinda%20-%20PE",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "oli-g1",
+      "nome": "Oficina do Sabor",
+      "categoria": "gastronomia",
+      "descricao": "Culinária pernambucana refinada comandada pelo chef César Santos, com jerimuns recheados.",
+      "destaque": "Jerimum recheado com camarão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Oficina%20do%20Sabor%2C%20Olinda%20-%20PE",
+      "icone": "🍽️",
+      "visitado": false
+    }
   ]
 }

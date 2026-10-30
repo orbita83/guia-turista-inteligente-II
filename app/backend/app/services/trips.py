@@ -156,6 +156,10 @@ async def plan_trip(
     if route_result:
         route = route_result
     attractions = atrativos_por_destino(destination_city, destination_state)
+    if not attractions and destination_name:
+        res_city, sep, res_uf = destination_name.rpartition(" - ")
+        if sep:
+            attractions = atrativos_por_destino(res_city, res_uf)
 
     guide_called = False
 

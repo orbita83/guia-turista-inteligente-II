@@ -441,6 +441,16 @@
   color: var(--text-muted);
 }
 
+.attractions-title-box .attractions-catalog-hint {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--primary-color, #2563eb);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+
 /* Barra de Progresso de Visitas */
 .visits-progress-container {
   background: #f8fafc;

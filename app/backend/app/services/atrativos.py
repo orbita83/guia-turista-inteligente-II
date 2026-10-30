@@ -23,18 +23,33 @@ def _catalog() -> dict[str, Any]:
 
 def atrativos_por_destino(cidade: str, uf: str) -> list[dict[str, Any]]:
     """Retorna somente correspondência exata; não cria sugestões para outras cidades."""
-    wanted = _normalize(cidade)
-    state = uf.strip().upper()
+    clean_cidade = (cidade or "").strip()
+    clean_uf = (uf or "").strip().upper()
+    if " - " in clean_cidade:
+        part_city, _, part_uf = clean_cidade.rpartition(" - ")
+        if part_city.strip():
+            clean_cidade = part_city.strip()
+            if not clean_uf and part_uf.strip():
+                clean_uf = part_uf.strip().upper()
+    elif "," in clean_cidade:
+        part_city, _, part_uf = clean_cidade.rpartition(",")
+        if part_city.strip():
+            clean_cidade = part_city.strip()
+            if not clean_uf and part_uf.strip():
+                clean_uf = part_uf.strip().upper()
+
+    wanted = _normalize(clean_cidade)
     for label, entries in _catalog().items():
         name, catalog_state = label.rsplit(" - ", 1)
-        if _normalize(name) == wanted and (not state or state == catalog_state):
+        if _normalize(name) == wanted and (not clean_uf or clean_uf == catalog_state):
             return deepcopy(entries)
     return []
 
 
 def enriquecer_viagem_legada(trip: dict[str, Any]) -> dict[str, Any]:
     """Adapta viagens antigas na leitura sem alterar seu registro persistido."""
-    if "atrativos" in trip:
+    existing_attractions = trip.get("atrativos")
+    if isinstance(existing_attractions, list) and len(existing_attractions) > 0:
         return trip
     destination = trip.get("destino")
     if not isinstance(destination, str) or not destination.strip():

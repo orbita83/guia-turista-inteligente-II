@@ -96,6 +96,22 @@ function climaDisponivel(value?: string): string | null {
     : null;
 }
 
+function formatarCategoriaAtrativo(
+  categoria: string,
+  icone?: string,
+): { rotulo: string; icone: string } {
+  const cat = categoria.toLowerCase();
+  if (cat === 'natureza' || cat === 'praia')
+    return { rotulo: 'PRAIA & NATUREZA', icone: icone || '🏖️' };
+  if (cat === 'historico' || cat === 'cultura')
+    return { rotulo: 'HISTÓRICO & CULTURA', icone: icone || '🏛️' };
+  if (cat === 'mirante' || cat === 'parque')
+    return { rotulo: 'MIRANTE & PARQUE', icone: icone || '🌿' };
+  if (cat === 'gastronomia') return { rotulo: 'COZINHA TÍPICA', icone: icone || '🍽️' };
+  if (cat === 'bar' || cat === 'lounge') return { rotulo: 'BAR & LOUNGE', icone: icone || '🍸' };
+  return { rotulo: 'ATRATIVO LOCAL', icone: icone || '📍' };
+}
+
 export function RoteiroResult({
   viagem,
   formParams,
@@ -291,6 +307,7 @@ export function RoteiroResult({
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
         `${item.nome} ${viagem.destino}`,
       )}`;
+    const badgeInfo = formatarCategoriaAtrativo(item.categoria, item.icone);
 
     return (
       <article
@@ -300,7 +317,9 @@ export function RoteiroResult({
       >
         <div className="attraction-card-top">
           <div className="attraction-tag-row">
-            <span className="attraction-category-badge">{item.categoria.toUpperCase()}</span>
+            <span className="attraction-category-badge">
+              <span aria-hidden="true">{badgeInfo.icone}</span> {badgeInfo.rotulo}
+            </span>
             <a
               href={linkMaps}
               target="_blank"
@@ -564,6 +583,10 @@ export function RoteiroResult({
               <h3 id="attractions-title">Atrativos & Gastronomia</h3>
               <p>Descubra e marque os locais e pratos que você já conheceu.</p>
               <p role="status">Ainda não há atrativos catalogados para {viagem.destino}.</p>
+              <p className="attractions-catalog-hint">
+                Destinos com catálogo curado ativo: Natal - RN, Recife - PE, Salvador - BA,
+                Fortaleza - CE, Rio de Janeiro - RJ, São Paulo - SP, Gramado - RS e Ouro Preto - MG.
+              </p>
             </div>
           </div>
         )}
@@ -631,7 +654,7 @@ export function RoteiroResult({
               <h4 className="attractions-group-title">
                 <span aria-hidden="true">📍</span> Pontos Turísticos & Atrativos
               </h4>
-              <p>Principais atrativos catalogados no destino.</p>
+              <p>Principais atrativos selecionados no destino.</p>
               <span className="attractions-count-pill">
                 {totalPontos} {totalPontos === 1 ? 'local' : 'locais'}
               </span>
@@ -654,7 +677,7 @@ export function RoteiroResult({
             <h4 className="attractions-group-title">
               <span aria-hidden="true">🍽️</span> Restaurantes & Gastronomia
             </h4>
-            <p>Opções gastronômicas catalogadas no destino.</p>
+            <p>Sugestões gastronômicas recomendadas no destino.</p>
             <span className="attractions-count-pill">
               {totalGastronomia} {totalGastronomia === 1 ? 'opção' : 'opções'}
             </span>
