@@ -275,7 +275,8 @@ export function parseTrip(value: unknown): Viagem | null {
     ...(optionalFields.atrativos ? { atrativos: optionalFields.atrativos } : {}),
     ...(trip.atrativos_fonte === 'catalogo_local' ||
     trip.atrativos_fonte === 'openstreetmap' ||
-    trip.atrativos_fonte === 'catalogo_local+openstreetmap'
+    trip.atrativos_fonte === 'catalogo_local+openstreetmap' ||
+    trip.atrativos_fonte === 'guia_regional'
       ? { atrativosFonte: trip.atrativos_fonte }
       : {}),
     ...(trip.atrativos_status === 'disponivel' ||

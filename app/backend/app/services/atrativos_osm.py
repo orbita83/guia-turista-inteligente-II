@@ -18,8 +18,17 @@ def _query(city: str, state: str) -> str:
     """Seleciona primeiro o estado e então a área municipal, nunca um raio arbitrário."""
     quoted_city = json.dumps(city, ensure_ascii=False)
     quoted_state = json.dumps(state, ensure_ascii=False)
+    if state == "Distrito Federal" or city.strip().casefold() in {"brasília", "brasilia"}:
+        return (
+            '[out:json][timeout:5];'
+            f'area["boundary"="administrative"]["admin_level"="4"]["name"={quoted_state}]->.municipio;'
+            '.municipio out ids;'
+            'nwr(area.municipio)["tourism"~"^(attraction|museum|gallery|viewpoint|zoo|aquarium|theme_park)$"]["name"];out center 25;'
+            'nwr(area.municipio)["historic"~"^(monument|memorial|archaeological_site|castle)$"]["name"];out center 25;'
+            'nwr(area.municipio)["amenity"="restaurant"]["name"];out center 25;'
+        )
     return (
-        '[out:json][timeout:8];'
+        '[out:json][timeout:5];'
         f'area["boundary"="administrative"]["admin_level"="4"]["name"={quoted_state}]->.uf;'
         f'area(area.uf)["boundary"="administrative"]["admin_level"="8"]["name"={quoted_city}]->.municipio;'
         '.municipio out ids;'
@@ -96,7 +105,12 @@ async def buscar_atrativos_osm(
         return deepcopy(cached[1]), cached[2]
     result: tuple[list[dict[str, Any]], str]
     try:
-        response = await client.post(url, data={"data": _query(city, state_name)}, timeout=10.0)
+        response = await client.post(
+            url,
+            data={"data": _query(city, state_name)},
+            headers={"User-Agent": "GuiaTuristaInteligente/2.0"},
+            timeout=4.0,
+        )
         if response.status_code != 200:
             logger.warning("Consulta OSM de atrativos retornou HTTP %s.", response.status_code)
             result = ([], "indisponivel")

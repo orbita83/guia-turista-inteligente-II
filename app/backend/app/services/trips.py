@@ -15,7 +15,11 @@ from app.core.circuit_breaker import CircuitBreaker
 from app.core.storage import TripStorage
 from app.schemas.roteiros import AjusteRelevo
 from app.services.altimetria_service import obter_perfil_topografico
-from app.services.atrativos import atrativos_por_destino, enriquecer_viagem_legada
+from app.services.atrativos import (
+    atrativos_por_destino,
+    atrativos_por_uf,
+    enriquecer_viagem_legada,
+)
 from app.services.atrativos_osm import buscar_atrativos_osm
 from app.services.custos_service import calcular_custos_viagem
 from app.services.guide import (
@@ -171,12 +175,22 @@ async def plan_trip(
         existing_names = {str(item.get("nome", "")).casefold() for item in local_attractions}
         additions = [item for item in mapped if item["nome"].casefold() not in existing_names]
         combined = local_attractions + additions
-        source = (
-            "catalogo_local+openstreetmap" if local_attractions and additions
-            else "catalogo_local" if local_attractions
-            else "openstreetmap"
-        )
-        return combined, "disponivel" if combined else mapped_status, source
+        if combined:
+            if not any(item.get("categoria") == "gastronomia" for item in combined):
+                regional = atrativos_por_uf(destination_state)
+                reg_gastro = [item for item in regional if item.get("categoria") == "gastronomia"]
+                if reg_gastro:
+                    combined = combined + reg_gastro
+            source = (
+                "catalogo_local+openstreetmap" if local_attractions and additions
+                else "catalogo_local" if local_attractions
+                else "openstreetmap"
+            )
+            return combined, "disponivel", source
+        regional = atrativos_por_uf(destination_state)
+        if regional:
+            return regional, "disponivel", "guia_regional"
+        return [], mapped_status, "openstreetmap"
 
     local_timer.pause()
     (weather_result, weather_ms), (route_result, route_ms), ((attractions, attractions_status, attractions_source), attractions_ms) = await asyncio.gather(

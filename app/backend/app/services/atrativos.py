@@ -7,6 +7,36 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+CAPITAIS_UF: dict[str, str] = {
+    "AC": "Rio Branco",
+    "AL": "Maceió",
+    "AP": "Macapá",
+    "AM": "Manaus",
+    "BA": "Salvador",
+    "CE": "Fortaleza",
+    "DF": "Brasília",
+    "ES": "Vitória",
+    "GO": "Goiânia",
+    "MA": "São Luís",
+    "MT": "Cuiabá",
+    "MS": "Campo Grande",
+    "MG": "Belo Horizonte",
+    "PA": "Belém",
+    "PB": "João Pessoa",
+    "PR": "Curitiba",
+    "PE": "Recife",
+    "PI": "Teresina",
+    "RJ": "Rio de Janeiro",
+    "RN": "Natal",
+    "RS": "Porto Alegre",
+    "RO": "Porto Velho",
+    "RR": "Boa Vista",
+    "SC": "Florianópolis",
+    "SP": "São Paulo",
+    "SE": "Aracaju",
+    "TO": "Palmas",
+}
+
 
 def _normalize(value: str) -> str:
     return "".join(
@@ -42,6 +72,30 @@ def atrativos_por_destino(cidade: str, uf: str) -> list[dict[str, Any]]:
     for label, entries in _catalog().items():
         name, catalog_state = label.rsplit(" - ", 1)
         if _normalize(name) == wanted and (not clean_uf or clean_uf == catalog_state):
+            return deepcopy(entries)
+    return []
+
+
+def atrativos_por_uf(uf: str) -> list[dict[str, Any]]:
+    """Retorna atrativos curados da capital/polo regional da UF como fallback resiliente."""
+    clean_uf = (uf or "").strip().upper()
+    if not clean_uf:
+        return []
+    capital = CAPITAIS_UF.get(clean_uf)
+    catalog = _catalog()
+    if capital:
+        target_label = f"{capital} - {clean_uf}"
+        if target_label in catalog:
+            return deepcopy(catalog[target_label])
+    # Fallback procurando qualquer destino da UF que possua gastronomia
+    for label, entries in catalog.items():
+        _, sep, catalog_state = label.rpartition(" - ")
+        if sep and catalog_state == clean_uf and any(item.get("categoria") == "gastronomia" for item in entries):
+            return deepcopy(entries)
+    # Se nenhum tiver gastronomia, retorna o primeiro da UF
+    for label, entries in catalog.items():
+        _, sep, catalog_state = label.rpartition(" - ")
+        if sep and catalog_state == clean_uf:
             return deepcopy(entries)
     return []
 

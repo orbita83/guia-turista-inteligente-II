@@ -91,6 +91,36 @@
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Carne%20de%20Sol%20com%20Macaxeira%2C%20Recife%20-%20PE",
       "icone": "🥩",
       "visitado": false
+    },
+    {
+      "id": "atrativo-5",
+      "nome": "Parque das Esculturas Francisco Brennand",
+      "categoria": "cultura",
+      "descricao": "Parque de esculturas monumentais de cerâmica sobre o arrecife natural do porto do Recife.",
+      "destaque": "Torre de Cristal e esculturas no arrecife",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque+das+Esculturas+Francisco+Brennand+Recife+PE",
+      "icone": "🗿",
+      "visitado": false
+    },
+    {
+      "id": "rec-g4",
+      "nome": "Entre Amigos O Bode",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional restaurante em Boa Viagem célebre pela carne de sol com queijo coalho e bode assado.",
+      "destaque": "Carne de bode e carne de sol nobres",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Entre+Amigos+O+Bode+Recife+PE",
+      "icone": "🐐",
+      "visitado": false
+    },
+    {
+      "id": "rec-g5",
+      "nome": "Bargaço Recife",
+      "categoria": "gastronomia",
+      "descricao": "Referência em frutos do mar sofisticados, moquecas e camarões no bairro do Pina.",
+      "destaque": "Frutos do mar e moquecas nobres",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bargaco+Recife+PE",
+      "icone": "🍤",
+      "visitado": false
     }
   ],
   "Salvador - BA": [
@@ -162,6 +192,36 @@
       "destaque": "Doces de tabuleiro",
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cocada%20Puxa%20de%20Fita%2C%20Salvador%20-%20BA",
       "icone": "🥥",
+      "visitado": false
+    },
+    {
+      "id": "ssa-5",
+      "nome": "Farol da Barra e Museu Náutico",
+      "categoria": "historico",
+      "descricao": "Forte de Santo Antônio da Barra com o farol mais antigo das Américas e pôr do sol inesquecível.",
+      "destaque": "Farol histórico e pôr do sol na Baía",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Farol+da+Barra+Salvador+BA",
+      "icone": "⛵",
+      "visitado": false
+    },
+    {
+      "id": "ssa-g4",
+      "nome": "Casa de Tereza",
+      "categoria": "gastronomia",
+      "descricao": "Culinária baiana refinada da chef Tereza Paim no charmoso bairro do Rio Vermelho.",
+      "destaque": "Moquecas baianas autênticas e arte",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa+de+Tereza+Salvador+BA",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "ssa-g5",
+      "nome": "Restaurante Donana",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional restaurante em Brotas famoso pelo siri catado, camarão à milanesa e vatapá cremoso.",
+      "destaque": "Moqueca de camarão e siri catado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante+Donana+Salvador+BA",
+      "icone": "🍤",
       "visitado": false
     }
   ],
@@ -409,6 +469,36 @@
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Fil%C3%A9%20%C3%A0%20Osvaldo%20Aranha%2C%20Rio%20de%20Janeiro%20-%20RJ",
       "icone": "🥩",
       "visitado": false
+    },
+    {
+      "id": "rio-5",
+      "nome": "Museu do Amanhã e Boulevard Olímpico",
+      "categoria": "cultura",
+      "descricao": "Obra de Santiago Calatrava na Baía de Guanabara com exposições sobre sustentabilidade e ciência.",
+      "destaque": "Arquitetura futurista na Praça Mauá",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Museu%20do%20Amanha%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "rio-g4",
+      "nome": "Confeitaria Colombo",
+      "categoria": "gastronomia",
+      "descricao": "Patrimônio cultural fundada em 1894 com espelhos belgas de cristal, vitrais e doces portugueses.",
+      "destaque": "Café colonial em salão Belle Époque de 1894",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Confeitaria%20Colombo%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "☕",
+      "visitado": false
+    },
+    {
+      "id": "rio-g5",
+      "nome": "Bar do Mineiro (Santa Teresa)",
+      "categoria": "gastronomia",
+      "descricao": "Clássico botequim boêmio de Santa Teresa servindo pastéis de feijão, feijoada e cerveja gelada.",
+      "destaque": "Pastel de feijão preto e feijoada",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Mineiro%20Santa%20Teresa%2C%20Rio%20de%20Janeiro%20-%20RJ",
+      "icone": "🥘",
+      "visitado": false
     }
   ],
   "São Paulo - SP": [
@@ -480,6 +570,36 @@
       "destaque": "Virado à Paulista Tradicional",
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Virado%20%C3%A0%20Paulista%20Tradicional%2C%20S%C3%A3o%20Paulo%20-%20SP",
       "icone": "🍛",
+      "visitado": false
+    },
+    {
+      "id": "sp-4",
+      "nome": "Bairro da Liberdade e Feira Oriental",
+      "categoria": "cultura",
+      "descricao": "Maior comunidade japonesa fora do Japão com lanternas orientais, templos e feiras gastronômicas.",
+      "destaque": "Cultura e culinária oriental",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bairro%20da%20Liberdade%2C%20Sao%20Paulo%20-%20SP",
+      "icone": "🏮",
+      "visitado": false
+    },
+    {
+      "id": "sp-5",
+      "nome": "Pinacoteca do Estado de São Paulo",
+      "categoria": "cultura",
+      "descricao": "Mais antigo museu de arte de São Paulo no Parque da Luz com importante acervo de arte brasileira.",
+      "destaque": "Acervo de arte brasileira do século XIX",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pinacoteca%20do%20Estado%2C%20Sao%20Paulo%20-%20SP",
+      "icone": "🎨",
+      "visitado": false
+    },
+    {
+      "id": "sp-g5",
+      "nome": "Pastel de Bacalhau do Mercadão",
+      "categoria": "gastronomia",
+      "descricao": "Famoso pastel crocante com recheio farto e cremoso de bacalhau no Mercado Municipal de São Paulo.",
+      "destaque": "Pastel de bacalhau gigante do Mercadão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pastel%20de%20Bacalhau%20Mercadao%2C%20Sao%20Paulo%20-%20SP",
+      "icone": "🥟",
       "visitado": false
     }
   ],
@@ -615,6 +735,46 @@
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Caranguejo%20do%20Assis%2C%20Fortaleza%20-%20CE",
       "icone": "🦀",
       "visitado": false
+    },
+    {
+      "id": "for-5",
+      "nome": "Mercado Central de Fortaleza",
+      "categoria": "cultura",
+      "descricao": "Mais de 500 boxes com artesanato tradicional cearense em renda de bilro, redes e castanhas de caju.",
+      "destaque": "Rendas de bilro e castanhas de caju",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado+Central+de+Fortaleza+CE",
+      "icone": "🛍️",
+      "visitado": false
+    },
+    {
+      "id": "for-g3",
+      "nome": "Chico do Caranguejo (Praia do Futuro)",
+      "categoria": "gastronomia",
+      "descricao": "A mais famosa barraca da Praia do Futuro, consagrada pela tradicional caranguejada cearense.",
+      "destaque": "Caranguejo fresco na Praia do Futuro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Chico+do+Caranguejo+Fortaleza+CE",
+      "icone": "🦀",
+      "visitado": false
+    },
+    {
+      "id": "for-g4",
+      "nome": "Cantinho do Frango",
+      "categoria": "gastronomia",
+      "descricao": "Polo cultural e gastronômico na Aldeota servindo frango desossado, petiscos e MPB ao vivo.",
+      "destaque": "Petiscos nordestinos e chopp gelado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cantinho+do+Frango+Fortaleza+CE",
+      "icone": "🍗",
+      "visitado": false
+    },
+    {
+      "id": "for-g5",
+      "nome": "Sorveteria 50 Sabores (Beira-Mar)",
+      "categoria": "gastronomia",
+      "descricao": "Famosa pelos sabores artesanais generosos de frutas tropicais cearenses como sapoti, graviola e tapioca.",
+      "destaque": "Sorvetes artesanais de frutas regionais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=50+Sabores+Fortaleza+CE",
+      "icone": "🍨",
+      "visitado": false
     }
   ],
   "João Pessoa - PB": [
@@ -667,6 +827,56 @@
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Nau%20Frutos%20do%20Mar%2C%20Joao%20Pessoa%20-%20PB",
       "icone": "🍽️",
       "visitado": false
+    },
+    {
+      "id": "jp-4",
+      "nome": "Praia do Jacaré e Pôr do Sol do Bolero de Ravel",
+      "categoria": "natureza",
+      "descricao": "Embarcações e deques à beira do Rio Paraíba celebrando o pôr do sol com o saxofonista Jurandy.",
+      "destaque": "Bolero de Ravel no pôr do sol do Jacaré",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20do%20Jacare%20Bolero%20de%20Ravel%2C%20Cabedelo%20-%20PB",
+      "icone": "🎷",
+      "visitado": false
+    },
+    {
+      "id": "jp-5",
+      "nome": "Estação Cabo Branco (Ciência, Cultura e Artes)",
+      "categoria": "cultura",
+      "descricao": "Complexo arquitetônico futurista projetado por Oscar Niemeyer dedicado a exposições e astronomia.",
+      "destaque": "Arquitetura monumental de Niemeyer",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Estacao%20Cabo%20Branco%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "jp-g3",
+      "nome": "Bar do Cuscuz (Cabo Branco)",
+      "categoria": "gastronomia",
+      "descricao": "Ponto famoso na orla servindo cuscuz recheado de carne de sol com queijo coalho e caldinhos.",
+      "destaque": "Cuscuz recheado com queijo coalho e carne de sol",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Cuscuz%20Cabo%20Branco%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🥣",
+      "visitado": false
+    },
+    {
+      "id": "jp-g4",
+      "nome": "Tábua de Carne",
+      "categoria": "gastronomia",
+      "descricao": "Cortes nobres de carne de sol de filé mignon grelhados com macaxeira cozida e manteiga de garrafa.",
+      "destaque": "Carne de sol nobre na tábua",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Tabua%20de%20Carne%20Manaíra%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "jp-g5",
+      "nome": "Gulliver Mar Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Alta gastronomia francesa e marítima com vista espetacular para o mar de Cabo Branco.",
+      "destaque": "Frutos do mar refinados com vista do mar",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Gulliver%20Mar%2C%20Joao%20Pessoa%20-%20PB",
+      "icone": "🦞",
+      "visitado": false
     }
   ],
   "Maceió - AL": [
@@ -709,6 +919,66 @@
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parmegianno%20Pajucara%2C%20Maceio%20-%20AL",
       "icone": "🍽️",
       "visitado": false
+    },
+    {
+      "id": "mac-3",
+      "nome": "Praia de Ipioca e Piscinas Naturais",
+      "categoria": "natureza",
+      "descricao": "Águas calmas e mornas em tons azul-turquesa no litoral norte alagoano.",
+      "destaque": "Piscinas naturais de águas mornas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20de%20Ipioca%2C%20Maceio%20-%20AL",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "mac-4",
+      "nome": "Pavilhão do Artesanato de Pajuçara",
+      "categoria": "cultura",
+      "descricao": "Polo de artesanato tradicional em renda filé, bordados de labirinto e cerâmica.",
+      "destaque": "Rendas tradicionais de filé alagoano",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pavilhao%20do%20Artesanato%20Pajucara%2C%20Maceio%20-%20AL",
+      "icone": "🛍️",
+      "visitado": false
+    },
+    {
+      "id": "mac-5",
+      "nome": "Mirante de São Gonçalo",
+      "categoria": "mirante",
+      "descricao": "Mirante histórico com vista privilegiada para o porto de Jaraguá e centro de Maceió.",
+      "destaque": "Vista panorâmica do porto e da orla",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mirante%20de%20Sao%20Goncalo%2C%20Maceio%20-%20AL",
+      "icone": "🌄",
+      "visitado": false
+    },
+    {
+      "id": "mac-g3",
+      "nome": "Lopana Barraca de Praia",
+      "categoria": "gastronomia",
+      "descricao": "Quiosque sofisticado na areia da Ponta Verde com petiscos de frutos do mar e drinks.",
+      "destaque": "Camarão crocante e drinks à beira-mar",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Lopana%2C%20Maceio%20-%20AL",
+      "icone": "🍹",
+      "visitado": false
+    },
+    {
+      "id": "mac-g4",
+      "nome": "Restaurante Akuaba",
+      "categoria": "gastronomia",
+      "descricao": "Alta culinária afro-brasileira e alagoana premiada da chef Vera Rocha.",
+      "destaque": "Moquecas e acarajé refinado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Akuaba%2C%20Maceio%20-%20AL",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "mac-g5",
+      "nome": "Massarella Trattoria",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional cantina italiana no bairro de Ponta Verde servindo massas artesanais.",
+      "destaque": "Massas frescas artesanais e vinhos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Massarella%20Trattoria%2C%20Maceio%20-%20AL",
+      "icone": "🍝",
+      "visitado": false
     }
   ],
   "Belo Horizonte - MG": [
@@ -740,6 +1010,76 @@
       "destaque": "Fígado com jiló e queijo Canastra",
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Central%2C%20Belo%20Horizonte%20-%20MG",
       "icone": "🧀",
+      "visitado": false
+    },
+    {
+      "id": "bh-3",
+      "nome": "Praça da Liberdade e Circuito Cultural",
+      "categoria": "cultura",
+      "descricao": "Esplanada central cercada de palácios centenários e museus de ciência, artes e memória mineira.",
+      "destaque": "Circuito Liberdade de museus",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praca+da+Liberdade+Belo+Horizonte+MG",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "bh-4",
+      "nome": "Mercado Central de Belo Horizonte",
+      "categoria": "cultura",
+      "descricao": "Polo gastronômico eleito um dos melhores mercados do mundo, com queijos da Canastra e cachaças.",
+      "destaque": "Queijo canastra, cachaças e fígado com jiló",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado+Central+Belo+Horizonte+MG",
+      "icone": "🧀",
+      "visitado": false
+    },
+    {
+      "id": "bh-5",
+      "nome": "Mirante do Mangabeiras",
+      "categoria": "mirante",
+      "descricao": "Deck panorâmico ao pé da Serra do Curral com visão espetacular de toda a mancha urbana de BH.",
+      "destaque": "Visão panorâmica da capital mineira",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mirante+do+Mangabeiras+Belo+Horizonte+MG",
+      "icone": "🌄",
+      "visitado": false
+    },
+    {
+      "id": "bh-g2",
+      "nome": "Dona Lucinha",
+      "categoria": "gastronomia",
+      "descricao": "A maior guardiã da culinária mineira do Ciclo do Ouro em fogão a lenha com tutu e feijão tropeiro.",
+      "destaque": "Tutu à mineira e costelinha em fogão a lenha",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Dona+Lucinha+Belo+Horizonte+MG",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "bh-g3",
+      "nome": "Casa Cheia (Mercado Central)",
+      "categoria": "gastronomia",
+      "descricao": "Boteco lendário do Mercado Central servindo Mexidoido e carne de lata com queijo minas.",
+      "destaque": "Mexidoido e carne de lata",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa+Cheia+Mercado+Central+Belo+Horizonte+MG",
+      "icone": "🥘",
+      "visitado": false
+    },
+    {
+      "id": "bh-g4",
+      "nome": "Xapuri Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante rústico na Pampulha com mesas na varanda servindo leitoa a pururuca e doces de compota.",
+      "destaque": "Leitoa a pururuca e doces em compota",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Xapuri+Restaurante+Belo+Horizonte+MG",
+      "icone": "🍖",
+      "visitado": false
+    },
+    {
+      "id": "bh-g5",
+      "nome": "Cantina do Lucas",
+      "categoria": "gastronomia",
+      "descricao": "Patrimônio cultural da boemia no Edifício Maletta, famoso pelo filé à parmegiana e chopp.",
+      "destaque": "Filé à parmegiana no Edifício Maletta",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cantina+do+Lucas+Belo+Horizonte+MG",
+      "icone": "🍝",
       "visitado": false
     }
   ],
@@ -773,6 +1113,76 @@
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Madalosso%2C%20Curitiba%20-%20PR",
       "icone": "🍝",
       "visitado": false
+    },
+    {
+      "id": "cwb-3",
+      "nome": "Jardim Botânico de Curitiba",
+      "categoria": "natureza",
+      "descricao": "Cartão-postal com estufa de ferro e vidro inspirada no Palácio de Cristal de Londres e jardins franceses.",
+      "destaque": "Estufa de ferro e jardins geométricos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Jardim+Botanico+de+Curitiba+PR",
+      "icone": "🌺",
+      "visitado": false
+    },
+    {
+      "id": "cwb-4",
+      "nome": "Parque Tanguá",
+      "categoria": "natureza",
+      "descricao": "Parque em antiga pedreira desativada com mirante panorâmico de 65 metros e túnel artificial.",
+      "destaque": "Mirante sobre a pedreira e lago",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque+Tangua+Curitiba+PR",
+      "icone": "🏞️",
+      "visitado": false
+    },
+    {
+      "id": "cwb-5",
+      "nome": "Ópera de Arame",
+      "categoria": "cultura",
+      "descricao": "Teatro circular com estrutura tubular de aço e teto transparente integrado à natureza e lago.",
+      "destaque": "Teatro tubular sobre o lago",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Opera+de+Arame+Curitiba+PR",
+      "icone": "🎭",
+      "visitado": false
+    },
+    {
+      "id": "cwb-g2",
+      "nome": "Bar do Alemão (Largo da Ordem)",
+      "categoria": "gastronomia",
+      "descricao": "Ponto histórico com o clássico Submarino (chopp com steinhäger) e tradicional carne de onça.",
+      "destaque": "Carne de onça e chopp submarino",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar+do+Alemao+Curitiba+PR",
+      "icone": "🍺",
+      "visitado": false
+    },
+    {
+      "id": "cwb-g3",
+      "nome": "Restaurante Cascatinha",
+      "categoria": "gastronomia",
+      "descricao": "Tradição italiana em Santa Felicidade servindo polenta frita, frango a passarinho e radicci.",
+      "destaque": "Frango com polenta crocante",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante+Cascatinha+Curitiba+PR",
+      "icone": "🍗",
+      "visitado": false
+    },
+    {
+      "id": "cwb-g4",
+      "nome": "Mercearia Fantinato",
+      "categoria": "gastronomia",
+      "descricao": "Boteco histórico com balcão de frios, cervejas artesanais e premiada carne de onça paranaense.",
+      "destaque": "Carne de onça premiada no boteco",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercearia+Fantinato+Curitiba+PR",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "cwb-g5",
+      "nome": "Durski Gastronomia",
+      "categoria": "gastronomia",
+      "descricao": "Alta gastronomia clássica e eslava do chef Junior Durski com uma das maiores cartas de vinho do país.",
+      "destaque": "Alta gastronomia e carta de vinhos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Durski+Curitiba+PR",
+      "icone": "🍽️",
+      "visitado": false
     }
   ],
   "Olinda - PE": [
@@ -804,6 +1214,2046 @@
       "destaque": "Jerimum recheado com camarão",
       "linkMaps": "https://www.google.com/maps/search/?api=1&query=Oficina%20do%20Sabor%2C%20Olinda%20-%20PE",
       "icone": "🍽️",
+      "visitado": false
+    }
+  ],
+  "Brasília - DF": [
+    {
+      "id": "bsb-1",
+      "nome": "Congresso Nacional e Praça dos Três Poderes",
+      "categoria": "historico",
+      "descricao": "Conjunto monumental icônico projetado por Oscar Niemeyer no Eixo Monumental.",
+      "destaque": "Cúpulas do Senado e Câmara",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Congresso%20Nacional%2C%20Brasilia%20-%20DF",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "bsb-2",
+      "nome": "Catedral Metropolitana Nossa Senhora Aparecida",
+      "categoria": "historico",
+      "descricao": "Monumento arquitetônico com 16 pilares de concreto e vitrais coloridos de Marianne Peretti.",
+      "destaque": "Vitrais e pilares hiperbólicos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Catedral%20Metropolitana%20de%20Brasilia%2C%20Brasilia%20-%20DF",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "bsb-3",
+      "nome": "Memorial JK e Eixo Monumental",
+      "categoria": "cultura",
+      "descricao": "Memorial dedicado a Juscelino Kubitschek, com acervo histórico da fundação de Brasília.",
+      "destaque": "Túmulo de JK e acervo histórico",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Memorial%20JK%2C%20Brasilia%20-%20DF",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "bsb-4",
+      "nome": "Pontão do Lago Sul",
+      "categoria": "natureza",
+      "descricao": "Polo gastronômico e de lazer à beira do Lago Paranoá, famoso pelo pôr do sol.",
+      "destaque": "Orla do Lago Paranoá e pôr do sol",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pontao%20do%20Lago%20Sul%2C%20Brasilia%20-%20DF",
+      "icone": "🌅",
+      "visitado": false
+    },
+    {
+      "id": "bsb-5",
+      "nome": "Parque da Cidade Sarah Kubitschek",
+      "categoria": "natureza",
+      "descricao": "Um dos maiores parques urbanos do mundo, com pistas de caminhada, lagos e áreas verdes.",
+      "destaque": "Maior parque urbano da América Latina",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20da%20Cidade%20Sarah%20Kubitschek%2C%20Brasilia%20-%20DF",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "bsb-g1",
+      "nome": "Restaurante Mangai Brasília",
+      "categoria": "gastronomia",
+      "descricao": "Buffet nordestino premium com baião de dois, carne de sol e doces artesanais à beira do lago.",
+      "destaque": "Buffet nordestino e vista para o lago",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Mangai%2C%20Brasilia%20-%20DF",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "bsb-g2",
+      "nome": "Nau Frutos do Mar",
+      "categoria": "gastronomia",
+      "descricao": "Gastronomia contemporânea com foco em camarões, lagostas e peixes em ambiente moderno.",
+      "destaque": "Camarões e frutos do mar nobres",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Nau%20Frutos%20do%20Mar%2C%20Brasilia%20-%20DF",
+      "icone": "🦞",
+      "visitado": false
+    },
+    {
+      "id": "bsb-g3",
+      "nome": "Coco Bambu Lago Sul",
+      "categoria": "gastronomia",
+      "descricao": "Ambiente sofisticado com cardápio generoso de frutos do mar com vista para o Lago Paranoá.",
+      "destaque": "Camarão Internacional à beira do lago",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Coco%20Bambu%20Lago%20Sul%2C%20Brasilia%20-%20DF",
+      "icone": "🍤",
+      "visitado": false
+    },
+    {
+      "id": "bsb-g4",
+      "nome": "Bar Beirute (Asa Sul)",
+      "categoria": "gastronomia",
+      "descricao": "Ponto cultural histórico de Brasília fundado em 1966, famoso pelo chopp e beirutes tradicionais.",
+      "destaque": "Kibe frito e beirute tradicional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20Beirute%20Asa%20Sul%2C%20Brasilia%20-%20DF",
+      "icone": "🥙",
+      "visitado": false
+    },
+    {
+      "id": "bsb-g5",
+      "nome": "Feitiço das Artes",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante e espaço cultural icônico da 306 Norte, combinando comida brasileira e MPB ao vivo.",
+      "destaque": "Culinária brasileira e chorinho",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Feitico%20das%20Artes%2C%20Brasilia%20-%20DF",
+      "icone": "🎶",
+      "visitado": false
+    }
+  ],
+  "Florianópolis - SC": [
+    {
+      "id": "fln-1",
+      "nome": "Ponte Hercílio Luz e Mirante",
+      "categoria": "historico",
+      "descricao": "Maior ponte pênsil do Brasil e cartão-postal de Santa Catarina com iluminação cênica noturna.",
+      "destaque": "Patrimônio histórico pênsil",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Ponte%20Hercilio%20Luz%2C%20Florianopolis%20-%20SC",
+      "icone": "🌉",
+      "visitado": false
+    },
+    {
+      "id": "fln-2",
+      "nome": "Praia da Joaquina e Dunas",
+      "categoria": "natureza",
+      "descricao": "Famosa praia oceânica com dunas preservadas para sandboard e ondas de nível internacional.",
+      "destaque": "Dunas gigantes e surfe",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20da%20Joaquina%2C%20Florianopolis%20-%20SC",
+      "icone": "🏄",
+      "visitado": false
+    },
+    {
+      "id": "fln-3",
+      "nome": "Centro Histórico e Mercado Público",
+      "categoria": "cultura",
+      "descricao": "Edifício secular com arquitetura açoriana, artesanato, peixarias e polo gastronômico.",
+      "destaque": "Arquitetura açoriana e artesanato",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Publico%20de%20Florianopolis%2C%20Florianopolis%20-%20SC",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "fln-4",
+      "nome": "Lagoa da Conceição e Mirante do Morro da Cruz",
+      "categoria": "natureza",
+      "descricao": "Lagoa de água salobra cercada de morros, esportes náuticos e mirante panorâmico.",
+      "destaque": "Esportes náuticos e vista panorâmica",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Lagoa%20da%20Conceicao%2C%20Florianopolis%20-%20SC",
+      "icone": "⛵",
+      "visitado": false
+    },
+    {
+      "id": "fln-5",
+      "nome": "Fortaleza de São José da Ponta Grossa",
+      "categoria": "historico",
+      "descricao": "Construção militar colonial do século XVIII com canhões originais e capela histórica.",
+      "destaque": "Canhões e muralhas coloniais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Fortaleza%20de%20Sao%20Jose%20da%20Ponta%20Grossa%2C%20Florianopolis%20-%20SC",
+      "icone": "🏰",
+      "visitado": false
+    },
+    {
+      "id": "fln-g1",
+      "nome": "Ostradamus Bar e Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Pioneiro no cultivo e preparo de ostras frescas premiadas no histórico Ribeirão da Ilha.",
+      "destaque": "Ostras gratinadas e frescas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Ostradamus%20Bar%20e%20Restaurante%2C%20Florianopolis%20-%20SC",
+      "icone": "🦪",
+      "visitado": false
+    },
+    {
+      "id": "fln-g2",
+      "nome": "Bar do Arante",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional restaurante açoriano no Pântano do Sul, coberto por milhares de bilhetinhos de clientes.",
+      "destaque": "Frutos do mar e bilhetinhos históricos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Arante%2C%20Florianopolis%20-%20SC",
+      "icone": "📜",
+      "visitado": false
+    },
+    {
+      "id": "fln-g3",
+      "nome": "Rancho Açoriano",
+      "categoria": "gastronomia",
+      "descricao": "Sequência completa de camarão e frutos do mar com deck à beira da baía sul.",
+      "destaque": "Sequência de frutos do mar à beira-mar",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Rancho%20Acoriano%2C%20Florianopolis%20-%20SC",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "fln-g4",
+      "nome": "Box 32 (Mercado Público)",
+      "categoria": "gastronomia",
+      "descricao": "Famoso balcão gastronômico com o tradicional pastel de berbigão e camarão gigante.",
+      "destaque": "Pastel de berbigão e chopp artesanal",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Box%2032%20Mercado%20Publico%2C%20Florianopolis%20-%20SC",
+      "icone": "🍤",
+      "visitado": false
+    },
+    {
+      "id": "fln-g5",
+      "nome": "Rosso Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Referência em polvo crocante na brasa pelo chef Alysson Müller em Santo Antônio de Lisboa.",
+      "destaque": "Polvo crocante na brasa",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Rosso%20Restaurante%2C%20Florianopolis%20-%20SC",
+      "icone": "🐙",
+      "visitado": false
+    }
+  ],
+  "Porto Alegre - RS": [
+    {
+      "id": "poa-1",
+      "nome": "Orla do Guaíba e Usina do Gasômetro",
+      "categoria": "natureza",
+      "descricao": "Parque linear revitalizado com ciclovias, bares e o pôr do sol mais famoso do Rio Grande do Sul.",
+      "destaque": "Pôr do sol icônico do Guaíba",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Orla%20do%20Guaiba%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🌅",
+      "visitado": false
+    },
+    {
+      "id": "poa-2",
+      "nome": "Parque Farroupilha (Redenção)",
+      "categoria": "natureza",
+      "descricao": "Maior parque central da cidade com feira dominical de artesanato e antiguidades (Brique da Redenção).",
+      "destaque": "Brique da Redenção e lago dos pedalinhos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20Farroupilha%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "poa-3",
+      "nome": "Mercado Público de Porto Alegre",
+      "categoria": "cultura",
+      "descricao": "Patrimônio cultural inaugurado em 1869 com temperos, erva-mate, peixarias e a famosa Banca 40.",
+      "destaque": "Banca 40 e produtos gaúchos típicos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Publico%20de%20Porto%20Alegre%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "poa-4",
+      "nome": "Museu de Arte do Rio Grande do Sul (MARGS)",
+      "categoria": "cultura",
+      "descricao": "Edifício histórico neoclássico na Praça da Alfândega com acervo de artes visuais gaúchas.",
+      "destaque": "Pinacoteca e arquitetura neoclássica",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=MARGS%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🎨",
+      "visitado": false
+    },
+    {
+      "id": "poa-5",
+      "nome": "Fundação Iberê Camargo",
+      "categoria": "cultura",
+      "descricao": "Prédio escultural à beira do Guaíba projetado pelo arquiteto Álvaro Siza, dedicado a exposições modernas.",
+      "destaque": "Arquitetura monumental de Álvaro Siza",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Fundacao%20Ibere%20Camargo%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "poa-g1",
+      "nome": "Churrascaria Galpão Crioulo",
+      "categoria": "gastronomia",
+      "descricao": "Rodízio autêntico de churrasco gaúcho com cortes nobres e apresentações folclóricas de dança tradicional.",
+      "destaque": "Churrasco no espeto corrido com show",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Churrascaria%20Galpao%20Crioulo%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "poa-g2",
+      "nome": "Komka Bar e Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Famoso restaurante tradicional porto-alegrense servindo galeto al primo canto e polenta frita crocante.",
+      "destaque": "Galeto al primo canto e polenta frita",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Komka%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🍗",
+      "visitado": false
+    },
+    {
+      "id": "poa-g3",
+      "nome": "Gambrinus (Mercado Público)",
+      "categoria": "gastronomia",
+      "descricao": "O restaurante mais antigo em atividade contínua no Rio Grande do Sul, famoso pelo bacalhau e chopp.",
+      "destaque": "Bacalhau à Gomes de Sá centenário",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Gambrinus%20Mercado%20Publico%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "poa-g4",
+      "nome": "Atelier de Massas",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante e galeria de arte no Centro Histórico famoso pelas massas artesanais frescas e molhos ricos.",
+      "destaque": "Massas artesanais e galeria de arte",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Atelier%20de%20Massas%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🍝",
+      "visitado": false
+    },
+    {
+      "id": "poa-g5",
+      "nome": "Chicafundó Cozinha Afetiva",
+      "categoria": "gastronomia",
+      "descricao": "Bistrô charmoso no bairro Rio Branco focado em gastronomia de conforto com ingredientes locais.",
+      "destaque": "Cozinha autoral e acolhedora",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Chicafundo%2C%20Porto%20Alegre%20-%20RS",
+      "icone": "🍽️",
+      "visitado": false
+    }
+  ],
+  "Manaus - AM": [
+    {
+      "id": "mao-1",
+      "nome": "Teatro Amazonas",
+      "categoria": "historico",
+      "descricao": "Símbolo máximo da Belle Époque amazônica, com cúpula de azulejos alsacianos e sala de espetáculos.",
+      "destaque": "Cúpula de mosaico e arquitetura clássica",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Teatro%20Amazonas%2C%20Manaus%20-%20AM",
+      "icone": "🎭",
+      "visitado": false
+    },
+    {
+      "id": "mao-2",
+      "nome": "Encontro das Águas (Negro e Solimões)",
+      "categoria": "natureza",
+      "descricao": "Espetacular fenômeno em que as águas escuras do Rio Negro e barrentas do Rio Solimões correm sem se misturar.",
+      "destaque": "Encontro hidrológico dos grandes rios",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Encontro%20das%20Aguas%2C%20Manaus%20-%20AM",
+      "icone": "🌊",
+      "visitado": false
+    },
+    {
+      "id": "mao-3",
+      "nome": "Mercado Municipal Adolpho Lisboa",
+      "categoria": "cultura",
+      "descricao": "Construção histórica de ferro fundido inspirada no Les Halles de Paris, às margens do Rio Negro.",
+      "destaque": "Estrutura Eiffel e ervas medicinais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Municipal%20Adolpho%20Lisboa%2C%20Manaus%20-%20AM",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "mao-4",
+      "nome": "MUSA - Museu da Amazônia",
+      "categoria": "natureza",
+      "descricao": "Museu vivo com reserva florestal primária e torre de observação de 42 metros sobre a copa da selva.",
+      "destaque": "Torre panorâmica sobre a selva",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=MUSA%20Museu%20da%20Amazonia%2C%20Manaus%20-%20AM",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "mao-5",
+      "nome": "Praia da Ponta Negra",
+      "categoria": "natureza",
+      "descricao": "Orla fluvial urbanizada no Rio Negro com calçadão, anfiteatro e pôr do sol espetacular.",
+      "destaque": "Praia de rio e calçadão de pedras portuguesas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20da%20Ponta%20Negra%2C%20Manaus%20-%20AM",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "mao-g1",
+      "nome": "Banzeiro Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante premiado do chef Felipe Schaedler, célebre pela costela de tambaqui e formiga saúva.",
+      "destaque": "Costela de tambaqui e formiga saúva",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Banzeiro%20Restaurante%2C%20Manaus%20-%20AM",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "mao-g2",
+      "nome": "Caxiri Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Cozinha amazônica contemporânea com janelões com vista frontal para o Teatro Amazonas.",
+      "destaque": "Culinária da floresta com vista do teatro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Caxiri%20Restaurante%2C%20Manaus%20-%20AM",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "mao-g3",
+      "nome": "Moquém do Banzeiro",
+      "categoria": "gastronomia",
+      "descricao": "Técnica indígena tradicional do moquém para assar peixes nobres amazônicos sobre braseiro de lenha.",
+      "destaque": "Peixes assados no moquém indígena",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Moquem%20do%20Banzeiro%2C%20Manaus%20-%20AM",
+      "icone": "🔥",
+      "visitado": false
+    },
+    {
+      "id": "mao-g4",
+      "nome": "Peixaria Morona",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional restaurante regional com porções fartas de tambaqui assado, caldeirada e pirarucu.",
+      "destaque": "Caldeirada de tambaqui e pirarucu",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Peixaria%20Morona%2C%20Manaus%20-%20AM",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "mao-g5",
+      "nome": "Tacacá da Gisela",
+      "categoria": "gastronomia",
+      "descricao": "A mais famosa barraca de tacacá de Manaus, servida em cuias fumegantes no Largo de São Sebastião.",
+      "destaque": "Tacacá com tucupi e jambu no largo",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Tacaca%20da%20Gisela%2C%20Manaus%20-%20AM",
+      "icone": "🥣",
+      "visitado": false
+    }
+  ],
+  "Belém - PA": [
+    {
+      "id": "bel-1",
+      "nome": "Mercado Ver-o-Peso",
+      "categoria": "cultura",
+      "descricao": "Maior feira livre da América Latina, abastecida diariamente por ribeirinhos com frutas, ervas e peixes.",
+      "destaque": "Patrimônio cultural e gastronômico paraense",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20Ver-o-Peso%2C%20Belem%20-%20PA",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "bel-2",
+      "nome": "Basílica Santuário de Nossa Senhora de Nazaré",
+      "categoria": "historico",
+      "descricao": "Santuário neorromânico e barroco construído no século XX, ponto culminante da procissão do Círio de Nazaré.",
+      "destaque": "Berço do Círio de Nazaré",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Basilica%20de%20Nossa%20Senhora%20de%20Nazare%2C%20Belem%20-%20PA",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "bel-3",
+      "nome": "Estação das Docas",
+      "categoria": "cultura",
+      "descricao": "Antigos galpões portuários de ferro restaurados com restaurantes refinados, sorveterias e vista da Baía do Guajará.",
+      "destaque": "Galpões restaurados e pôr do sol na baía",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Estacao%20das%20Docas%2C%20Belem%20-%20PA",
+      "icone": "⚓",
+      "visitado": false
+    },
+    {
+      "id": "bel-4",
+      "nome": "Forte do Presépio e Feliz Lusitânia",
+      "categoria": "historico",
+      "descricao": "Marco de fundação de Belém em 1616 com muralhas de pedra, canhões e vista panorâmica do porto.",
+      "destaque": "Berço histórico de fundação de Belém",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Forte%20do%20Presepio%2C%20Belem%20-%20PA",
+      "icone": "🏰",
+      "visitado": false
+    },
+    {
+      "id": "bel-5",
+      "nome": "Parque Mangal das Garças",
+      "categoria": "natureza",
+      "descricao": "Parque ecológico com lagos, borboletário, viveiro de pássaros e farol mirante com vista 360 graus.",
+      "destaque": "Borboletário e farol mirante",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mangal%20das%20Garcas%2C%20Belem%20-%20PA",
+      "icone": "🦩",
+      "visitado": false
+    },
+    {
+      "id": "bel-g1",
+      "nome": "Remanso do Bosque",
+      "categoria": "gastronomia",
+      "descricao": "Ícone da cozinha contemporânea brasileira pelos chefs Thiago e Felipe Castanho com produtos locais da Amazônia.",
+      "destaque": "Filhote na brasa com tucupi",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Remanso%20do%20Bosque%2C%20Belem%20-%20PA",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "bel-g2",
+      "nome": "Manjar das Garças",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante refinado integrado à natureza do Mangal das Garças servindo pato no tucupi e filhote.",
+      "destaque": "Pato no tucupi e filhote à beira do rio",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Manjar%20das%20Garcas%2C%20Belem%20-%20PA",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "bel-g3",
+      "nome": "Point do Açaí",
+      "categoria": "gastronomia",
+      "descricao": "O verdadeiro açaí paraense puro batido na hora servido com farinha de tapioca e peixe frito crocante.",
+      "destaque": "Açaí paraense autêntico com peixe frito",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Point%20do%20Acai%2C%20Belem%20-%20PA",
+      "icone": "🥣",
+      "visitado": false
+    },
+    {
+      "id": "bel-g4",
+      "nome": "Lá em Casa (Estação das Docas)",
+      "categoria": "gastronomia",
+      "descricao": "Fundado por Paulo Martins, o embaixador da gastronomia paraense, célebre pelo menu degustação Corrida do Círio.",
+      "destaque": "Corrida do Círio: maniçoba e vatapá",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20La%20em%20Casa%2C%20Belem%20-%20PA",
+      "icone": "🥘",
+      "visitado": false
+    },
+    {
+      "id": "bel-g5",
+      "nome": "Sorveteria Cairu",
+      "categoria": "gastronomia",
+      "descricao": "Premiada internacionalmente pelos sorvetes artesanais de frutas amazônicas como açaí, bacuri e tapioca.",
+      "destaque": "Sorvetes premiados de açaí e castanha",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Sorveteria%20Cairu%20Estacao%20das%20Docas%2C%20Belem%20-%20PA",
+      "icone": "🍨",
+      "visitado": false
+    }
+  ],
+  "Goiânia - GO": [
+    {
+      "id": "gyn-1",
+      "nome": "Praça Cívica e Monumento às Três Raças",
+      "categoria": "historico",
+      "descricao": "Marco zero da capital goiana e coração do maior conjunto tombado de arquitetura Art Déco do Brasil.",
+      "destaque": "Patrimônio Art Déco e marco zero",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praca%20Civica%2C%20Goiania%20-%20GO",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "gyn-2",
+      "nome": "Bosque dos Buritis",
+      "categoria": "natureza",
+      "descricao": "Mais antigo parque da cidade com fontes, lagos artificiais e a sede do Museu de Arte de Goiânia (MAG).",
+      "destaque": "Lagos com fontes e Museu de Arte",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bosque%20dos%20Buritis%2C%20Goiania%20-%20GO",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "gyn-3",
+      "nome": "Parque Flamboyant",
+      "categoria": "natureza",
+      "descricao": "Parque urbano moderno com dois lagos interligados, pistas para corrida, mirantes e pontes de madeira.",
+      "destaque": "Lagos com pontes e pista de caminhada",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20Flamboyant%2C%20Goiania%20-%20GO",
+      "icone": "🌅",
+      "visitado": false
+    },
+    {
+      "id": "gyn-4",
+      "nome": "Centro Cultural Oscar Niemeyer",
+      "categoria": "cultura",
+      "descricao": "Complexo com museu de arte contemporânea, palácio da música e esplanada vermelha assinados por Niemeyer.",
+      "destaque": "Esplanada e cúpula de Oscar Niemeyer",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Centro%20Cultural%20Oscar%20Niemeyer%2C%20Goiania%20-%20GO",
+      "icone": "🎨",
+      "visitado": false
+    },
+    {
+      "id": "gyn-5",
+      "nome": "Memorial do Cerrado (PUC Goiás)",
+      "categoria": "cultura",
+      "descricao": "Complexo museológico a céu aberto com réplicas de aldeias indígenas, quilombos e vila colonial.",
+      "destaque": "Museu a céu aberto e vila colonial",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Memorial%20do%20Cerrado%2C%20Goiania%20-%20GO",
+      "icone": "🛖",
+      "visitado": false
+    },
+    {
+      "id": "gyn-g1",
+      "nome": "Chão de Nativos",
+      "categoria": "gastronomia",
+      "descricao": "Culinária goiana de raiz em fogão a lenha com empadão goiano, arroz com pequi e leitoa a pururuca.",
+      "destaque": "Arroz com pequi e empadão goiano",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Chao%20de%20Nativos%2C%20Goiania%20-%20GO",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "gyn-g2",
+      "nome": "Restaurante Íz",
+      "categoria": "gastronomia",
+      "descricao": "Alta gastronomia autoral do premiado chef Ian Baiocchi combinando técnicas francesas e ingredientes do cerrado.",
+      "destaque": "Cozinha contemporânea premiada",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Iz%2C%20Goiania%20-%20GO",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "gyn-g3",
+      "nome": "Churrascaria Favo de Mel",
+      "categoria": "gastronomia",
+      "descricao": "Referência em cortes nobres grelhados, costela de chão e buffet diversificado em Goiânia.",
+      "destaque": "Rodízio premium de carnes nobres",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Churrascaria%20Favo%20de%20Mel%2C%20Goiania%20-%20GO",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "gyn-g4",
+      "nome": "Mourão Chopp e Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Ponto clássico de boteco com panelinhas sertanejas recheadas, petiscos e cerveja gelada.",
+      "destaque": "Panelinhas goianas e chopp artesanal",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mourao%20Chopp%2C%20Goiania%20-%20GO",
+      "icone": "🍻",
+      "visitado": false
+    },
+    {
+      "id": "gyn-g5",
+      "nome": "Biscoitos Pereira",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional lanchonete goiana famosa pelo pão de queijo quentinho e biscoito de queijo escaldado.",
+      "destaque": "Pão de queijo e biscoito escaldado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Biscoitos%20Pereira%2C%20Goiania%20-%20GO",
+      "icone": "🧀",
+      "visitado": false
+    }
+  ],
+  "Vitória - ES": [
+    {
+      "id": "vix-1",
+      "nome": "Convento da Penha",
+      "categoria": "historico",
+      "descricao": "Santuário franciscano fundado em 1558 sobre um rochedo de 154 metros com vista deslumbrante da baía.",
+      "destaque": "Vista panorâmica sobre penhasco histórico",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Convento%20da%20Penha%2C%20Vitoria%20-%20ES",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "vix-2",
+      "nome": "Praia de Camburi",
+      "categoria": "natureza",
+      "descricao": "A maior orla marítima da capital com calçadão, quiosques, ciclovia e prática de esportes náuticos.",
+      "destaque": "Orla principal de Vitória com quiosques",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20de%20Camburi%2C%20Vitoria%20-%20ES",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "vix-3",
+      "nome": "Palácio Anchieta",
+      "categoria": "historico",
+      "descricao": "Sede do governo construída no século XVI como colégio jesuíta, guardando o túmulo simbólico de Padre Anchieta.",
+      "destaque": "Edifício colonial quinhentista",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Palacio%20Anchieta%2C%20Vitoria%20-%20ES",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "vix-4",
+      "nome": "Ilha do Boi e Enseada do Suá",
+      "categoria": "natureza",
+      "descricao": "Bairro nobre cercado por praias de águas calmas (Praia da Direita e Praia Grande) ideais para banho.",
+      "destaque": "Praia da Direita de águas tranquilas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Ilha%20do%20Boi%2C%20Vitoria%20-%20ES",
+      "icone": "🌊",
+      "visitado": false
+    },
+    {
+      "id": "vix-5",
+      "nome": "Parque Botânico Vale",
+      "categoria": "natureza",
+      "descricao": "Reserva de Mata Atlântica de 33 hectares com trilhas guiadas, orquidário e lago com tartarugas.",
+      "destaque": "Trilhas ecológicas e orquidário",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20Botanico%20Vale%2C%20Vitoria%20-%20ES",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "vix-g1",
+      "nome": "Restaurante Ilha do Caranguejo",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante temático famoso pela caranguejada tradicional capixaba e ambiente festivo animado.",
+      "destaque": "Caranguejo capixaba com vinagrete",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Ilha%20do%20Caranguejo%2C%20Vitoria%20-%20ES",
+      "icone": "🦀",
+      "visitado": false
+    },
+    {
+      "id": "vix-g2",
+      "nome": "Cantinho do Curuca",
+      "categoria": "gastronomia",
+      "descricao": "A mais autêntica moqueca capixaba feita com peixe fresco e urucum em panela de barro artesanal.",
+      "destaque": "Moqueca capixaba tradicional em barro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cantinho%20do%20Curuca%2C%20Vitoria%20-%20ES",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "vix-g3",
+      "nome": "Papaguth Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Localizado no píer da Praça do Papa, com pratos sofisticados de frutos do mar e vista do Convento da Penha.",
+      "destaque": "Frutos do mar com vista panorâmica da baía",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Papaguth%2C%20Vitoria%20-%20ES",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "vix-g4",
+      "nome": "Pirão d'Água",
+      "categoria": "gastronomia",
+      "descricao": "Culinária capixaba raiz com moquecas, peroá frito crocante com farofa e torta capixaba tradicional.",
+      "destaque": "Peroá frito com farofa e moqueca",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pirao%20d%20Agua%2C%20Vitoria%20-%20ES",
+      "icone": "🥘",
+      "visitado": false
+    },
+    {
+      "id": "vix-g5",
+      "nome": "Botequim do Celso",
+      "categoria": "gastronomia",
+      "descricao": "Ponto de encontro querido no Jardim da Penha com pastéis de siri, empadinhas e cerveja estupidamente gelada.",
+      "destaque": "Pastelzinho de siri e petiscos de boteco",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Botequim%20do%20Celso%2C%20Vitoria%20-%20ES",
+      "icone": "🍻",
+      "visitado": false
+    }
+  ],
+  "São Luís - MA": [
+    {
+      "id": "slz-1",
+      "nome": "Centro Histórico de São Luís (UNESCO)",
+      "categoria": "historico",
+      "descricao": "Mais de 3.000 casarões coloniais dos séculos XVIII e XIX com as maiores fachadas de azulejos portugueses da América.",
+      "destaque": "Azulejaria colonial portuguesa tombada",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Centro%20Historico%20de%20Sao%20Luis%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "slz-2",
+      "nome": "Palácio dos Leões",
+      "categoria": "historico",
+      "descricao": "Fortificação militar de 1612 transformada em sede do governo maranhense com suntuosos salões de época.",
+      "destaque": "Salões dourados e vista da Baía de São Marcos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Palacio%20dos%20Leoes%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🏰",
+      "visitado": false
+    },
+    {
+      "id": "slz-3",
+      "nome": "Teatro Arthur Azevedo",
+      "categoria": "cultura",
+      "descricao": "Inaugurado em 1817 em estilo neoclássico, o segundo mais antigo do país, com camarotes em ferradura dourada.",
+      "destaque": "Arquitetura neoclássica e espetáculos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Teatro%20Arthur%20Azevedo%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🎭",
+      "visitado": false
+    },
+    {
+      "id": "slz-4",
+      "nome": "Praia do Calhau e Avenida Litorânea",
+      "categoria": "natureza",
+      "descricao": "Extensa praia de mar quente com quiosques de reggae, bares com música ao vivo e brisa do Atlântico.",
+      "destaque": "Avenida Litorânea e quiosques de reggae",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20do%20Calhau%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "slz-5",
+      "nome": "Casa do Maranhão",
+      "categoria": "cultura",
+      "descricao": "Museu interativo dedicado às tradições do Bumba Meu Boi, tambor de crioula e festas populares.",
+      "destaque": "Tradição do Bumba Meu Boi e folclore",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa%20do%20Maranhao%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🐂",
+      "visitado": false
+    },
+    {
+      "id": "slz-g1",
+      "nome": "Cabana do Sol",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante emblemático servindo porções generosas de carne de sol com arroz de cuxá, feijão de corda e paçoca.",
+      "destaque": "Carne de sol especial com arroz de cuxá",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cabana%20do%20Sol%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "slz-g2",
+      "nome": "Restaurante Senac (Centro Histórico)",
+      "categoria": "gastronomia",
+      "descricao": "Buffet refinado em casarão colonial histórico reunindo peixada maranhense, vatapá e sobremesas de bacuri.",
+      "destaque": "Buffet colonial de pratos maranhenses",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Senac%20Centro%20Historico%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "slz-g3",
+      "nome": "Casa de Juja",
+      "categoria": "gastronomia",
+      "descricao": "Gastronomia afetiva maranhense com arroz de camarão com cuxá e a imperdível torta de caranguejo desfiado.",
+      "destaque": "Torta de caranguejo e arroz de camarão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa%20de%20Juja%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🦐",
+      "visitado": false
+    },
+    {
+      "id": "slz-g4",
+      "nome": "Bar do Nelson",
+      "categoria": "gastronomia",
+      "descricao": "Ponto tradicional na Avenida Litorânea que consagrou São Luís como a 'Jamaica Brasileira' com reggae de raiz.",
+      "destaque": "Reggae roots à beira-mar e petiscos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Nelson%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🎶",
+      "visitado": false
+    },
+    {
+      "id": "slz-g5",
+      "nome": "Sorvetes Coco Real",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional sorveteria maranhense com sabores típicos da terra como bacuri, cupuaçu, murici e buriti.",
+      "destaque": "Sorvetes de bacuri e buriti",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Sorvetes%20Coco%20Real%2C%20Sao%20Luis%20-%20MA",
+      "icone": "🍨",
+      "visitado": false
+    }
+  ],
+  "Teresina - PI": [
+    {
+      "id": "the-1",
+      "nome": "Encontro dos Rios Parnaíba e Poti",
+      "categoria": "natureza",
+      "descricao": "Parque ambiental no bairro Poty Velho onde as águas dos dois principais rios se juntam com a estátua do Cabeça de Cuia.",
+      "destaque": "Monumento do Cabeça de Cuia e encontro dos rios",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Encontro%20dos%20Rios%2C%20Teresina%20-%20PI",
+      "icone": "🌊",
+      "visitado": false
+    },
+    {
+      "id": "the-2",
+      "nome": "Ponte Estaiada João Luís Ferreira",
+      "categoria": "mirante",
+      "descricao": "Ponte arquitetônica moderna sobre o Rio Poti equipada com mirante panorâmico no topo a 95 metros de altura.",
+      "destaque": "Mirante panorâmico com elevador a 95m",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Ponte%20Estaiada%2C%20Teresina%20-%20PI",
+      "icone": "🌉",
+      "visitado": false
+    },
+    {
+      "id": "the-3",
+      "nome": "Museu do Piauí (Casa de Odilon Nunes)",
+      "categoria": "historico",
+      "descricao": "Casarão neoclássico do século XIX na Praça da Bandeira com acervo histórico, arqueológico e de arte sacra.",
+      "destaque": "Acervo de fósseis e arte sacra piauiense",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Museu%20do%20Piaui%2C%20Teresina%20-%20PI",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "the-4",
+      "nome": "Polo Cerâmico do Poty Velho",
+      "categoria": "cultura",
+      "descricao": "Ponto tradicional de oficinas de artesãos e paneleiras que moldam peças utilitárias e decorativas em argila.",
+      "destaque": "Artesanato tradicional em cerâmica e barro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Polo%20Ceramico%20do%20Poty%20Velho%2C%20Teresina%20-%20PI",
+      "icone": "🏺",
+      "visitado": false
+    },
+    {
+      "id": "the-5",
+      "nome": "Igreja de São Benedito",
+      "categoria": "historico",
+      "descricao": "Templo histórico construído em 1886 por Frei Serafim com portas de jacarandá talhadas à mão.",
+      "destaque": "Portas de jacarandá entalhadas à mão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Igreja%20de%20Sao%20Benedito%2C%20Teresina%20-%20PI",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "the-g1",
+      "nome": "Restaurante Favorito",
+      "categoria": "gastronomia",
+      "descricao": "Um dos restaurantes mais conceituados de Teresina com cortes nobres de carnes e carta refinada de vinhos.",
+      "destaque": "Cortes de carnes nobres e alta gastronomia",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Favorito%2C%20Teresina%20-%20PI",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "the-g2",
+      "nome": "Coco Bambu Teresina",
+      "categoria": "gastronomia",
+      "descricao": "A unidade histórica onde nasceu a renomada rede nacional, famosa pelos pratos gigantes de frutos do mar.",
+      "destaque": "Berço original da famosa rede Coco Bambu",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Coco%20Bambu%2C%20Teresina%20-%20PI",
+      "icone": "🍤",
+      "visitado": false
+    },
+    {
+      "id": "the-g3",
+      "nome": "Manga Rosa Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Referência em cozinha regional piauiense: carne de sol com paçoca de pilão, capote (galinha-d'angola) e macaxeira.",
+      "destaque": "Carne de sol com paçoca de pilão e capote",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Manga%20Rosa%20Restaurante%2C%20Teresina%20-%20PI",
+      "icone": "🥘",
+      "visitado": false
+    },
+    {
+      "id": "the-g4",
+      "nome": "O Pesqueirinho",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante ribeirinho especializado em peixada piauiense de surubim e tambaqui à beira do Rio Poti.",
+      "destaque": "Peixada piauiense de surubim fresco",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=O%20Pesqueirinho%2C%20Teresina%20-%20PI",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "the-g5",
+      "nome": "Bar do Chagas (Panelada)",
+      "categoria": "gastronomia",
+      "descricao": "Ponto folclórico da gastronomia piauiense servindo a tradicional panelada com cheiro-verde e cachaça local.",
+      "destaque": "Panelada piauiense e sarapatel",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Chagas%2C%20Teresina%20-%20PI",
+      "icone": "🥣",
+      "visitado": false
+    }
+  ],
+  "Aracaju - SE": [
+    {
+      "id": "aju-1",
+      "nome": "Orla de Atalaia e Passarela do Caranguejo",
+      "categoria": "natureza",
+      "descricao": "Orla litorânea com lagos artificiais, quadras, feira de artesanato e a estátua icônica do caranguejo gigante.",
+      "destaque": "Passarela do Caranguejo e quiosques animados",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Orla%20de%20Atalaia%2C%20Aracaju%20-%20SE",
+      "icone": "🦀",
+      "visitado": false
+    },
+    {
+      "id": "aju-2",
+      "nome": "Museu da Gente Sergipana",
+      "categoria": "cultura",
+      "descricao": "Premiado museu multimídia e interativo em casarão histórico restaurado celebrando a linguagem e folclore de Sergipe.",
+      "destaque": "Museu tecnológico da identidade sergipana",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Museu%20da%20Gente%20Sergipana%2C%20Aracaju%20-%20SE",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "aju-3",
+      "nome": "Oceanário de Aracaju (Projeto Tamar)",
+      "categoria": "natureza",
+      "descricao": "Edifício em formato de tartaruga marinha gigante com aquários de tubarões, raias e centro de reabilitação marinha.",
+      "destaque": "Tanques de tartarugas marinhas e tubarões",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Oceanario%20de%20Aracaju%2C%20Aracaju%20-%20SE",
+      "icone": "🐢",
+      "visitado": false
+    },
+    {
+      "id": "aju-4",
+      "nome": "Mercados Centrais de Aracaju",
+      "categoria": "cultura",
+      "descricao": "Conjunto dos mercados Antônio Franco e Thales Ferraz com rendas irlandesas de Divina Pastora e doces regionais.",
+      "destaque": "Rendas irlandesas e queijos artesanais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercados%20Centrais%20de%20Aracaju%2C%20Aracaju%20-%20SE",
+      "icone": "🛍️",
+      "visitado": false
+    },
+    {
+      "id": "aju-5",
+      "nome": "Crôa do Goré e Rio Vaza-Barris",
+      "categoria": "natureza",
+      "descricao": "Banco de areia branca que emerge durante a maré baixa no Rio Vaza-Barris com bares flutuantes e catamarãs.",
+      "destaque": "Banco de areia e manguezais com catamarã",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Croa%20do%20Gore%2C%20Aracaju%20-%20SE",
+      "icone": "⛵",
+      "visitado": false
+    },
+    {
+      "id": "aju-g1",
+      "nome": "Cariri Restaurante e Casa de Forró",
+      "categoria": "gastronomia",
+      "descricao": "Ponto tradicional na Passarela do Caranguejo servindo caranguejo quebrado na tábua e forró pé-de-serra diário.",
+      "destaque": "Caranguejo quebrado e forró pé-de-serra",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cariri%20Restaurante%2C%20Aracaju%20-%20SE",
+      "icone": "🦀",
+      "visitado": false
+    },
+    {
+      "id": "aju-g2",
+      "nome": "Caçarola (Mercado Antônio Franco)",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante no terraço do mercado histórico famoso pelo Camarão na Moranga e a sobremesa exclusiva 'Moça Virgem'.",
+      "destaque": "Camarão na moranga e sobremesa Moça Virgem",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Cacarola%2C%20Aracaju%20-%20SE",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "aju-g3",
+      "nome": "Mangará",
+      "categoria": "gastronomia",
+      "descricao": "Buffet cenográfico temático do sertão nordestino servindo carne de sol na nata, macaxeira frita e cuscuz recheado.",
+      "destaque": "Buffet sertanejo e carne de sol na nata",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mangara%2C%20Aracaju%20-%20SE",
+      "icone": "🥘",
+      "visitado": false
+    },
+    {
+      "id": "aju-g4",
+      "nome": "Restaurante Pitú com Pirão da Eliane",
+      "categoria": "gastronomia",
+      "descricao": "Prato célebre sergipano: pitú (camarão gigante de água doce) servido com pirão cremoso e arroz de coco.",
+      "destaque": "Pitú gigante com pirão cremoso",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pitu%20com%20Pirao%20da%20Eliane%2C%20Aracaju%20-%20SE",
+      "icone": "🦐",
+      "visitado": false
+    },
+    {
+      "id": "aju-g5",
+      "nome": "Bar do Kid (Orla de Atalaia)",
+      "categoria": "gastronomia",
+      "descricao": "Quiosque beira-mar com pastelzinho de aratu na palha, moqueca de camarão e água de coco gelada.",
+      "destaque": "Pastelzinho de aratu e moqueca",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Kid%2C%20Aracaju%20-%20SE",
+      "icone": "🍻",
+      "visitado": false
+    }
+  ],
+  "Cuiabá - MT": [
+    {
+      "id": "cgb-1",
+      "nome": "Centro Geodésico da América do Sul",
+      "categoria": "historico",
+      "descricao": "Marco geográfico oficial calculado pelo Marechal Rondon marcando o ponto equidistante entre os oceanos Pacífico e Atlântico.",
+      "destaque": "Marco geodésico exato do continente",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Centro%20Geodesico%20da%20America%20do%20Sul%2C%20Cuiaba%20-%20MT",
+      "icone": "🧭",
+      "visitado": false
+    },
+    {
+      "id": "cgb-2",
+      "nome": "Parque das Águas e Show das Fontes",
+      "categoria": "natureza",
+      "descricao": "Parque moderno de 270 mil metros quadrados com lago central e espetáculo noturno de águas e luzes sincronizadas.",
+      "destaque": "Show pirotécnico e musical das fontes luminosas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20das%20Aguas%2C%20Cuiaba%20-%20MT",
+      "icone": "⛲",
+      "visitado": false
+    },
+    {
+      "id": "cgb-3",
+      "nome": "Museu do Rio Cuiabá e Aquário Municipal",
+      "categoria": "cultura",
+      "descricao": "Edifício histórico do antigo Mercado do Porto dedicado à cultura ribeirinha, ao Rio Cuiabá e a espécies de peixes pantaneiros.",
+      "destaque": "Peixes vivos do Pantanal e cultura ribeirinha",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Museu%20do%20Rio%20Cuiaba%2C%20Cuiaba%20-%20MT",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "cgb-4",
+      "nome": "Igreja de Nossa Senhora do Rosário e São Benedito",
+      "categoria": "historico",
+      "descricao": "Igreja colonial do século XVIII construída por negros e garimpeiros sobre jazidas de ouro, sede da maior festa popular.",
+      "destaque": "Igreja colonial de ouro e São Benedito",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Igreja%20de%20Sao%20Benedito%2C%20Cuiaba%20-%20MT",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "cgb-5",
+      "nome": "Parque Mãe Bonifácia",
+      "categoria": "natureza",
+      "descricao": "Área verde de 77 hectares preservando a vegetação do cerrado e espécies nativas como micos e cotias.",
+      "destaque": "Reserva de cerrado com micos nativos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20Mae%20Bonifacia%2C%20Cuiaba%20-%20MT",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "cgb-g1",
+      "nome": "Peixaria Okde",
+      "categoria": "gastronomia",
+      "descricao": "A mais conceituada peixaria cuiabana servindo a famosa ventrecha de pacu frita e a tradicional mojica de pintado.",
+      "destaque": "Ventrecha de pacu e mojica de pintado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Peixaria%20Okde%2C%20Cuiaba%20-%20MT",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "cgb-g2",
+      "nome": "Mahalo Cozinha Criativa",
+      "categoria": "gastronomia",
+      "descricao": "Premiado nacionalmente pela chef Ariani Malouf com cozinha autoral brasileira sofisticada e toques pantaneiros.",
+      "destaque": "Alta gastronomia premiada com toques pantaneiros",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mahalo%20Cozinha%20Criativa%2C%20Cuiaba%20-%20MT",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "cgb-g3",
+      "nome": "Regionalíssimo",
+      "categoria": "gastronomia",
+      "descricao": "Buffet folclórico cuiabano com arroz Maria Isabel (com carne seca), farofa de banana-da-terra e doce de caju.",
+      "destaque": "Maria Isabel com farofa de banana e pequi",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Regionalissimo%2C%20Cuiaba%20-%20MT",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "cgb-g4",
+      "nome": "Lelis Peixaria",
+      "categoria": "gastronomia",
+      "descricao": "Rodízio completo de peixes do Pantanal: piraputanga na brasa, caldo de piranha e medalhão de pintado.",
+      "destaque": "Rodízio completo de peixes do Pantanal",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Lelis%20Peixaria%2C%20Cuiaba%20-%20MT",
+      "icone": "🎣",
+      "visitado": false
+    },
+    {
+      "id": "cgb-g5",
+      "nome": "Choppão Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional ponto de encontro fundado em 1974 na Praça 8 de Abril servindo filé com fritas e chopp artesanal.",
+      "destaque": "Filé à parmegiana e chopp gelado tradicional",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Choppao%2C%20Cuiaba%20-%20MT",
+      "icone": "🍻",
+      "visitado": false
+    }
+  ],
+  "Campo Grande - MS": [
+    {
+      "id": "cgr-1",
+      "nome": "Bioparque Pantanal (Aquário do Pantanal)",
+      "categoria": "natureza",
+      "descricao": "O maior aquário de água doce do planeta, com 5 milhões de litros de água abrigando mais de 350 espécies aquáticas.",
+      "destaque": "Maior aquário de água doce do planeta",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bioparque%20Pantanal%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🐠",
+      "visitado": false
+    },
+    {
+      "id": "cgr-2",
+      "nome": "Parque das Nações Indígenas",
+      "categoria": "natureza",
+      "descricao": "Um dos maiores parques urbanos do mundo com 119 hectares, lagos com capivaras livres e o Museu de Arte Contemporânea.",
+      "destaque": "Capivaras soltas e lagos naturais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20das%20Nacoes%20Indigenas%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "cgr-3",
+      "nome": "Museu das Culturas Dom Bosco (MARCO)",
+      "categoria": "cultura",
+      "descricao": "Acervo de referência mundial sobre os povos indígenas do Pantanal e Chaco: Terena, Bororo e Xavante.",
+      "destaque": "Acervo etnográfico das etnias pantaneiras",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Museu%20das%20Culturas%20Dom%20Bosco%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "cgr-4",
+      "nome": "Feira Central e Monumento do Sobá",
+      "categoria": "cultura",
+      "descricao": "Polo gastronômico e cultural tombado como patrimônio imaterial, celebrando a fusão nipônica e pantaneira do sobá.",
+      "destaque": "Patrimônio cultural do sobá pantaneiro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Feira%20Central%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🍜",
+      "visitado": false
+    },
+    {
+      "id": "cgr-5",
+      "nome": "Morada dos Baís",
+      "categoria": "historico",
+      "descricao": "Primeiro sobrado de alvenaria edificado no centro de Campo Grande em 1918, hoje centro cultural e gastronômico.",
+      "destaque": "Patrimônio arquitetônico de 1918",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Morada%20dos%20Bais%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🎨",
+      "visitado": false
+    },
+    {
+      "id": "cgr-g1",
+      "nome": "Sobá da Feira Central",
+      "categoria": "gastronomia",
+      "descricao": "O icônico sobá sul-mato-grossense: macarrão artesanal, tiras de carne bovina ou suína e caldo aromático de gengibre.",
+      "destaque": "Sobá tradicional tombado como patrimônio",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Feira%20Central%20Soba%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🍜",
+      "visitado": false
+    },
+    {
+      "id": "cgr-g2",
+      "nome": "Casa do Peixe",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante tradicional fundado em 1977 servindo o pintado a urucum gratinado com queijo e arroz branco.",
+      "destaque": "Pintado a urucum gratinado com queijo",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa%20do%20Peixe%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "cgr-g3",
+      "nome": "Cantina Romana",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional cantina italiana de Campo Grande servindo massas frescas, filé à parmegiana e vinhos selecionados.",
+      "destaque": "Massas artesanais e filé à parmegiana",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cantina%20Romana%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🍝",
+      "visitado": false
+    },
+    {
+      "id": "cgr-g4",
+      "nome": "Bar do Zé (Pastel de Jacaré)",
+      "categoria": "gastronomia",
+      "descricao": "Ponto pitoresco famoso pelo pastel sequinho e crocante recheado com carne de jacaré legalizada do Pantanal.",
+      "destaque": "Pastel crocante de carne de jacaré",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Ze%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🐊",
+      "visitado": false
+    },
+    {
+      "id": "cgr-g5",
+      "nome": "Churrascaria Gaúcho Gastão",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional churrasco sul-mato-grossense com linguiça de Maracaju, costela desmanchando e mandioca amarela macia.",
+      "destaque": "Linguiça de Maracaju e costela pantaneira",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Churrascaria%20Gaucho%20Gastao%2C%20Campo%20Grande%20-%20MS",
+      "icone": "🥩",
+      "visitado": false
+    }
+  ],
+  "Porto Velho - RO": [
+    {
+      "id": "pvh-1",
+      "nome": "Estrada de Ferro Madeira-Mamoré (Complexo Histórico)",
+      "categoria": "historico",
+      "descricao": "Patrimônio histórico nacional que documenta a construção da ferrovia na floresta amazônica durante o Ciclo da Borracha.",
+      "destaque": "Locomotivas a vapor centenárias da borracha",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Estrada%20de%20Ferro%20Madeira-Mamore%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🚂",
+      "visitado": false
+    },
+    {
+      "id": "pvh-2",
+      "nome": "As Três Marias (As Três Caixas D'Água)",
+      "categoria": "historico",
+      "descricao": "Símbolo máximo de Porto Velho, reservatórios cilíndricos importados dos Estados Unidos no início do século XX.",
+      "destaque": "Símbolo histórico e bandeira da cidade",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praca%20das%20Tres%20Caixas%20D%20Agua%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "pvh-3",
+      "nome": "Mirante do Rio Madeira e Usina de Santo Antônio",
+      "categoria": "natureza",
+      "descricao": "Mirante panorâmico sobre o monumental Rio Madeira com vista das turbinas da usina hidrelétrica e pôr do sol.",
+      "destaque": "Vista panorâmica das corredeiras do Rio Madeira",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mirante%20do%20Rio%20Madeira%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🌊",
+      "visitado": false
+    },
+    {
+      "id": "pvh-4",
+      "nome": "Catedral Sagrado Coração de Jesus",
+      "categoria": "historico",
+      "descricao": "Iniciada em 1917, abriga vitrais sacros importados de Milão e pinturas murais retratando os pioneiros da Amazônia.",
+      "destaque": "Vitrais italianos e arte sacra amazônica",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Catedral%20Sagrado%20Coracao%20de%20Jesus%2C%20Porto%20Velho%20-%20RO",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "pvh-5",
+      "nome": "Parque Natural de Porto Velho",
+      "categoria": "natureza",
+      "descricao": "Unidade de conservação com 390 hectares de floresta nativa amazônica, arvorismo, tirolesa e trilhas ecológicas.",
+      "destaque": "Trilhas em floresta primária amazônica",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20Natural%20de%20Porto%20Velho%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "pvh-g1",
+      "nome": "O Canto do Peixe",
+      "categoria": "gastronomia",
+      "descricao": "Referência gastronômica de Rondônia servindo tambaqui assado na brasa, caldeirada de jatuarana e pirarucu à casaca.",
+      "destaque": "Tambaqui assado na brasa e pirarucu",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=O%20Canto%20do%20Peixe%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "pvh-g2",
+      "nome": "Restaurante San Gennaro",
+      "categoria": "gastronomia",
+      "descricao": "Ambiente sofisticado com massas artesanais, frutos do mar e carnes nobres grelhadas no carvão.",
+      "destaque": "Massas artesanais e carnes grelhadas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=San%20Gennaro%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "pvh-g3",
+      "nome": "Celeiro Grill",
+      "categoria": "gastronomia",
+      "descricao": "Churrascaria de referência na capital com cortes especiais e rodízio de carnes nobres.",
+      "destaque": "Churrasco nobre e buffet diversificado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Celeiro%20Grill%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "pvh-g4",
+      "nome": "Peixaria do Miranda",
+      "categoria": "gastronomia",
+      "descricao": "Peixaria tradicional às margens da rodovia com costeleta de tambaqui crocante e pirão de peixe fumegante.",
+      "destaque": "Costeleta crocante de tambaqui com pirão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Peixaria%20do%20Miranda%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🎣",
+      "visitado": false
+    },
+    {
+      "id": "pvh-g5",
+      "nome": "Tacacá da Praça Aluizio Ferreira",
+      "categoria": "gastronomia",
+      "descricao": "A feira noturna mais querida da cidade com tacacá fresco, vatapá, arroz de cuxá e doces de cupuaçu.",
+      "destaque": "Tacacá com jambu e feira gastronômica noturna",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praca%20Aluizio%20Ferreira%2C%20Porto%20Velho%20-%20RO",
+      "icone": "🥣",
+      "visitado": false
+    }
+  ],
+  "Rio Branco - AC": [
+    {
+      "id": "rbr-1",
+      "nome": "Passarela Joaquim Macedo e Calçadão da Gameleira",
+      "categoria": "mirante",
+      "descricao": "Passarela estaiada sobre o Rio Acre ligando o Primeiro ao Segundo Distrito, próxima à histórica Gameleira centenária.",
+      "destaque": "Passarela estaiada sobre o Rio Acre",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Passarela%20Joaquim%20Macedo%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🌉",
+      "visitado": false
+    },
+    {
+      "id": "rbr-2",
+      "nome": "Palácio Rio Branco",
+      "categoria": "historico",
+      "descricao": "Edifício neoclássico construído em 1930 como sede do governo do território com colunas jônicas e obelisco dos heróis.",
+      "destaque": "Palácio neoclássico e obelisco da Revolução Acreana",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Palacio%20Rio%20Branco%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "rbr-3",
+      "nome": "Memorial dos Autonomistas e Museu da Borracha",
+      "categoria": "cultura",
+      "descricao": "Complexo cultural abrigando o túmulo de Plácido de Castro e rico acervo sobre seringueiros e Chico Mendes.",
+      "destaque": "História dos seringais e de Chico Mendes",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Memorial%20dos%20Autonomistas%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "rbr-4",
+      "nome": "Parque da Maternidade",
+      "categoria": "natureza",
+      "descricao": "Extenso parque linear de 6 km que corta o centro da cidade com ciclovias, quadras e o restaurante Casarão.",
+      "destaque": "Parque linear com ciclovias e quiosques",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20da%20Maternidade%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "rbr-5",
+      "nome": "Horto Florestal de Rio Branco",
+      "categoria": "natureza",
+      "descricao": "Área verde de 17 hectares de floresta amazônica secundária com lago de vitórias-régias e trilhas sombreadas.",
+      "destaque": "Trilhas amazônicas e vitórias-régias",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Horto%20Florestal%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🌺",
+      "visitado": false
+    },
+    {
+      "id": "rbr-g1",
+      "nome": "Point do Pato",
+      "categoria": "gastronomia",
+      "descricao": "Ícone da gastronomia acreana criado pela dona Socorro servindo o famoso pato no tucupi e moqueca de pirarucu.",
+      "destaque": "Pato no tucupi e moqueca de pirarucu",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Point%20do%20Pato%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🦆",
+      "visitado": false
+    },
+    {
+      "id": "rbr-g2",
+      "nome": "Jarude Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Culinária sírio-libanesa de altíssimo padrão, reflexo da forte presença da imigração árabe na história do Acre.",
+      "destaque": "Culinária sírio-libanesa e quibe cru",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Jarude%20Restaurante%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🥙",
+      "visitado": false
+    },
+    {
+      "id": "rbr-g3",
+      "nome": "Anexo Bar e Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Ambiente descontraído no Parque da Maternidade servindo petiscos regionais, chopp e peixes amazônicos grelhados.",
+      "destaque": "Costela de tambaqui e drinks regionais",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Anexo%20Bar%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "rbr-g4",
+      "nome": "O Casarão",
+      "categoria": "gastronomia",
+      "descricao": "Instalado em casarão histórico de madeira servindo filé ao molho madeira, massas e pizzas artesanais.",
+      "destaque": "Casarão histórico e carnes grelhadas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=O%20Casarao%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "rbr-g5",
+      "nome": "Tacacaria da Base",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional quiosque no bairro da Base com tacacá fumegante servido na cuia e vatapá acreano.",
+      "destaque": "Tacacá acreano autêntico na cuia",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Tacacaria%20da%20Base%2C%20Rio%20Branco%20-%20AC",
+      "icone": "🥣",
+      "visitado": false
+    }
+  ],
+  "Macapá - AP": [
+    {
+      "id": "mcp-1",
+      "nome": "Fortaleza de São José de Macapá",
+      "categoria": "historico",
+      "descricao": "Maior fortificação colonial militar de engenharia portuguesa no Brasil, inaugurada em 1782 sobre a foz do Rio Amazonas.",
+      "destaque": "Maior forte colonial de pedra do Brasil",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Fortaleza%20de%20Sao%20Jose%20de%20Macapa%2C%20Macapa%20-%20AP",
+      "icone": "🏰",
+      "visitado": false
+    },
+    {
+      "id": "mcp-2",
+      "nome": "Monumento Marco Zero do Equador",
+      "categoria": "historico",
+      "descricao": "Obelisco de 30 metros marcando exatamente a passagem da Linha Imaginária do Equador, onde é possível pisar nos dois hemisférios.",
+      "destaque": "Linha do Equador separando Norte e Sul",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Marco%20Zero%20do%20Equador%2C%20Macapa%20-%20AP",
+      "icone": "🌐",
+      "visitado": false
+    },
+    {
+      "id": "mcp-3",
+      "nome": "Trapiche Eliezer Levy e Orla do Amazonas",
+      "categoria": "natureza",
+      "descricao": "Passarela de 386 metros que avança sobre as águas barrentas e grandiosas do Rio Amazonas com bonde elétrico.",
+      "destaque": "Passarela sobre o monumental Rio Amazonas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Trapiche%20Eliezer%20Levy%2C%20Macapa%20-%20AP",
+      "icone": "🌅",
+      "visitado": false
+    },
+    {
+      "id": "mcp-4",
+      "nome": "Museu Sacaca",
+      "categoria": "cultura",
+      "descricao": "Museu a céu aberto com réplicas de casas indígenas waiãpi, palafitas ribeirinhas e farmácia de ervas da floresta.",
+      "destaque": "Casas tradicionais e medicina popular amazônica",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Museu%20Sacaca%2C%20Macapa%20-%20AP",
+      "icone": "🛖",
+      "visitado": false
+    },
+    {
+      "id": "mcp-5",
+      "nome": "Casa do Artesão",
+      "categoria": "cultura",
+      "descricao": "Principal centro de exibição do artesanato indígena de cerâmica maracá-cunani e peças em madeira de lei.",
+      "destaque": "Cerâmica indígena maracá e artesanato",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa%20do%20Artesao%2C%20Macapa%20-%20AP",
+      "icone": "🛍️",
+      "visitado": false
+    },
+    {
+      "id": "mcp-g1",
+      "nome": "Restaurante Flora",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante de alta gastronomia amazônica célebre pelo filhote na brasa com crosta de castanha-do-pará.",
+      "destaque": "Filhote na brasa com crosta de castanha",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Flora%2C%20Macapa%20-%20AP",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "mcp-g2",
+      "nome": "Cantinho do Rio",
+      "categoria": "gastronomia",
+      "descricao": "Deck gastronômico às margens do Rio Amazonas com camarão no bafo, filhote frito e água de coco gelada.",
+      "destaque": "Camarão no bafo com vista do Rio Amazonas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cantinho%20do%20Rio%2C%20Macapa%20-%20AP",
+      "icone": "🌊",
+      "visitado": false
+    },
+    {
+      "id": "mcp-g3",
+      "nome": "Estrela do Norte",
+      "categoria": "gastronomia",
+      "descricao": "Casa tradicional amapaense servindo caldeirada de tucunaré com ovos, pirarucu desfiado e açaí da terra.",
+      "destaque": "Caldeirada de tucunaré e açaí puro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Estrela%20do%20Norte%2C%20Macapa%20-%20AP",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "mcp-g4",
+      "nome": "Delícias do Marajó",
+      "categoria": "gastronomia",
+      "descricao": "Especialidades que combinam o autêntico queijo de búfala do Marajó com carnes nobres e peixes amazônicos.",
+      "destaque": "Queijo marajoara e carnes de búfalo",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Delicias%20do%20Marajo%2C%20Macapa%20-%20AP",
+      "icone": "🧀",
+      "visitado": false
+    },
+    {
+      "id": "mcp-g5",
+      "nome": "Bar do Abreu (Orla)",
+      "categoria": "gastronomia",
+      "descricao": "Ponto de encontro na orla de Santa Inês famoso pelos petiscos de peixe frito com vinagrete e cerveja estupidamente gelada.",
+      "destaque": "Peixe frito crocante e chopp à beira-rio",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bar%20do%20Abreu%2C%20Macapa%20-%20AP",
+      "icone": "🍻",
+      "visitado": false
+    }
+  ],
+  "Boa Vista - RR": [
+    {
+      "id": "bvb-1",
+      "nome": "Parque do Rio Branco e Mirante Edileusa Lóz",
+      "categoria": "mirante",
+      "descricao": "Maior obra turística de Roraima com mirante de 120 metros de altura com piso de vidro panorâmico sobre o Rio Branco.",
+      "destaque": "Mirante de 120m com piso de vidro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20do%20Rio%20Branco%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🗼",
+      "visitado": false
+    },
+    {
+      "id": "bvb-2",
+      "nome": "Praça do Centro Cívico e Monumento aos Garimpeiros",
+      "categoria": "historico",
+      "descricao": "Centro do traçado urbanístico radial planejado em formato de leque por Darcy Aleixo Derenusson nos anos 1940.",
+      "destaque": "Monumento aos Garimpeiros e traçado em leque",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praca%20do%20Centro%20Civico%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "bvb-3",
+      "nome": "Orla Taumanan",
+      "categoria": "natureza",
+      "descricao": "Plataforma suspensa sobre a margem do Rio Branco com restaurantes, quiosques e palco para apresentações culturais.",
+      "destaque": "Plataforma suspensa e brisa do Rio Branco",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Orla%20Taumanan%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🌅",
+      "visitado": false
+    },
+    {
+      "id": "bvb-4",
+      "nome": "Bosque dos Papagaios",
+      "categoria": "natureza",
+      "descricao": "Parque ecológico preservado com 12 hectares abrigando araras, tucanos, papagaios e trilhas interpretativas.",
+      "destaque": "Viveiro de araras e preservação de aves",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Bosque%20dos%20Papagaios%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🦜",
+      "visitado": false
+    },
+    {
+      "id": "bvb-5",
+      "nome": "Complexo Turístico Ayrton Senna",
+      "categoria": "natureza",
+      "descricao": "Parque linear com mais de 2 km com pistas de cooper, fontes luminosas interativas e praças de alimentação.",
+      "destaque": "Maior parque linear urbano de Roraima",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Complexo%20Ayrton%20Senna%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🏃",
+      "visitado": false
+    },
+    {
+      "id": "bvb-g1",
+      "nome": "Restaurante Meu Cantinho",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante típico de Roraima servindo a tradicional paçoca de carne seca com banana e a damurida indígena.",
+      "destaque": "Paçoca de carne com banana e damurida",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Meu%20Cantinho%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "bvb-g2",
+      "nome": "Marina Meu Caso",
+      "categoria": "gastronomia",
+      "descricao": "À beira do Rio Branco servindo tambaqui assado na brasa e moqueca de tucunaré com vista privilegiada do pôr do sol.",
+      "destaque": "Tambaqui assado na brasa à beira do rio",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Marina%20Meu%20Caso%2C%20Boa%20Vista%20-%20RR",
+      "icone": "⚓",
+      "visitado": false
+    },
+    {
+      "id": "bvb-g3",
+      "nome": "Riu Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Gastronomia contemporânea com ingredientes da savana roraimense e da Amazônia pelo chef local.",
+      "destaque": "Cozinha contemporânea com toques do lavrado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Riu%20Restaurante%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "bvb-g4",
+      "nome": "Peixaria do Piauí (Boa Vista)",
+      "categoria": "gastronomia",
+      "descricao": "Tradicional rodízio e porções de peixes amazônicos de couro e escama com farofa amarela e vinagrete.",
+      "destaque": "Ventrecha de pacu e filhote frito",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Peixaria%20do%20Piaui%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🎣",
+      "visitado": false
+    },
+    {
+      "id": "bvb-g5",
+      "nome": "Damay Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Cozinha saudável e regional com peixes frescos assados, saladas com frutas da floresta e sobremesas de cupuaçu.",
+      "destaque": "Peixes nobres e sobremesas de frutas amazônicas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Damay%20Restaurante%2C%20Boa%20Vista%20-%20RR",
+      "icone": "🥗",
+      "visitado": false
+    }
+  ],
+  "Palmas - TO": [
+    {
+      "id": "pmw-1",
+      "nome": "Praça dos Girassóis e Palácio Araguaia",
+      "categoria": "historico",
+      "descricao": "A maior praça pública da América Latina com o Palácio Araguaia e o monumento memorial aos Dezoito do Forte de Copacabana.",
+      "destaque": "Maior praça pública da América Latina",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praca%20dos%20Girassois%2C%20Palmas%20-%20TO",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "pmw-2",
+      "nome": "Parque Cesamar",
+      "categoria": "natureza",
+      "descricao": "Principal parque ecológico central da capital mais jovem do Brasil com lago, mata de galeria e pista de caminhada.",
+      "destaque": "Lago central com capivaras e trilhas na mata",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20Cesamar%2C%20Palmas%20-%20TO",
+      "icone": "🌳",
+      "visitado": false
+    },
+    {
+      "id": "pmw-3",
+      "nome": "Praia da Graciosa e Ponte FHC",
+      "categoria": "natureza",
+      "descricao": "Famosa praia de água doce no Lago de Palmas com calçadão, quiosques e vista da ponte de 8 km sobre o Rio Tocantins.",
+      "destaque": "Praia de rio e vista da ponte de 8 km",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Praia%20da%20Graciosa%2C%20Palmas%20-%20TO",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "pmw-4",
+      "nome": "Ilha Canela",
+      "categoria": "natureza",
+      "descricao": "Ilha de areia branca situada no centro do Lago de Palmas, acessível por travessia de lancha rápida.",
+      "destaque": "Ilha de areia branca no lago de Palmas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Ilha%20Canela%2C%20Palmas%20-%20TO",
+      "icone": "🏝️",
+      "visitado": false
+    },
+    {
+      "id": "pmw-5",
+      "nome": "Memorial Coluna Prestes",
+      "categoria": "cultura",
+      "descricao": "Monumento cênico projetado por Oscar Niemeyer na Praça dos Girassóis em homenagem à marcha histórica pelo interior do Brasil.",
+      "destaque": "Monumento desenhado por Oscar Niemeyer",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Memorial%20Coluna%20Prestes%2C%20Palmas%20-%20TO",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "pmw-g1",
+      "nome": "Cabana do Lago",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante renomado à beira do lago servindo tucunaré na brasa, surubim na telha e galinhada caipira com pequi.",
+      "destaque": "Tucunaré na brasa e surubim na telha",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cabana%20do%20Lago%2C%20Palmas%20-%20TO",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "pmw-g2",
+      "nome": "Restaurante Mercatto",
+      "categoria": "gastronomia",
+      "descricao": "Cozinha contemporânea com cortes nobres de parrilla, risotos refinados e carta seleta de vinhos.",
+      "destaque": "Parrilla de carnes nobres e risotos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Mercatto%2C%20Palmas%20-%20TO",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "pmw-g3",
+      "nome": "Dona Maria Beach (Praia da Graciosa)",
+      "categoria": "gastronomia",
+      "descricao": "Bar de praia com deck pé na areia servindo petiscos de peixe frito, camarão alho e óleo e chopp gelado.",
+      "destaque": "Petiscos de praia com pôr do sol no lago",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Dona%20Maria%20Beach%2C%20Palmas%20-%20TO",
+      "icone": "🍤",
+      "visitado": false
+    },
+    {
+      "id": "pmw-g4",
+      "nome": "Vereda Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Comida caseira afetiva tocantinense com feijão tropeiro, carne de sol frita na banha e paçoca de pilão.",
+      "destaque": "Carne de sol artesanal e feijão tropeiro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Vereda%20Restaurante%2C%20Palmas%20-%20TO",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "pmw-g5",
+      "nome": "Fogão a Lenha Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Buffet caipira tradicional com tachos de ferro sobre fogão a lenha servindo costelinha com quiabo e pequi.",
+      "destaque": "Fogão a lenha caipira com pequi e quiabo",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Fogao%20a%20Lenha%20Palmas%2C%20Palmas%20-%20TO",
+      "icone": "🥘",
+      "visitado": false
+    }
+  ],
+  "Foz do Iguaçu - PR": [
+    {
+      "id": "igu-1",
+      "nome": "Cataratas do Iguaçu (Parque Nacional)",
+      "categoria": "natureza",
+      "descricao": "Uma das Sete Maravilhas Naturais do Mundo, conjunto de 275 quedas d'água gigantes em plena Mata Atlântica.",
+      "destaque": "Garganta do Diabo e passarelas das cataratas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cataratas%20do%20Iguacu%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🌊",
+      "visitado": false
+    },
+    {
+      "id": "igu-2",
+      "nome": "Usina Hidrelétrica de Itaipu Binacional",
+      "categoria": "historico",
+      "descricao": "Uma das maiores obras de engenharia do mundo moderno, gerando energia limpa para Brasil e Paraguai.",
+      "destaque": "Visita panorâmica da barragem e vertedouro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Itaipu%20Binacional%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "⚡",
+      "visitado": false
+    },
+    {
+      "id": "igu-3",
+      "nome": "Parque das Aves",
+      "categoria": "natureza",
+      "descricao": "Santuário ecológico de 16 hectares com imensos viveiros de imersão abrigando tucanos, araras e flamingos.",
+      "destaque": "Viveiros de imersão com araras e tucanos",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Parque%20das%20Aves%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🦜",
+      "visitado": false
+    },
+    {
+      "id": "igu-4",
+      "nome": "Marco das Três Fronteiras",
+      "categoria": "cultura",
+      "descricao": "Ponto geográfico histórico onde se encontram o Rio Paraná e o Rio Iguaçu, unindo Brasil, Argentina e Paraguai.",
+      "destaque": "Obelisco tríplice e espetáculo cultural de danças",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Marco%20das%20Tres%20Fronteiras%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🧭",
+      "visitado": false
+    },
+    {
+      "id": "igu-5",
+      "nome": "Templo Budista Chen Tien",
+      "categoria": "cultura",
+      "descricao": "Espaço de paz e meditação com mais de 120 estátuas monumentais, incluindo um Buda de 7 metros, com vista para a fronteira.",
+      "destaque": "Estátuas monumentais de Buda e jardins",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Templo%20Budista%20Chen%20Tien%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🏯",
+      "visitado": false
+    },
+    {
+      "id": "igu-g1",
+      "nome": "Churrascaria Rafain Show",
+      "categoria": "gastronomia",
+      "descricao": "Rodízio premium de carnes nobres acompanhado do maior espetáculo folclórico da América Latina registrado no Guinness.",
+      "destaque": "Churrasco nobre com show folclórico latino",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Rafain%20Churrascaria%20Show%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🥩",
+      "visitado": false
+    },
+    {
+      "id": "igu-g2",
+      "nome": "Restaurante Porto Canoas",
+      "categoria": "gastronomia",
+      "descricao": "Localizado no coração do Parque Nacional com buffet brasileiro sobre deque com vista frontal da Garganta do Diabo.",
+      "destaque": "Almoço com vista do topo das Cataratas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Porto%20Canoas%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🍽️",
+      "visitado": false
+    },
+    {
+      "id": "igu-g3",
+      "nome": "La Máfia Trattoria",
+      "categoria": "gastronomia",
+      "descricao": "Cantina italiana temática em ambiente intimista servindo massas frescas caseiras, filés e vinhos importados.",
+      "destaque": "Trattoria temática com massas frescas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=La%20Mafia%20Trattoria%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🍝",
+      "visitado": false
+    },
+    {
+      "id": "igu-g4",
+      "nome": "Castelo Libanês",
+      "categoria": "gastronomia",
+      "descricao": "Autêntica gastronomia árabe com espetos de carneiro, esfihas folhadas, homus e doces com água de flor de laranjeira.",
+      "destaque": "Comida libanesa autêntica na Tríplice Fronteira",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Castelo%20Libanes%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🥙",
+      "visitado": false
+    },
+    {
+      "id": "igu-g5",
+      "nome": "Trapiche Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Especialista em peixes nobres de água doce da bacia do Paraná: dourado assado na telha e surubim ao molho de maracujá.",
+      "destaque": "Dourado assado na telha e peixes de rio",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Trapiche%20Restaurante%2C%20Foz%20do%20Iguacu%20-%20PR",
+      "icone": "🐟",
+      "visitado": false
+    }
+  ],
+  "Bonito - MS": [
+    {
+      "id": "bon-1",
+      "nome": "Gruta do Lago Azul",
+      "categoria": "natureza",
+      "descricao": "Caverna monumental com formações geológicas milenares e lago subterrâneo com águas de cor azul-turquesa cristalina.",
+      "destaque": "Lago subterrâneo com águas azul-turquesa",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Gruta%20do%20Lago%20Azul%2C%20Bonito%20-%20MS",
+      "icone": "💎",
+      "visitado": false
+    },
+    {
+      "id": "bon-2",
+      "nome": "Recanto Ecológico Rio da Prata (Flutuação)",
+      "categoria": "natureza",
+      "descricao": "A experiência mais famosa de flutuação em rio cristalino do mundo, nadando ao lado de cardumes de piraputangas e dourados.",
+      "destaque": "Flutuação em águas cristalinas com peixes",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Rio%20da%20Prata%2C%20Bonito%20-%20MS",
+      "icone": "🤿",
+      "visitado": false
+    },
+    {
+      "id": "bon-3",
+      "nome": "Abismo Anhumas",
+      "categoria": "natureza",
+      "descricao": "Descida por rapel elétrico de 72 metros através de uma fenda na rocha até um lago cristalino subterrâneo com estalactites.",
+      "destaque": "Rapel elétrico de 72m em caverna com lago",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Abismo%20Anhumas%2C%20Bonito%20-%20MS",
+      "icone": "🧗",
+      "visitado": false
+    },
+    {
+      "id": "bon-4",
+      "nome": "Boca da Onça Ecotour",
+      "categoria": "natureza",
+      "descricao": "Trilha com a maior cachoeira do Mato Grosso do Sul (156 metros de queda livre) e piscinas naturais para banho.",
+      "destaque": "Maior cachoeira do estado com 156m de queda",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Boca%20da%20Onca%20Ecotour%2C%20Bonito%20-%20MS",
+      "icone": "🏞️",
+      "visitado": false
+    },
+    {
+      "id": "bon-5",
+      "nome": "Balneário Municipal de Bonito",
+      "categoria": "natureza",
+      "descricao": "Área de banho em águas cristalinas do Rio Formoso rodeada de árvores nativas com deques e quiosques de lazer.",
+      "destaque": "Banho no Rio Formoso com cardumes de peixes",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Balneario%20Municipal%2C%20Bonito%20-%20MS",
+      "icone": "🏖️",
+      "visitado": false
+    },
+    {
+      "id": "bon-g1",
+      "nome": "Casa do João",
+      "categoria": "gastronomia",
+      "descricao": "O restaurante mais famoso de Bonito com jardim arborizado servindo a consagrada Traíra Sem Espinho e piraputanga assada.",
+      "destaque": "A lendária Traíra Sem Espinho",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Casa%20do%20Joao%2C%20Bonito%20-%20MS",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "bon-g2",
+      "nome": "Juanita Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Conceituada cozinha pantaneira servindo o pintado na telha assado na brasa com mandioca e pirão de peixe.",
+      "destaque": "Pintado na telha na brasa com mandioca",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Juanita%20Restaurante%2C%20Bonito%20-%20MS",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "bon-g3",
+      "nome": "Pantanal Grill",
+      "categoria": "gastronomia",
+      "descricao": "Pioneiro em carnes exóticas no centro de Bonito: iscas crocantes de jacaré, carne de avestruz e cortes nobres bovinos.",
+      "destaque": "Iscas crocantes de jacaré e carnes exóticas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pantanal%20Grill%2C%20Bonito%20-%20MS",
+      "icone": "🐊",
+      "visitado": false
+    },
+    {
+      "id": "bon-g4",
+      "nome": "Restaurante Tapera",
+      "categoria": "gastronomia",
+      "descricao": "Restaurante rústico sob a copa de uma figueira centenária servindo pratos da culinária de comitiva pantaneira.",
+      "destaque": "Cozinha de comitiva pantaneira sob a figueira",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante%20Tapera%2C%20Bonito%20-%20MS",
+      "icone": "🥘",
+      "visitado": false
+    },
+    {
+      "id": "bon-g5",
+      "nome": "Taboa Bar",
+      "categoria": "gastronomia",
+      "descricao": "Bar rústico e cultural onde os clientes assinam as paredes de pau-a-pique, famoso pela cachaça artesanal com mel e guaraná.",
+      "destaque": "Cachaça artesanal Taboa e paredes assinadas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Taboa%20Bar%2C%20Bonito%20-%20MS",
+      "icone": "🍹",
+      "visitado": false
+    }
+  ],
+  "Juazeiro do Norte - CE": [
+    {
+      "id": "jdo-1",
+      "nome": "Colina do Horto e Estátua de Padre Cícero",
+      "categoria": "historico",
+      "descricao": "Monumento de 27 metros no alto da colina, centro de peregrinação com vista panorâmica do Vale do Cariri.",
+      "destaque": "Estátua de Padre Cícero e Museu Vivo",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Estatua+de+Padre+Cicero+Juazeiro+do+Norte+CE",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "jdo-2",
+      "nome": "Basílica Santuário de Nossa Senhora das Dores",
+      "categoria": "historico",
+      "descricao": "Templo histórico construído em 1827 pelo Padre Cícero, epicentro das maiores romarias do Nordeste.",
+      "destaque": "Coração das romarias do Cariri",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Basilica+de+Nossa+Senhora+das+Dores+Juazeiro+do+Norte+CE",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "jdo-3",
+      "nome": "Centro Cultural do Cariri Sérvulo Esmeraldo",
+      "categoria": "cultura",
+      "descricao": "Maior complexo cultural do interior do Ceará com teatro, galerias de arte, planetário e parque ecológico.",
+      "destaque": "Teatro, exposições e planetário",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Centro+Cultural+do+Cariri+Juazeiro+do+Norte+CE",
+      "icone": "🎨",
+      "visitado": false
+    },
+    {
+      "id": "jdo-4",
+      "nome": "Memorial Padre Cícero e Casarão Histórico",
+      "categoria": "cultura",
+      "descricao": "Museu com relíquias pessoais, fotografias, biblioteca e documentos históricos do fundador da cidade.",
+      "destaque": "Acervo histórico de Padre Cícero",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Memorial+Padre+Cicero+Juazeiro+do+Norte+CE",
+      "icone": "🏛️",
+      "visitado": false
+    },
+    {
+      "id": "jdo-5",
+      "nome": "Geopark Araripe (Sítio Colina do Horto)",
+      "categoria": "natureza",
+      "descricao": "Primeiro geoparque das Américas chancelado pela UNESCO, com trilhas da mata atlântica encravada no semiárido.",
+      "destaque": "Geopark UNESCO e trilhas ecológicas",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Geopark+Araripe+Juazeiro+do+Norte+CE",
+      "icone": "🌍",
+      "visitado": false
+    },
+    {
+      "id": "jdo-g1",
+      "nome": "Restaurante Sirigado do Pedro",
+      "categoria": "gastronomia",
+      "descricao": "O mais conceituado restaurante de frutos do mar e sirigado grelhado na brasa no Cariri.",
+      "destaque": "Sirigado grelhado na brasa",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante+Sirigado+do+Pedro+Juazeiro+do+Norte+CE",
+      "icone": "🐟",
+      "visitado": false
+    },
+    {
+      "id": "jdo-g2",
+      "nome": "Cozinha Cariri",
+      "categoria": "gastronomia",
+      "descricao": "Autêntica gastronomia sertaneja com baião de dois, queijo coalho tostado e carne de sol maturada.",
+      "destaque": "Baião de dois com queijo coalho e carne de sol",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Cozinha+Cariri+Juazeiro+do+Norte+CE",
+      "icone": "🍲",
+      "visitado": false
+    },
+    {
+      "id": "jdo-g3",
+      "nome": "Restaurante O Gavião",
+      "categoria": "gastronomia",
+      "descricao": "Famoso pela tradicional galinha caipira ao molho pardo com pirão e feijão verde fresquinho.",
+      "destaque": "Galinha caipira tradicional com pirão",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Restaurante+O+Gaviao+Juazeiro+do+Norte+CE",
+      "icone": "🍗",
+      "visitado": false
+    },
+    {
+      "id": "jdo-g4",
+      "nome": "Boteco do Cariri",
+      "categoria": "gastronomia",
+      "descricao": "Ponto de encontro animado servindo petiscos regionais, macaxeira na manteiga da terra e caldos.",
+      "destaque": "Petiscos sertanejos e chopp gelado",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Boteco+do+Cariri+Juazeiro+do+Norte+CE",
+      "icone": "🍻",
+      "visitado": false
+    },
+    {
+      "id": "jdo-g5",
+      "nome": "Pau de Arara Restaurante",
+      "categoria": "gastronomia",
+      "descricao": "Buffet rústico tradicional com paçoca de carne de sol, panelada e doces de caju e goiaba.",
+      "destaque": "Buffet sertanejo e paçoca de carne",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pau+de+Arara+Restaurante+Juazeiro+do+Norte+CE",
+      "icone": "🥘",
       "visitado": false
     }
   ]
