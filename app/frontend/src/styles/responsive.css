@@ -1,0 +1,128 @@
+@media (min-width: 640px) {
+  body {
+    padding: 2.5rem 1rem;
+    font-size: 16px;
+  }
+
+  .app-header {
+    margin-bottom: 2rem;
+  }
+  .app-header h1 {
+    font-size: 2.2rem;
+  }
+  .app-header p {
+    font-size: 0.95rem;
+  }
+
+  .card {
+    margin-bottom: 1.6rem;
+    padding: 1.6rem;
+    border-radius: 16px;
+  }
+
+  .user-info img,
+  .user-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  .user-name {
+    font-size: 1rem;
+  }
+  .user-email {
+    font-size: 0.85rem;
+  }
+  .form-title {
+    margin-bottom: 1.2rem;
+    font-size: 1.25rem;
+  }
+  .form-row {
+    gap: 12px;
+    margin-bottom: 1.1rem;
+  }
+  .form-row select {
+    width: 100px;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .telemetry-heading h2 {
+    font-size: 1.4rem;
+  }
+  .telemetry-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    max-width: 1320px;
+  }
+
+  .planning-layout-with-sidebar {
+    grid-template-columns: minmax(0, 1.62fr) minmax(340px, 1fr);
+    align-items: start;
+    gap: 1.4rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .suggestions-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .btn-location {
+    width: 100%;
+  }
+
+  .suggestion-list,
+  .propulsion-options,
+  .parameter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .suggestion-chip {
+    width: 100%;
+  }
+
+  .profile-options button {
+    flex: 1 1 145px;
+  }
+
+  .toast-container {
+    top: 0.85rem;
+    right: 0.85rem;
+    left: 0.85rem;
+    width: auto;
+  }
+
+  .telemetry-details > div {
+    flex-wrap: wrap;
+  }
+  .telemetry-correlation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .telemetry-copy {
+    width: 100%;
+  }
+  .telemetry-providers li > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .telemetry-state {
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

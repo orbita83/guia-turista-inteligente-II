@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+httpx
+google-genai
+google-auth
+prometheus-client
+filelock
+python-multipart
+orjson
+email-validator
+itsdangerous
+

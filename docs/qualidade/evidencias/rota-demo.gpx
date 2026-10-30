@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Guia do Turista Inteligente" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Rota: Recife - PE para Olinda - PE</name>
+    <desc>Sugestão 01 (Rodovia Principal / Menor Tempo) - 10 km (7 min)</desc>
+  </metadata>
+  <wpt lat="-8.0476" lon="-34.877">
+    <name>Origem: Recife - PE</name>
+  </wpt>
+  <wpt lat="-8.0089" lon="-34.8553">
+    <name>Destino: Olinda - PE</name>
+  </wpt>
+  <trk>
+    <name>Sugestão 01 (Rodovia Principal / Menor Tempo)</name>
+    <trkseg>
+    <trkpt lat="-8.0476" lon="-34.877"/>
+    <trkpt lat="-8.03" lon="-34.86"/>
+    <trkpt lat="-8.0089" lon="-34.8553"/>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,161 @@
+# Critérios de aceite
+
+> Os critérios abaixo tornam verificável o comportamento descrito na fonte. “Estado” indica **Fonte**, **Derivado** ou **Proposto**.
+
+| ID | Critério verificável | Estado |
+| --- | --- | --- |
+| CA-AUT-001 | Dado login Google válido, o cabeçalho apresenta a identidade ativa e as chamadas usam seu identificador. | Derivado |
+| CA-AUT-002 | Ao alternar de Google para visitante, a identidade Google permanece restaurável em um clique. | Fonte |
+| CA-AUT-003 | Uma sessão visitante expira após 2 horas e não acessa o histórico de outra identidade. | Fonte/Derivado |
+| CA-PLN-001 | Cidade/UF inválida é rejeitada; UF inconsistente resulta em `422`. | Fonte |
+| CA-PLN-002 | Durante planejamento ativo, nova submissão idêntica é impedida no cliente e protegida por `409` no servidor. | Fonte |
+| CA-PLN-003 | Planejamento concluído apresenta rota, clima, guia, telemetria e dados de custos correspondentes à mesma solicitação. | Derivado |
+| CA-MAP-001 | Quando houver alternativas, selecionar uma rota atualiza geometria, duração, custos e paradas de modo coerente. | Fonte/Derivado |
+| CA-MAP-002 | O mapa apresenta paradas antes do limite crítico segundo autonomia e margem configurada. | Fonte |
+| CA-MAP-003 | Perfil de relevo informa máxima, ganho/perda e efeito no consumo. | Fonte |
+| CA-CST-001 | O total reúne energia/combustível e pedágios e é dividido pela ocupação de 1 a 8 pessoas. | Fonte |
+| CA-GUI-001 | O guia chega progressivamente e o frontend acrescenta os chunks na ordem recebida. | Fonte |
+| CA-GUI-002 | O stream termina com sinal inequívoco de conclusão e não permanece carregando. | Derivado |
+| CA-GUI-003 | O roteiro de IA respeita seções e limites de concisão definidos na documentação. | Fonte |
+| CA-HIS-001 | A interface mantém visível a viagem retornada pelo contrato existente durante a reconciliação, sem duplicar nem afirmar persistência sem confirmação observável. | Fonte/Derivado; backend fora do escopo desta entrega |
+| CA-HIS-002 | A interface remove localmente a viagem após resposta de sucesso do contrato existente, sem recarregar a SPA; falha preserva o card. | Fonte/Implementado no frontend |
+| CA-EXP-001 | A aplicação gera GPX 1.1 válido contendo os pontos previstos da rota. | Fonte/Derivado |
+| CA-EXP-003 | A exportação backend da viagem autenticada usa sua geometria real, impede acesso cruzado e rejeita trajeto inválido sem inventar pontos. | Fonte/Derivado; contrato operacional do projeto |
+| CA-EXP-002 | Ações de Maps e WhatsApp usam a rota ativa e não dados de planejamento anterior. | Derivado |
+| CA-TEL-001 | Após o primeiro planejamento, a UI diferencia `X-Process-Time` do tempo total monotônico, mantém sinais ausentes como indisponíveis, mascara `X-Request-ID` e limpa o snapshot ao trocar identidade. | Fonte/Implementado no frontend |
+| CA-TEL-002 | `/healthz`, `/readyz` e `/metrics` respondem conforme finalidade operacional. | Fonte |
+| CA-PLN-006 | Novos planejamentos e streams aceitam duração entre 1 e 5 dias e rejeitam valores fora da faixa com `422`. | Fonte, seção 3.1 |
+| CA-HIS-003 | O planejamento agenda uma gravação por `BackgroundTasks` somente após gerar a viagem completa; cancelamento não agenda viagem incompleta. | Fonte, seções 3.4 e 4.5 |
+| CA-DES-001 | Geocodificações e consultas independentes são executadas concorrentemente. | Fonte |
+| CA-DES-002 | Desconexão interrompe o pipeline e impede salvar resultado incompleto. | Fonte |
+| CA-DES-003 | A meta de resposta de planejamento é inferior a 1.000 ms no cenário e ambiente de medição a definir. | Fonte + questão |
+| CA-OPS-001 | Backend inicia em `8001` e frontend em `5173` com configuração documentada. | Fonte |
+| CA-OPS-002 | Suítes backend/frontend e lint concluem sem falhas antes da entrega. | Fonte |
+| CA-OPS-003 | O frontend usa `.ts`/`.tsx`, passa por verificação estrita de tipos e é servido/construído por Vite+ sem perder os comandos npm esperados pela atividade. | Decisão aprovada |
+| CA-OPS-004 | A raiz instala a versão fixada do Turbo sem instalação global, reconhece a configuração `turbo.json` e permite executar tarefas de ambos os workspaces por comando único ou filtro. | Decisão aprovada |
+| CA-PLN-004 | Jornada crítica pode ser concluída por teclado e mantém contraste WCAG 2.1 AA nos dois temas. | Fonte/Derivado |
+| CA-PLN-005 | Negar geolocalização não impede o planejamento manual. | Derivado |
+
+## Condições para homologação
+
+- Critério associado a pelo menos um teste ou evidência manual reproduzível.
+- Dependências externas simuladas em testes e identificadas em homologação integrada.
+- Critérios com “questão” não viram gate numérico até ambiente e método serem aprovados.
+- Falhas conhecidas devem registrar impacto, contorno e decisão de aceite.
+
+### Evidência frontend de CA-TEL-001
+
+- `api.test.ts` valida headers ausentes, inválidos e válidos sem coerção para zero.
+- `useApp.test.tsx` valida concorrência, snapshot anterior e isolamento de identidade.
+- `TelemetriaCard.test.tsx` valida semântica textual, indisponibilidade, provedores e
+  correlação mascarada; `App.test.tsx` cobre a integração até o logout.
+- `RNF-TEL-001` é atendido pelo uso seguro de `X-Request-ID`; `RNF-TEL-004` é
+  atendido sem polling ou requisição adicional de telemetria.
+
+### Evidência frontend de CA-HIS-001 e CA-HIS-002
+
+- `api.test.ts` valida e normaliza respostas completas e parciais, descartando itens
+  sem identificador seguro.
+- `useApp.test.tsx` cobre item provisório, confirmação, exclusão local sem reload,
+  falha preservando o catálogo e resposta atrasada de outra identidade.
+- `HistoricoViagens.test.tsx` cobre resumo compacto, “Aguardando dados”, carregamento,
+  vazio, erro, persistência pendente e exclusão acessível.
+
+### Evidência frontend de F01 para CA-PLN-003, CA-MAP-001 e CA-HIS-001
+
+- `api.test.ts` verifica que campos opcionais válidos de clima, geometria, rotas,
+  atrativos e visitas atravessam o parser; campos malformados são descartados sem
+  impedir a leitura de viagens antigas. A disponibilidade desses campos em produção
+  ainda depende da evolução do contrato do backend.
+
+### Evidência frontend de F02 para CA-MAP-001
+
+- `MapaRota.test.tsx` valida o estado sem geometria, a preservação do resumo textual e
+  a seleção apenas de alternativas recebidas. `routeCalculator.test.ts` confirma que
+  o cliente não inventa alternativas quando a API não as fornece.
+
+### Evidência frontend de F03 para CA-MAP-003
+
+- `api.test.ts` rejeita série altimétrica fora de ordem; `MapaRota.test.tsx` verifica
+  que o gráfico usa amostras recebidas e mostra indisponibilidade na ausência delas.
+  Indicadores de relevo sem dados de origem deixam de ser exibidos.
+
+### Evidência frontend de F04 para CA-PLN-003
+
+- `RoteiroResult.test.tsx` confirma a apresentação de clima parcial recebido e
+  mensagens de indisponibilidade no lugar de temperaturas e condição fixas.
+
+### Evidência frontend de F12 para CA-PLN-003
+
+- `atrativosService.test.ts` garante que destinos não catalogados não recebem locais
+  inventados; `RoteiroResult.test.tsx` verifica o estado vazio correspondente.
+
+### Evidência frontend de F06 e F07 para CA-PLN-001
+
+- `api.test.ts` verifica extração segura dos detalhes HTTP 422; `RoteiroForm.test.tsx`
+  cobre associação aos campos, entradas numéricas vazias, preço zero e exigências
+  condicionais para veículo elétrico. O formulário não envia números não finitos.
+
+### Evidência frontend de F08 para CA-PLN-003
+
+- `useApp.test.tsx` cobre confirmação, salvamento apenas local quando o endpoint não
+  existe, reversão após falha e sincronização posterior. A tela distingue esses
+  estados e oferece nova tentativa quando há alterações locais pendentes.
+
+### Evidência frontend de F09 para CA-GUI-001 e CA-GUI-002
+
+- `streamingGuide.test.ts` diferencia SSE, reprodução de conteúdo existente,
+  cancelamento e encerramento sem `done`; `RoteiroResult.test.tsx` verifica que a
+  contingência concluída não é apresentada como transmissão ao vivo.
+
+### Evidência frontend de F05 e F16 para CA-MAP-001 e CA-EXP-001
+
+- `MapaRota.test.tsx` verifica que a seleção da alternativa é controlada pela
+  aplicação; `TripNavigationTabs.test.tsx` cobre a indisponibilidade do GPX sem
+  geometria. `routeCalculator.test.ts` cobre GPX com pontos recebidos, escape XML e
+  rejeição de trajeto inválido.
+
+### Evidência frontend de F10 para CA-HIS-001
+
+- `useApp.test.tsx` verifica que a troca de viagem descarta parâmetros de outra e
+  restaura os da viagem criada na sessão quando disponíveis. `RoteiroResult.test.tsx`
+  confirma que perfil e duração ausentes são apresentados como não informados.
+
+### Evidência frontend de F13 para CA-PLN-005
+
+- `geolocation.test.ts` preserva Haversine e as quatro sugestões; `RoteiroForm.test.tsx`
+  verifica que a distância aparece como aproximação em linha reta e o preenchimento
+  manual continua disponível.
+
+### Evidência frontend de F14 para CA-PLN-004
+
+- `ErrorBoundary.test.tsx` provoca erro de renderização, verifica a mensagem
+  acessível e a recuperação pelo botão de nova tentativa.
+
+### Auditoria frontend F15 para CA-PLN-004
+
+- `App.test.tsx` e `TripNavigationTabs.test.tsx` verificam setas de teclado, foco e
+  associação entre abas e painéis. Os filtros de atrativos agora são um grupo de
+  botões com `aria-pressed`, sem semântica de abas sem painéis.
+- `themeContrast.test.tsx` verifica os pares de contraste dos dois temas. O foco
+  visível está definido em `styles/tokens-base.css`; movimento reduzido em
+  `styles/responsive.css`. Mensagens de estado usam `role="status"` ou `role="alert"`.
+- A compatibilidade com leitores de tela específicos depende da homologação em
+  dispositivos assistivos, ainda fora da suíte automatizada.
+
+### Avaliação frontend F17 para CA-OPS-003
+
+- `index.html` referencia o favicon SVG do diretório `public/`; o build o distribui.
+  Sprite de ícones não utilizado e manifesto PWA sem escopo offline definido seguem
+  fora da implementação, conforme arquitetura de referência.
+
+### Evidência frontend F18 para CA-OPS-002
+
+- As suítes de API, formulário, mapa, histórico, visitas, streaming e GPX cobrem
+  respostas completas/parciais, validação, falha e sincronização. Testes que
+  esperavam alternativas, custos e paradas simulados foram removidos junto dos
+  helpers sem uso; `routeCalculator.test.ts` agora verifica apenas dados recebidos,
+  links e GPX com geometria válida.
+
+Fonte: [módulo canônico](../modulo-guia-turista-inteligente.md).
+

@@ -1,0 +1,1 @@
+"""Schemas HTTP do backend."""
