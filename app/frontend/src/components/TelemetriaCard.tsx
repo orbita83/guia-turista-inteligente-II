@@ -96,7 +96,8 @@ export function TelemetriaCard({
   const sessionData =
     snapshot?.session ??
     (state.kind === 'loading' || state.kind === 'error' ? state.session : undefined);
-  const trigger = snapshot ? latencyAlertLabel(snapshot.totalTimeMs, snapshot.apiTimeMs) : null;
+  const trigger = snapshot ? latencyAlertLabel(snapshot.totalTimeMs) : null;
+  const internalTimeMs = snapshot?.etapas?.processamento_interno_ms;
   const effectiveConnectivity = connectivity ?? snapshot?.connectivity;
   const currentConnectivity: ConnectivityCondition = {
     state: effectiveConnectivity?.state ?? connectivity?.state ?? 'unknown',
@@ -202,8 +203,14 @@ export function TelemetriaCard({
                 )}
               />
               <Metric
-                label="Tempo da API"
-                value={displayDuration(snapshot?.apiTimeMs ?? missing)}
+                label="Processamento interno"
+                value={formatDuration(
+                  typeof internalTimeMs === 'number' &&
+                    Number.isFinite(internalTimeMs) &&
+                    internalTimeMs >= 0
+                    ? { available: true, value: internalTimeMs }
+                    : missing,
+                )}
                 tone="server"
               />
             </dl>
@@ -227,6 +234,10 @@ export function TelemetriaCard({
             <details className="telemetry-stage-details">
               <summary>Ver etapas medidas</summary>
               <dl aria-label="Etapas detalhadas do planejamento">
+                <Metric
+                  label="Duração da requisição no servidor"
+                  value={displayDuration(snapshot?.apiTimeMs ?? missing)}
+                />
                 {(
                   [
                     ['Geocodificação da origem', 'geocodificacao_origem_ms'],
@@ -252,9 +263,11 @@ export function TelemetriaCard({
               </dl>
             </details>
             <p className="telemetry-measurement-note">
-              O tempo total inclui a leitura da resposta; o tempo da API inclui a espera por
-              provedores externos. Geocoding mostra a maior das duas etapas paralelas. O tempo até
-              renderizar a tela não é medido.
+              Processamento interno: tempo das etapas locais do planejamento, sem os blocos de
+              integração externa. Inclui a espera pelos cálculos locais em thread; não mede CPU pura
+              nem todo o ciclo HTTP. A duração da requisição no servidor inclui a espera por
+              provedores externos. O tempo total inclui a leitura da resposta. Geocoding mostra a
+              maior das duas etapas paralelas. O tempo até renderizar a tela não é medido.
             </p>
           </section>
 

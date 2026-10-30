@@ -85,7 +85,8 @@ export type EtapaPlanejamento =
   | 'roteamento_ms'
   | 'guia_ms'
   | 'altimetria_ms'
-  | 'total_servicos_ms';
+  | 'total_servicos_ms'
+  | 'processamento_interno_ms';
 export type ProvedorPlanejamento =
   | 'open_meteo_geocoding'
   | 'open_meteo_weather'

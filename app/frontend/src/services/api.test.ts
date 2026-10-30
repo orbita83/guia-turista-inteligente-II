@@ -331,6 +331,21 @@ describe('F01 — campos opcionais da viagem', () => {
 describe('criarViagem telemetry metadata', () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it.each([0, 12.345, undefined, -1, '12ms', Infinity, NaN])(
+    'valida processamento interno sem inferir valores ausentes: %s',
+    (duration) => {
+      const parsed = parseTrip({
+        ...trip,
+        telemetria: { duracoes_etapas_ms: { processamento_interno_ms: duration } },
+      });
+      const expected =
+        typeof duration === 'number' && Number.isFinite(duration) && duration >= 0
+          ? duration
+          : undefined;
+      expect(parsed?.telemetria?.duracoes_etapas_ms.processamento_interno_ms).toBe(expected);
+    },
+  );
+
   it('reads valid operational headers and measures monotonic total time', async () => {
     vi.spyOn(performance, 'now').mockReturnValueOnce(100).mockReturnValueOnce(355.5);
     vi.stubGlobal(

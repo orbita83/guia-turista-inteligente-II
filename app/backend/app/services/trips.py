@@ -38,6 +38,27 @@ class InvalidTripInput(ValueError):
 T = TypeVar("T")
 
 
+class _LocalProcessingTimer:
+    """Soma segmentos locais; os blocos de integração ficam pausados."""
+
+    def __init__(self) -> None:
+        self._started_at: float | None = perf_counter()
+        self._elapsed = 0.0
+
+    def pause(self) -> None:
+        if self._started_at is not None:
+            self._elapsed += perf_counter() - self._started_at
+            self._started_at = None
+
+    def resume(self) -> None:
+        if self._started_at is None:
+            self._started_at = perf_counter()
+
+    def finish_ms(self) -> float:
+        self.pause()
+        return round(self._elapsed * 1000, 3)
+
+
 async def _measure(awaitable: Awaitable[T]) -> tuple[T, float]:
     started_at = perf_counter()
     result = await awaitable
@@ -74,6 +95,7 @@ async def plan_trip(
 ) -> dict[str, Any]:
     """Planeja a viagem; permite ao router adiar a persistência para BackgroundTasks."""
     planning_started_at = perf_counter()
+    local_timer = _LocalProcessingTimer()
     user_id = str(user["id"])
     origin_city = (
         sanitize_input(form.get("origem_cidade", "")) or form.get("origem_cidade", "")
@@ -103,6 +125,7 @@ async def plan_trip(
         "alternativas": [],
     }
 
+    local_timer.pause()
     (
         (origin_coords, origin_geocoding_ms),
         (
@@ -113,6 +136,7 @@ async def plan_trip(
         _measure(geocode(client, origin_city, origin_state, states)),
         _measure(geocode(client, destination_city, destination_state, states)),
     )
+    local_timer.resume()
     latitude_origin, longitude_origin, resolved_origin = origin_coords
     latitude_destination, longitude_destination, resolved_destination = (
         destination_coords
@@ -129,6 +153,7 @@ async def plan_trip(
         weather_called = _coordinates_available(destination_coords)
         return await get_weather(client, latitude_destination, longitude_destination)
 
+    local_timer.pause()
     (weather_result, weather_ms), (route_result, route_ms) = await asyncio.gather(
         _measure(
             circuit_breakers["weather"].call(
@@ -151,6 +176,7 @@ async def plan_trip(
             )
         ),
     )
+    local_timer.resume()
     if weather_result:
         weather = weather_result
     if route_result:
@@ -198,6 +224,7 @@ async def plan_trip(
         results = await asyncio.gather(*(measure_candidate(candidate) for candidate in candidates))
         return results[0]
 
+    local_timer.pause()
     ((guide, diagnostics), guide_ms), (elevation, elevation_ms) = await asyncio.gather(
         _measure(circuit_breakers["guide"].call(
             measured_guide,
@@ -217,6 +244,7 @@ async def plan_trip(
         )),
         measured_elevations(),
     )
+    local_timer.resume()
     if elevation is not None:
         route["altimetria"] = elevation
     if form.get("propulsao") and route.get("status") == "disponivel":
@@ -332,6 +360,7 @@ async def plan_trip(
     }
     if any(key in form for key in ('duracao_dias', 'perfis', 'propulsao')):
         trip['parametros'] = form.copy()
+    stage_durations["processamento_interno_ms"] = local_timer.finish_ms()
     if persist:
         await asyncio.to_thread(storage.add_for_user, user_id, trip, user)
     return trip

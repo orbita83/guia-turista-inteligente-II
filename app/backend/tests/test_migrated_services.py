@@ -527,6 +527,7 @@ async def test_plan_trip_keeps_trip_fields_and_persists_result(monkeypatch) -> N
         "roteamento_ms",
         "guia_ms",
         "total_servicos_ms",
+        "processamento_interno_ms",
     }
     assert all(
         duration >= 0 for duration in trip["telemetria"]["duracoes_etapas_ms"].values()

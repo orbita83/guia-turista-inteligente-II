@@ -21,9 +21,9 @@ quando a conectividade do navegador muda. Mostra “ONLINE” apenas quando o re
 é `{ status: "ok" }`; sem confirmação mostra estado inconclusivo. É uma verificação
 pontual, não monitoramento contínuo nem indicação da saúde dos provedores.
 
-São dados reais nesta entrega: Tempo total, Tempo da API, rota, identidade de
+São dados reais nesta entrega: Tempo total, Processamento interno (quando informado pelo backend), rota, identidade de
 exibição, contagem de roteiros do usuário e evidências presentes na resposta para
-Open-Meteo, OSRM e Gemini. Processamento interno, rede externa, RTT, tipo de rede,
+Open-Meteo, OSRM e Gemini. Rede externa, RTT, tipo de rede,
 uptime, conexões ativas, total do sistema, Open-Elevation e durações por provedor
 ficam explicitamente **Indisponíveis** ou **Desconhecidos**. `navigator.onLine`
 descreve apenas o indício do navegador e não a saúde da API.
@@ -31,13 +31,17 @@ descreve apenas o indício do navegador e não a saúde da API.
 `TelemetriaCard` deve apresentar, após consulta:
 
 - usuário/identidade ativa de maneira apropriada;
-- `X-Process-Time` como latência do servidor;
+- processamento interno do planejamento, sem blocos de integração externa;
+- `X-Process-Time` no detalhamento como duração da requisição no servidor, incluindo espera externa;
 - tempo total medido no cliente;
 - `X-Request-ID`/correlation ID mascarado e copiável quando adequado;
 - estado dos quatro provedores (Open-Meteo, OSRM, Open-Elevation e Gemini), incluindo
   degradação/fallback sem prometer disponibilidade inexistente.
 
 Medições de referência da fonte, ainda sem ambiente/metodologia aprovada:
+
+A semântica e os limites da nova medição estão em
+[observabilidade e diagnóstico](../../../../docs/qualidade/observabilidade.md).
 
 | Sinal | Meta declarada | Tratamento |
 | --- | --- | --- |
