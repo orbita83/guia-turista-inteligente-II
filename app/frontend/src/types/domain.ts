@@ -74,7 +74,8 @@ export interface Viagem {
   telemetria?: TelemetriaViagem;
   rotas?: RotaAlternativa[];
   atrativos?: AtrativoTuristico[];
-  atrativosFonte?: 'catalogo_local';
+  atrativosFonte?: 'catalogo_local' | 'openstreetmap' | 'catalogo_local+openstreetmap';
+  atrativosStatus?: 'disponivel' | 'sem_resultados' | 'municipio_nao_identificado' | 'indisponivel';
   atrativosVisitadosIds?: string[];
 }
 

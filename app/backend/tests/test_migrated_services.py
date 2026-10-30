@@ -379,7 +379,7 @@ def test_storage_keeps_visitor_in_memory_and_persistent_user_isolated(tmp_path) 
 def test_storage_updates_visits_atomically_without_cross_user_access(tmp_path) -> None:
     storage_path = tmp_path / "viagens.json"
     storage = TripStorage(storage_path)
-    trip = {"id": "trip-1", "atrativos_visitados_ids": []}
+    trip = {"id": "trip-1", "atrativos": [{"id": "poi-1"}], "atrativos_visitados_ids": []}
     other_trip = {"id": "private-trip", "atrativos_visitados_ids": []}
     storage.add_for_user("google-1", trip, {"id": "google-1", "tipo": "google"})
     storage.add_for_user("google-2", other_trip, {"id": "google-2", "tipo": "google"})
@@ -397,13 +397,13 @@ def test_storage_updates_visits_atomically_without_cross_user_access(tmp_path) -
     )
     assert storage.list_for_user("google-2") == [other_trip]
     assert TripStorage(storage_path).list_for_user("google-1") == [
-        {"id": "trip-1", "atrativos_visitados_ids": []}
+        {"id": "trip-1", "atrativos": [{"id": "poi-1"}], "atrativos_visitados_ids": []}
     ]
 
     storage.ensure_visitor("visitante_1")
     storage.add_for_user(
         "visitante_1",
-        {"id": "visitor-trip"},
+        {"id": "visitor-trip", "atrativos": [{"id": "poi-visitor"}]},
         {"tipo": "visitante"},
     )
     assert storage.update_attraction_visit(
@@ -525,6 +525,7 @@ async def test_plan_trip_keeps_trip_fields_and_persists_result(monkeypatch) -> N
         "geocodificacao_destino_ms",
         "clima_ms",
         "roteamento_ms",
+        "atrativos_ms",
         "guia_ms",
         "total_servicos_ms",
         "processamento_interno_ms",

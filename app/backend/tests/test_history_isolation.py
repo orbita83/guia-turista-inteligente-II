@@ -61,8 +61,10 @@ def test_history_and_deletion_remain_scoped_to_active_identity(tmp_path, monkeyp
             assert client.delete("/api/v1/roteiros/trip-private").status_code == 204
             assert storage.list_for_user("bob") == [{"id": "trip-private", "destino": "Olinda"}]
             assert client.post("/api/v1/auth/google", json={"credential": "bob"}).status_code == 200
-            assert client.get("/api/v1/roteiros/minhas-viagens").json() == {
-                "viagens": [{"id": "trip-private", "destino": "Olinda"}]
-            }
+            bob_history = client.get("/api/v1/roteiros/minhas-viagens").json()["viagens"]
+            assert len(bob_history) == 1
+            assert bob_history[0]["id"] == "trip-private"
+            assert bob_history[0]["destino"] == "Olinda"
+            assert bob_history[0]["atrativos_fonte"] == "catalogo_local"
     finally:
         app.dependency_overrides.clear()

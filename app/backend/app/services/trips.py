@@ -16,6 +16,7 @@ from app.core.storage import TripStorage
 from app.schemas.roteiros import AjusteRelevo
 from app.services.altimetria_service import obter_perfil_topografico
 from app.services.atrativos import atrativos_por_destino, enriquecer_viagem_legada
+from app.services.atrativos_osm import buscar_atrativos_osm
 from app.services.custos_service import calcular_custos_viagem
 from app.services.guide import (
     fallback_guide_with_diagnostics,
@@ -91,6 +92,8 @@ async def plan_trip(
     gemini_api_key: str,
     gemini_timeout_seconds: float,
     circuit_breakers: dict[str, CircuitBreaker],
+    open_elevation_api_key: str = "",
+    overpass_url: str = "https://overpass-api.de/api/interpreter",
     persist: bool = True,
 ) -> dict[str, Any]:
     """Planeja a viagem; permite ao router adiar a persistência para BackgroundTasks."""
@@ -153,8 +156,30 @@ async def plan_trip(
         weather_called = _coordinates_available(destination_coords)
         return await get_weather(client, latitude_destination, longitude_destination)
 
+    local_attractions = atrativos_por_destino(destination_city, destination_state)
+    if not local_attractions and destination_name:
+        res_city, sep, res_uf = destination_name.rpartition(" - ")
+        if sep:
+            local_attractions = atrativos_por_destino(res_city, res_uf)
+
+    async def measured_attractions() -> tuple[list[dict[str, Any]], str, str]:
+        if local_attractions and any(item.get("categoria") == "gastronomia" for item in local_attractions):
+            return local_attractions, "disponivel", "catalogo_local"
+        mapped, mapped_status = await buscar_atrativos_osm(
+            client, destination_city, destination_state, states, url=overpass_url
+        )
+        existing_names = {str(item.get("nome", "")).casefold() for item in local_attractions}
+        additions = [item for item in mapped if item["nome"].casefold() not in existing_names]
+        combined = local_attractions + additions
+        source = (
+            "catalogo_local+openstreetmap" if local_attractions and additions
+            else "catalogo_local" if local_attractions
+            else "openstreetmap"
+        )
+        return combined, "disponivel" if combined else mapped_status, source
+
     local_timer.pause()
-    (weather_result, weather_ms), (route_result, route_ms) = await asyncio.gather(
+    (weather_result, weather_ms), (route_result, route_ms), ((attractions, attractions_status, attractions_source), attractions_ms) = await asyncio.gather(
         _measure(
             circuit_breakers["weather"].call(
                 measured_weather,
@@ -175,17 +200,13 @@ async def plan_trip(
                 longitude_destination,
             )
         ),
+        _measure(measured_attractions()),
     )
     local_timer.resume()
     if weather_result:
         weather = weather_result
     if route_result:
         route = route_result
-    attractions = atrativos_por_destino(destination_city, destination_state)
-    if not attractions and destination_name:
-        res_city, sep, res_uf = destination_name.rpartition(" - ")
-        if sep:
-            attractions = atrativos_por_destino(res_city, res_uf)
 
     guide_called = False
 
@@ -216,7 +237,12 @@ async def plan_trip(
             if not isinstance(geometry, list) or len(geometry) < 2:
                 return None, None
             async with semaphore:
-                profile, elapsed = await _measure(obter_perfil_topografico(geometry, client=client))
+                consultation = (
+                    obter_perfil_topografico(geometry, client=client, api_key=open_elevation_api_key)
+                    if open_elevation_api_key
+                    else obter_perfil_topografico(geometry, client=client)
+                )
+                profile, elapsed = await _measure(consultation)
             result = profile.model_dump(mode="json")
             candidate["altimetria"] = result
             return result, elapsed
@@ -325,6 +351,7 @@ async def plan_trip(
         "clima_ms": weather_ms,
         "roteamento_ms": route_ms,
         "guia_ms": guide_ms,
+        "atrativos_ms": attractions_ms,
     }
     stage_durations["total_servicos_ms"] = round(
         (perf_counter() - planning_started_at) * 1000, 3
@@ -337,7 +364,8 @@ async def plan_trip(
         "origem": origin_name,
         "destino": destination_name,
         "atrativos": attractions,
-        "atrativos_fonte": "catalogo_local",
+        "atrativos_fonte": attractions_source,
+        "atrativos_status": attractions_status,
         "clima": weather,
         "percurso": route,
         "dicas_destino": guide,

@@ -24,6 +24,8 @@ class Settings(BaseSettings):
         "776335673676-dk7od4ljhh43bio4bppf94i8ou0u9v9i.apps.googleusercontent.com"
     )
     gemini_api_key: str = ""
+    open_elevation_api_key: str = ""
+    overpass_url: str = "https://overpass-api.de/api/interpreter"
     gemini_timeout_seconds: float = Field(
         default=60.0,
         validation_alias=AliasChoices(

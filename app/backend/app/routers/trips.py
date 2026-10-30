@@ -148,6 +148,8 @@ async def create_trip(
                 states=settings.states,
                 gemini_api_key=settings.gemini_api_key,
                 gemini_timeout_seconds=settings.gemini_timeout_seconds,
+                open_elevation_api_key=settings.open_elevation_api_key,
+                overpass_url=settings.overpass_url,
                 circuit_breakers=circuit_breakers,
                 persist=False,
             )

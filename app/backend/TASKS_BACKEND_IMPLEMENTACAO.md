@@ -245,3 +245,58 @@ Aceitação: suíte backend/frontend, check e build executados ao final; número
 - [ ] Atualizar checklist e relatório
 - [ ] Executar suíte completa, lint/typecheck e build
 Implementação: PENDENTE. Validação: PENDENTE.
+
+## Correção de topografia — Plano 01
+
+### TASK-BE-014 — Restabelecer consulta altimétrica e explicar falhas
+
+Responsável: Aluno 3, com integração frontend. Prioridade: P1. Fonte: §3.3 e §6.1 da atividade; RF-MAP-004/005 e CA-MAP-003.
+Problema: viagens reais possuem geometria, mas Open-Elevation recusou quatro consultas com HTTP 429 por franquia anônima excedida; a interface só exibe indisponibilidade genérica.
+Esperado: chave opcional de servidor no header oficial, estado público seguro para limite do provedor e mensagem específica no painel da rota correta; nenhum perfil inventado.
+Arquivos previstos: `core/config.py`, `services/altimetria_service.py`, `services/trips.py`, `routers/trips.py`, `schemas/roteiros.py`, `.env.example`, parser e mapa do frontend, testes e documentação.
+Dependências: chave válida e franquia disponível para comprovação com serviço real; implementação e testes controlados independem disso.
+Aceitação: contrato de sucesso preservado; HTTP 429 não vaza corpo bruto; viagens antigas com 429 exibem causa segura; alternativa não herda perfil de outra; testes dirigidos e suíte final aprovados.
+- [x] Investigar documentação, código, viagens persistidas e contrato oficial do provedor
+- [x] Implementar configuração e tratamento de erros
+- [x] Integrar estado ao frontend e atualizar testes
+- [x] Validar em lote e atualizar relatório
+Implementação: CONCLUÍDA. Validação: APROVADA NOS TESTES E NA CONSULTA REAL; CAPTURA VISUAL PENDENTE.
+Evidências: `app/core/config.py`, `app/services/altimetria_service.py`, `app/services/trips.py`, `app/routers/trips.py`, `frontend/src/services/tripOptionalFields.ts`, `frontend/src/components/MapaRota.tsx`; testes em `test_altimetria_service.py`, `test_http_api.py`, `apiGeometry.test.ts` e `MapaRota.test.tsx`. Consulta real com 10 pontos da geometria salva: `sucesso`, cotas 225,23–1.052,63 m. Suíte geral: 413 backend, 272 frontend, 3 SSE aprovados; check e build aprovados. Após a correção de tipagem, os testes direcionados foram repetidos. O perfil das viagens já gravadas não foi alterado.
+
+## Correção de atrativos — Plano 02
+
+### TASK-BE-015 — Cobrir Abaiara com locais documentados e validar visitas
+
+Responsável: transversal de backend e frontend. Prioridade: P1. Fonte: §3.5 da atividade e RF-GUI-005.
+Problema: Abaiara - CE fora do catálogo, aviso de cobertura fixo e PATCH permissivo quando uma viagem não tinha lista de atrativos.
+Esperado: locais comprovados da cidade em cards, persistência de visitas restrita aos IDs válidos, ausência honesta de restaurantes não confirmados e grupos visuais preservados.
+Arquivos: `app/data/atrativos.json`, `app/data/FONTES_ATRATIVOS_ABAIARA.md`, `app/core/storage.py`, `frontend/src/components/RoteiroResult.tsx`, testes e plano.
+Dependências: curadoria verificável para qualquer ampliação futura da cobertura.
+Aceitação: Natal continua com cinco atrativos e cinco opções gastronômicas; Abaiara apresenta dois locais e zero restaurantes; histórico legado recebe locais sem gravação retroativa; PATCH rejeita ID estranho; ambos os grupos aparecem no frontend.
+- [x] Investigar contrato, catálogo, histórico e fontes municipais
+- [x] Catalogar somente locais documentados e registrar procedência
+- [x] Restringir PATCH aos IDs da viagem ou do catálogo correspondente
+- [x] Corrigir aviso de cobertura e manter dois grupos na interface
+- [x] Adicionar e executar testes direcionados
+- [x] Concluir suíte geral
+- [ ] Comparar visualmente no navegador
+Implementação: CONCLUÍDA. Validação: TESTES, CHECK E BUILD APROVADOS; CAPTURAS PENDENTES.
+Resultados: 415 testes backend, 274 frontend e 3 SSE aprovados; zero falhas. `npm run check` e `npm run build` aprovados. Leitura local de uma viagem salva para Abaiara retornou dois locais via serviço de histórico, sem alterar a base.
+Observação: não há comprovação de restaurante específico em funcionamento em Abaiara; nenhuma opção gastronômica foi fabricada. A cobertura do catálogo continua parcial por cidade.
+
+### TASK-BE-016 — Buscar locais próprios para municípios fora da cobertura fixa
+
+Responsável: transversal de backend e frontend. Prioridade: P1. Fonte: §3.5 e RF-GUI-005; correção do usuário de que cada destino deve ter seus próprios locais.
+Problema: catalogar manualmente Abaiara não escala; demais municípios continuam com zero cards.
+Esperado: buscar POIs mapeados estritamente dentro da área municipal e UF, identificar a procedência e falhas, complementar o catálogo quando faltar gastronomia e preservar visitas por IDs estáveis.
+Arquivos: `app/services/atrativos_osm.py`, `app/services/trips.py`, `app/core/config.py`, `app/routers/trips.py`, `.env.example`, parser e componente frontend, testes e documentação.
+Dependências: instância Overpass disponível e cobertura OSM no município; uma instância própria/autorizada pode ser apontada via `OVERPASS_URL`.
+Aceitação: testes verificam seleção de área municipal, rejeição sem área única, separação de restaurantes, integração com planejamento, contrato de status, atribuição OSM e fallback seguro. Consulta real deve ser medida separadamente.
+- [x] Investigar fonte, política de uso e contrato do projeto
+- [x] Implementar consulta municipal, limite de itens, cache e estados de erro
+- [x] Integrar backend/frontend e adicionar testes
+- [ ] Validar contra instância Overpass real acessível
+- [x] Concluir suíte geral e build após a mudança
+Implementação: CONCLUÍDA. Validação: TESTES, CHECK E BUILD APROVADOS; PROVEDOR REAL INDISPONÍVEL NESTE AMBIENTE.
+Resultados: 420 testes backend, 276 frontend e 3 SSE aprovados; zero falhas. Check e build aprovados.
+Observação: os endpoints públicos testados retornaram HTTP 406/403 ou timeout; testes simulados não comprovam cobertura nem funcionamento do provedor real. Viagens antigas sem catálogo não são reconsultadas automaticamente. A consulta dinâmica pode aumentar a latência de planejamento quando não há cache.

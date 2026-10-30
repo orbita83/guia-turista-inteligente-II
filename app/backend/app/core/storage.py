@@ -11,6 +11,8 @@ from uuid import uuid4
 
 from filelock import FileLock
 
+from app.services.atrativos import enriquecer_viagem_legada
+
 
 class UnknownAttractionError(ValueError):
     """Atrativo não pertence à lista persistida da viagem."""
@@ -264,8 +266,8 @@ class TripStorage:
             if trip is None:
                 return None
 
-            attractions = trip.get("atrativos")
-            if isinstance(attractions, list) and not any(
+            attractions = enriquecer_viagem_legada(trip).get("atrativos")
+            if not isinstance(attractions, list) or not any(
                 isinstance(item, dict) and item.get("id") == attraction_id
                 for item in attractions
             ):

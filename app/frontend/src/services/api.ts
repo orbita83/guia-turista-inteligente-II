@@ -273,8 +273,16 @@ export function parseTrip(value: unknown): Viagem | null {
     ...(parameters ? { parametros: parameters } : {}),
     ...(optionalFields.rotas ? { rotas: optionalFields.rotas } : {}),
     ...(optionalFields.atrativos ? { atrativos: optionalFields.atrativos } : {}),
-    ...(trip.atrativos_fonte === 'catalogo_local'
-      ? { atrativosFonte: 'catalogo_local' as const }
+    ...(trip.atrativos_fonte === 'catalogo_local' ||
+    trip.atrativos_fonte === 'openstreetmap' ||
+    trip.atrativos_fonte === 'catalogo_local+openstreetmap'
+      ? { atrativosFonte: trip.atrativos_fonte }
+      : {}),
+    ...(trip.atrativos_status === 'disponivel' ||
+    trip.atrativos_status === 'sem_resultados' ||
+    trip.atrativos_status === 'municipio_nao_identificado' ||
+    trip.atrativos_status === 'indisponivel'
+      ? { atrativosStatus: trip.atrativos_status }
       : {}),
     ...(optionalFields.atrativosVisitadosIds
       ? { atrativosVisitadosIds: optionalFields.atrativosVisitadosIds }

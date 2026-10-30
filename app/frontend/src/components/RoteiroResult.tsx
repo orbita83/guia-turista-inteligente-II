@@ -164,10 +164,10 @@ export function RoteiroResult({
   }, [todosAtrativos, idsVisitados, filtroAtrativo]);
 
   // Separação em duas categorias do wireframe
-  const pontosTuristicos = useMemo(() => {
-    if (filtroAtrativo === 'gastronomia') return [];
-    return atrativosFiltrados.filter((item) => item.categoria !== 'gastronomia');
-  }, [atrativosFiltrados, filtroAtrativo]);
+  const pontosTuristicos = useMemo(
+    () => atrativosFiltrados.filter((item) => item.categoria !== 'gastronomia'),
+    [atrativosFiltrados],
+  );
 
   const gastronomia = useMemo(() => {
     return atrativosFiltrados.filter((item) => item.categoria === 'gastronomia');
@@ -302,11 +302,6 @@ export function RoteiroResult({
 
   const renderCard = (item: AtrativoTuristico) => {
     const isVisitado = idsVisitados.includes(item.id);
-    const linkMaps =
-      item.linkMaps ||
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        `${item.nome} ${viagem.destino}`,
-      )}`;
     const badgeInfo = formatarCategoriaAtrativo(item.categoria, item.icone);
 
     return (
@@ -320,15 +315,17 @@ export function RoteiroResult({
             <span className="attraction-category-badge">
               <span aria-hidden="true">{badgeInfo.icone}</span> {badgeInfo.rotulo}
             </span>
-            <a
-              href={linkMaps}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="attraction-maps-link"
-              title={`Ver ${item.nome} no Google Maps`}
-            >
-              Maps ↗
-            </a>
+            {item.linkMaps && (
+              <a
+                href={item.linkMaps}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="attraction-maps-link"
+                title={`Ver ${item.nome} no Google Maps`}
+              >
+                Maps ↗
+              </a>
+            )}
           </div>
 
           <h5 className="attraction-name">{item.nome}</h5>
@@ -582,13 +579,33 @@ export function RoteiroResult({
             <div className="attractions-title-box">
               <h3 id="attractions-title">Atrativos & Gastronomia</h3>
               <p>Descubra e marque os locais e pratos que você já conheceu.</p>
-              <p role="status">Ainda não há atrativos catalogados para {viagem.destino}.</p>
+              <p role="status">
+                {viagem.atrativosStatus === 'indisponivel'
+                  ? `A consulta de locais para ${viagem.destino} está indisponível.`
+                  : viagem.atrativosStatus === 'municipio_nao_identificado'
+                    ? `Não foi possível identificar a área municipal de ${viagem.destino}.`
+                    : `Ainda não há atrativos catalogados para ${viagem.destino}.`}
+              </p>
               <p className="attractions-catalog-hint">
-                Destinos com catálogo curado ativo: Natal - RN, Recife - PE, Salvador - BA,
-                Fortaleza - CE, Rio de Janeiro - RJ, São Paulo - SP, Gramado - RS e Ouro Preto - MG.
+                {viagem.atrativosFonte?.includes('openstreetmap')
+                  ? 'A consulta usa locais mapeados no município; a cobertura pode ser incompleta.'
+                  : 'O catálogo local ainda não cobre este destino. Nenhum local de outra cidade será apresentado como se fosse daqui.'}
               </p>
             </div>
           </div>
+        )}
+
+        {viagem.atrativosFonte?.includes('openstreetmap') && (
+          <p className="attractions-catalog-hint">
+            Locais mapeados no OpenStreetMap, sujeitos a alterações.{' '}
+            <a
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              © OpenStreetMap contributors
+            </a>
+          </p>
         )}
 
         {visitPersistenceStatus && (
@@ -648,28 +665,26 @@ export function RoteiroResult({
         )}
 
         {/* Seção 1: Pontos Turísticos & Atrativos */}
-        {filtroAtrativo !== 'gastronomia' && (
-          <div className="attractions-group" aria-label="Pontos Turísticos & Atrativos">
-            <div className="attractions-group-header">
-              <h4 className="attractions-group-title">
-                <span aria-hidden="true">📍</span> Pontos Turísticos & Atrativos
-              </h4>
-              <p>Principais atrativos selecionados no destino.</p>
-              <span className="attractions-count-pill">
-                {totalPontos} {totalPontos === 1 ? 'local' : 'locais'}
-              </span>
-            </div>
-            {pontosTuristicos.length > 0 ? (
-              <div className="attractions-grid">{pontosTuristicos.map(renderCard)}</div>
-            ) : (
-              <p className="attractions-group-empty">
-                {totalPontos
-                  ? 'Nenhum ponto turístico corresponde ao filtro selecionado.'
-                  : 'Sem pontos turísticos catalogados para este destino.'}
-              </p>
-            )}
+        <div className="attractions-group" aria-label="Pontos Turísticos & Atrativos">
+          <div className="attractions-group-header">
+            <h4 className="attractions-group-title">
+              <span aria-hidden="true">📍</span> Pontos Turísticos & Atrativos
+            </h4>
+            <p>Principais atrativos selecionados no destino.</p>
+            <span className="attractions-count-pill">
+              {totalPontos} {totalPontos === 1 ? 'local' : 'locais'}
+            </span>
           </div>
-        )}
+          {pontosTuristicos.length > 0 ? (
+            <div className="attractions-grid">{pontosTuristicos.map(renderCard)}</div>
+          ) : (
+            <p className="attractions-group-empty">
+              {totalPontos
+                ? 'Nenhum ponto turístico corresponde ao filtro selecionado.'
+                : 'Sem pontos turísticos catalogados para este destino.'}
+            </p>
+          )}
+        </div>
 
         {/* Seção 2: Restaurantes & Gastronomia */}
         <div className="attractions-group" aria-label="Restaurantes & Gastronomia">

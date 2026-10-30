@@ -78,7 +78,18 @@ function providerElevation(value: unknown): {
 } {
   const result = record(value);
   if (!result) return {};
-  const statusAltimetria = text(result.status);
+  const status = text(result.status);
+  const mensagem = text(result.mensagem);
+  // Viagens já persistidas podem conter o erro HTTP antigo com o corpo do provedor.
+  // Convertemos apenas padrões conhecidos; a mensagem bruta nunca chega à interface.
+  const statusAltimetria =
+    status === 'erro_provedor' && mensagem?.includes('HTTP 429')
+      ? 'cota_excedida'
+      : status === 'indisponivel' && mensagem?.toLowerCase().includes('timeout')
+        ? 'timeout'
+        : status === 'indisponivel' && mensagem?.startsWith('Falha de conexão')
+          ? 'falha_conexao'
+          : status;
   const profile =
     result.sucesso === true && Array.isArray(result.pontos)
       ? elevationProfile(

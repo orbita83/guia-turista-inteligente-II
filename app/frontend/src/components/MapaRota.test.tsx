@@ -122,6 +122,36 @@ describe('F02 — geometria confirmada', () => {
     ).toBeInTheDocument();
   });
 
+  it('explica quota de elevação na rota afetada sem esconder o perfil de outra alternativa', () => {
+    const viagem: Viagem = {
+      ...trip,
+      percurso: {
+        ...trip.percurso,
+        geometria: principal.coordenadas,
+        statusAltimetria: 'cota_excedida',
+        alternativas: [
+          {
+            distancia: '9 km',
+            tempo: '25 min',
+            geometria: principal.coordenadas,
+            perfilElevacao: [
+              { distanciaKm: 0, altitudeM: 42 },
+              { distanciaKm: 9, altitudeM: 84 },
+            ],
+          },
+        ],
+      },
+    };
+    const { rerender } = render(<MapaRota viagem={viagem} />);
+    expect(screen.getByText(/atingiu o limite de uso do Open-Elevation/)).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Perfil de elevação de/ })).not.toBeInTheDocument();
+    rerender(<MapaRota viagem={viagem} alternativaAtiva={0} />);
+    expect(
+      screen.getByRole('img', { name: /Perfil de elevação de 42 a 84 metros/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/atingiu o limite de uso do Open-Elevation/)).not.toBeInTheDocument();
+  });
+
   it('identifica pontos projetados e não os atribui a outra alternativa', () => {
     const parada = {
       id: 'p1',

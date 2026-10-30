@@ -1,7 +1,9 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import catalogo from '../../../backend/app/data/atrativos.json';
 import type { Viagem } from '../types/domain';
+import { parseTrip } from '../services/api';
 import { RoteiroResult } from './RoteiroResult';
 
 const mockViagem: Viagem = {
@@ -169,6 +171,73 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
     expect(screen.getByText('Guia recebido no planejamento')).toBeInTheDocument();
   });
 
+  it('mostra os dez locais reais de Natal separados em cinco atrativos e cinco opções gastronômicas', () => {
+    const parsed = parseTrip({ id: 'natal', atrativos: catalogo['Natal - RN'] });
+    render(
+      <RoteiroResult
+        viagem={{ ...mockViagem, destino: 'Natal - RN', atrativos: parsed?.atrativos }}
+      />,
+    );
+    expect(screen.getByText('5 locais')).toBeInTheDocument();
+    expect(screen.getByText('5 opções')).toBeInTheDocument();
+    expect(screen.getAllByRole('article', { name: /\(.+\)/ }).length).toBe(10);
+  });
+
+  it('mostra locais documentados de Abaiara sem inventar restaurantes', () => {
+    const parsed = parseTrip({ id: 'abaiara', atrativos: catalogo['Abaiara - CE'] });
+    render(
+      <RoteiroResult
+        viagem={{ ...mockViagem, destino: 'Abaiara - CE', atrativos: parsed?.atrativos }}
+      />,
+    );
+    expect(screen.getByText('2 locais')).toBeInTheDocument();
+    expect(screen.getByText('0 opções')).toBeInTheDocument();
+    expect(screen.getByText('Praça da Igreja Matriz')).toBeInTheDocument();
+    expect(screen.getByText('Mercado Público Municipal Amâncio Tavares Leite')).toBeInTheDocument();
+    expect(screen.getByText('Sem restaurantes catalogados para este destino.')).toBeInTheDocument();
+  });
+
+  it('atribui locais OSM e distingue falha da consulta de um catálogo vazio', () => {
+    const { rerender } = render(
+      <RoteiroResult
+        viagem={{
+          ...mockViagem,
+          destino: 'Piripiri - PI',
+          atrativos: [
+            {
+              id: 'osm-node-1',
+              nome: 'Museu mapeado',
+              categoria: 'cultura',
+              descricao: 'Local mapeado',
+            },
+          ],
+          atrativosFonte: 'openstreetmap',
+          atrativosStatus: 'disponivel',
+        }}
+      />,
+    );
+    expect(screen.getByText('Museu mapeado')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /OpenStreetMap contributors/i })).toHaveAttribute(
+      'href',
+      'https://www.openstreetmap.org/copyright',
+    );
+    rerender(
+      <RoteiroResult
+        viagem={{
+          ...mockViagem,
+          destino: 'Piripiri - PI',
+          atrativos: [],
+          atrativosFonte: 'openstreetmap',
+          atrativosStatus: 'indisponivel',
+        }}
+      />,
+    );
+    expect(
+      screen.getByText('A consulta de locais para Piripiri - PI está indisponível.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Museu mapeado')).not.toBeInTheDocument();
+  });
+
   it('respeita uma lista vazia explícita do backend mesmo para cidade conhecida', async () => {
     render(
       <RoteiroResult viagem={{ ...mockViagem, atrativos: [], atrativosFonte: 'catalogo_local' }} />,
@@ -191,6 +260,9 @@ describe('RoteiroResult (Tópico 3.5: Clima, Guia em Streaming e Atrativos)', ()
 
     // Pratos típicos de Salvador devem ser visíveis
     expect(screen.getByText(/Acarajé Completo com Vatapá/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Pontos Turísticos & Atrativos/i }),
+    ).toBeInTheDocument();
 
     // Clica na aba Visitados
     const abaVisitados = screen.getByRole('button', { name: /Visitados/i });

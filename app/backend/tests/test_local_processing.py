@@ -67,6 +67,9 @@ def integrations(monkeypatch):
 
     monkeypatch.setattr(trips, "sanitize_input", sanitize)
     monkeypatch.setattr(trips, "atrativos_por_destino", attractions)
+    async def no_osm(*args, **kwargs):
+        return [], "indisponivel"
+    monkeypatch.setattr(trips, "buscar_atrativos_osm", no_osm)
     monkeypatch.setattr(trips, "geocode", geocode)
     monkeypatch.setattr(trips, "get_weather", weather)
     monkeypatch.setattr(trips, "get_route", route)
@@ -109,6 +112,43 @@ async def test_external_waits_do_not_inflate_local_processing(integrations):
     # Geocoding 2/3s e clima/rota 4/5s executam em paralelo: 3 + 5 + guia.
     assert fast["total_servicos_ms"] == 14005
     assert slow["total_servicos_ms"] == 68005
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("catalogued", "source"),
+    [
+        ([], "openstreetmap"),
+        ([{"id": "local-1", "nome": "Praça local", "categoria": "cultura"}], "catalogo_local+openstreetmap"),
+    ],
+)
+async def test_destino_recebe_apenas_locais_proprios_e_complementa_catalogo(
+    integrations, monkeypatch, catalogued, source
+):
+    monkeypatch.setattr(trips, "atrativos_por_destino", lambda *_: catalogued)
+
+    async def mapped(client, city, state_code, states, **kwargs):
+        assert (city, state_code, states["CE"]) == ("Abaiara", "CE", "Ceará")
+        return ([{"id": "osm-node-7", "nome": "Restaurante da cidade", "categoria": "gastronomia"}], "disponivel")
+
+    monkeypatch.setattr(trips, "buscar_atrativos_osm", mapped)
+    token = clock.set(Clock())
+    try:
+        trip = await trips.plan_trip(
+            {"origem_cidade": "Recife", "origem_uf": "PE", "destino_cidade": "Abaiara", "destino_uf": "CE"},
+            {"id": "visitor", "tipo": "visitante"},
+            client=object(), storage=SimpleNamespace(add_for_user=lambda *_: None),  # type: ignore[arg-type]
+            states={"CE": "Ceará"}, gemini_api_key="", gemini_timeout_seconds=60,
+            circuit_breakers={name: CircuitBreaker(name) for name in ("weather", "guide")},
+            persist=False,
+        )
+    finally:
+        clock.reset(token)
+    assert [item["id"] for item in trip["atrativos"]] == [
+        *[item["id"] for item in catalogued], "osm-node-7"
+    ]
+    assert trip["atrativos_fonte"] == source
+    assert trip["atrativos_status"] == "disponivel"
 
 
 @pytest.mark.asyncio

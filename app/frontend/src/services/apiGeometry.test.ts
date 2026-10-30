@@ -1,6 +1,21 @@
 import { expect, it } from 'vitest';
 import { parseTrip } from './api';
 
+it('preserva a origem OSM e a indisponibilidade da consulta municipal', () => {
+  expect(
+    parseTrip({
+      id: 'municipio',
+      atrativos: [],
+      atrativos_fonte: 'openstreetmap',
+      atrativos_status: 'indisponivel',
+    }),
+  ).toMatchObject({
+    atrativos: [],
+    atrativosFonte: 'openstreetmap',
+    atrativosStatus: 'indisponivel',
+  });
+});
+
 it('preserva a geometria real da resposta para o download GPX', () => {
   const points = [
     [-8.0476, -34.877],
@@ -51,6 +66,26 @@ it('normaliza o perfil altimétrico real e não inventa perfil em falha', () => 
       percurso: { altimetria: { ...profile, sucesso: false, status: 'indisponivel' } },
     })?.percurso.perfilElevacao,
   ).toBeUndefined();
+});
+
+it('identifica quota excedida em respostas novas e viagens antigas sem expor o corpo do erro', () => {
+  const oldError = {
+    sucesso: false,
+    status: 'erro_provedor',
+    mensagem:
+      'Erro retornado pelo Open-Elevation: Open-Elevation retornou HTTP 429: resposta privada',
+  };
+  const currentError = {
+    sucesso: false,
+    status: 'cota_excedida',
+    mensagem: 'A consulta de elevação atingiu o limite do provedor (HTTP 429).',
+  };
+  const oldTrip = parseTrip({ id: 'old', percurso: { altimetria: oldError } });
+  const currentTrip = parseTrip({ id: 'new', percurso: { altimetria: currentError } });
+  expect(oldTrip?.percurso.statusAltimetria).toBe('cota_excedida');
+  expect(currentTrip?.percurso.statusAltimetria).toBe('cota_excedida');
+  expect(oldTrip?.percurso.perfilElevacao).toBeUndefined();
+  expect(JSON.stringify(oldTrip)).not.toContain('resposta privada');
 });
 
 it('associa o perfil à alternativa de onde veio', () => {

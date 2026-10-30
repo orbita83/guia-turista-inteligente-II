@@ -74,6 +74,23 @@ export function MapaRota({
     : alternativa
       ? alternativa.topografia
       : viagem.percurso.topografia;
+  const statusAltimetria = rotaAtiva
+    ? undefined
+    : alternativa
+      ? alternativa.statusAltimetria
+      : viagem.percurso.statusAltimetria;
+  const motivoAltimetria =
+    statusAltimetria === 'cota_excedida'
+      ? 'A consulta desta viagem atingiu o limite de uso do Open-Elevation. Um novo planejamento precisa de quota disponível.'
+      : statusAltimetria === 'timeout'
+        ? 'A consulta de elevação desta viagem excedeu o tempo limite.'
+        : statusAltimetria === 'falha_conexao'
+          ? 'Não foi possível conectar ao serviço de elevação nesta viagem.'
+          : statusAltimetria === 'geometria_invalida'
+            ? 'A geometria desta rota não permitiu calcular um perfil de elevação.'
+            : statusAltimetria === 'erro_provedor'
+              ? 'O serviço de elevação falhou nesta viagem.'
+              : null;
 
   const elevations = elevation?.map((point) => point.altitudeM) ?? [];
   const minAltitude = elevations.reduce((min, altitude) => Math.min(min, altitude), Infinity);
@@ -684,7 +701,10 @@ export function MapaRota({
                   </svg>
                 </div>
               ) : (
-                <p role="status">Perfil de elevação indisponível para esta viagem.</p>
+                <div role="status">
+                  <p>Perfil de elevação indisponível para esta viagem.</p>
+                  {motivoAltimetria && <p>{motivoAltimetria}</p>}
+                </div>
               )}
             </div>
           )}

@@ -30,7 +30,7 @@ Modelo Pydantic v2 estruturado (`app/backend/app/schemas/roteiros.py`):
 ```python
 class PerfilTopografico(BaseModel):
     sucesso: bool
-    status: StatusAltimetria  # SUCESSO, PARCIAL, INDISPONIVEL, ERRO_PROVEDOR, GEOMETRIA_INVALIDA
+    status: StatusAltimetria  # SUCESSO, PARCIAL, INDISPONIVEL, COTA_EXCEDIDA, ERRO_PROVEDOR, GEOMETRIA_INVALIDA
     mensagem: str | None
     altitude_minima_m: float | None
     altitude_maxima_m: float | None
@@ -95,12 +95,19 @@ O serviço reutiliza o cliente assíncrono compartilhado `httpx.AsyncClient` ger
 | Geometria vazia ou inválida | `GEOMETRIA_INVALIDA` | Rejeição imediata sem requisição de rede |
 | Timeout do provedor (> 10s) | `INDISPONIVEL` | Retorna erro sem fabricar perfil plano |
 | Falha de conexão / DNS | `INDISPONIVEL` | Retorna erro sem fabricar perfil plano |
+| HTTP 429 / limite do provedor | `COTA_EXCEDIDA` | Informa limite sem repassar o corpo da resposta nem fabricar elevações |
 | Erro HTTP (500, 502, 503) | `ERRO_PROVEDOR` | Retorna status de erro e detalhe HTTP |
 | JSON quebrado / sem campo `results` | `ERRO_PROVEDOR` | Rejeita payload malformado |
 | Quantidade divergente de resultados | `ERRO_PROVEDOR` | Impede descompasso entre coordenadas e cotas |
 | Elevações nulas (`null`) ou `NaN` | `ERRO_PROVEDOR` | Rejeita dados corrompidos |
 
 > **Garantia de Integridade:** Sob nenhuma hipótese uma falha do provedor externo é substituída por elevações zeradas fictícias ($0\text{ m}$). Falhas são explicitadas pelo status e `sucesso = False`.
+
+### Configuração da franquia do provedor
+
+Configure `OPEN_ELEVATION_API_KEY` somente no ambiente do backend para enviar a chave no cabeçalho `X-API-Key` do POST. Sem chave, a consulta usa a franquia anônima do provedor. O limite é contabilizado por coordenada e pode produzir HTTP 429; uma chave não garante que haja franquia disponível. Consulte a [documentação oficial](https://www.open-elevation.com/index.html) e os [termos de uso](https://www.open-elevation.com/terms.html). A chave não deve ser exposta em `VITE_*`, respostas HTTP ou logs.
+
+O perfil salvo em uma viagem registra o resultado daquela consulta. Uma viagem antiga com falha não ganha elevações após configurar a chave; é preciso fazer novo planejamento com o provedor disponível. O frontend interpreta o HTTP 429 persistido no formato antigo como `cota_excedida`, sem exibir o corpo bruto.
 
 ---
 

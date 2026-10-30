@@ -22,7 +22,13 @@ def storage(tmp_path) -> TripStorage:
 
 
 @pytest.fixture
-def client(storage: TripStorage) -> Iterator[TestClient]:
+def client(storage: TripStorage, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    import app.services.trips as trip_services
+
+    async def unavailable_osm(*args: Any, **kwargs: Any) -> tuple[list[dict[str, Any]], str]:
+        return [], "indisponivel"
+
+    monkeypatch.setattr(trip_services, "buscar_atrativos_osm", unavailable_osm)
     app.dependency_overrides[get_storage] = lambda: storage
     with TestClient(app) as test_client:
         test_client.app.state.trip_storage = storage  # type: ignore[attr-defined]
@@ -102,6 +108,7 @@ def test_fluxo_integrado_planejamento_guia_visitas_e_isolamento(
     async def http_client():
         def response(request):
             if request.method == "POST":
+                assert request.headers["X-API-Key"] == "chave-de-teste"
                 return httpx.Response(200, json={"results": [{"elevation": 10}, {"elevation": 20}]})
             return httpx.Response(200, json={"code": "Ok", "routes": [{"distance": 1000, "duration": 60, "geometry": {"type": "LineString", "coordinates": [[-34, -8], [-34.01, -8.01]]}}]})
 
@@ -111,6 +118,7 @@ def test_fluxo_integrado_planejamento_guia_visitas_e_isolamento(
     monkeypatch.setattr(services, "geocode", geocode)
     monkeypatch.setattr(services, "get_weather", weather)
     monkeypatch.setattr(get_settings(), "gemini_api_key", "")
+    monkeypatch.setattr(get_settings(), "open_elevation_api_key", "chave-de-teste")
     app.dependency_overrides[get_http_client] = http_client
     assert client.post("/api/v1/auth/visitor").status_code == 200
     created = client.post("/api/v1/roteiros/planejar", json={
@@ -264,6 +272,20 @@ def test_catalogo_atrativos_nao_confunde_destinos_homonimos() -> None:
     assert atrativos_por_destino("São Paulo do Potengi", "RN") == []
 
 
+def test_catalogo_abaiara_usa_lugares_documentados_sem_inventar_restaurantes() -> None:
+    from app.services.atrativos import atrativos_por_destino
+
+    places = atrativos_por_destino("Abaiara", "CE")
+    assert {item["id"] for item in places} == {
+        "abaiara-praca-igreja-matriz", "abaiara-mercado-publico"
+    }
+    assert all(item["categoria"] != "gastronomia" for item in places)
+    assert atrativos_por_destino("Abaiara", "PE") == []
+    natal = atrativos_por_destino("Natal", "RN")
+    assert len(natal) == 10
+    assert sum(item["categoria"] == "gastronomia" for item in natal) == 5
+
+
 def test_historico_legado_recebe_catalogo_sem_alterar_dados(
     client: TestClient, storage: TripStorage
 ) -> None:
@@ -275,6 +297,25 @@ def test_historico_legado_recebe_catalogo_sem_alterar_dados(
     assert trip["atrativos_visitados_ids"] == ["atrativo-1"]
     assert trip["atrativos_fonte"] == "catalogo_local"
     assert "atrativos" not in storage.list_for_user(user["id"])[0]
+
+
+def test_abaiara_legada_recebe_locais_e_aceita_visita_somente_de_id_catalogado(
+    client: TestClient, storage: TripStorage
+) -> None:
+    user = client.post("/api/v1/auth/visitor").json()["usuario"]
+    storage.add_for_user(user["id"], {"id": "abaiara-antiga", "destino": "Abaiara - CE"}, user)
+    trip = client.get("/api/v1/roteiros/minhas-viagens").json()["viagens"][0]
+    assert len(trip["atrativos"]) == 2
+    path = "/api/v1/roteiros/abaiara-antiga/visitas"
+    assert client.patch(path, json={"atrativo_id": "nao-catalogado", "visitado": True}).status_code == 422
+    response = client.patch(
+        path, json={"atrativo_id": "abaiara-praca-igreja-matriz", "visitado": True}
+    )
+    assert response.status_code == 200
+    assert response.json()["atrativos_visitados_ids"] == ["abaiara-praca-igreja-matriz"]
+    assert client.get("/api/v1/roteiros/minhas-viagens").json()["viagens"][0][
+        "atrativos_visitados_ids"
+    ] == ["abaiara-praca-igreja-matriz"]
 
 
 def test_parametros_de_planejamento_rejeitam_veiculo_incompativel(client: TestClient) -> None:
@@ -404,7 +445,7 @@ def test_planning_endpoint_meets_mocked_latency_target_with_concurrent_stages(
     import app.services.trips as trip_services
     from app.schemas.roteiros import PerfilTopografico, StatusAltimetria
 
-    async def delayed_elevation(geometry, client):
+    async def delayed_elevation(geometry, client, api_key=""):
         await asyncio.sleep(0.1)
         return PerfilTopografico(sucesso=False, status=StatusAltimetria.INDISPONIVEL)
 
@@ -992,12 +1033,12 @@ def test_attraction_visit_patch_persists_only_for_active_users(
     monkeypatch.setattr(auth_router, "verify_google_token", fake_verify)
     storage.add_for_user(
         "google-owner",
-        {"id": "owner-trip"},
+        {"id": "owner-trip", "atrativos": [{"id": "poi-1"}]},
         {"id": "google-owner", "tipo": "google"},
     )
     storage.add_for_user(
         "google-other",
-        {"id": "other-trip"},
+        {"id": "other-trip", "atrativos": [{"id": "poi-1"}]},
         {"id": "google-other", "tipo": "google"},
     )
 
@@ -1017,7 +1058,7 @@ def test_attraction_visit_patch_persists_only_for_active_users(
     assert storage.list_for_user("google-owner")[0]["atrativos_visitados_ids"] == [
         "poi-1"
     ]
-    assert storage.list_for_user("google-other") == [{"id": "other-trip"}]
+    assert storage.list_for_user("google-other") == [{"id": "other-trip", "atrativos": [{"id": "poi-1"}]}]
     assert (
         client.patch(
             "/api/v1/roteiros/other-trip/visitas",
@@ -1038,7 +1079,7 @@ def test_visitas_sao_idempotentes_e_recarregadas_no_historico(
     client: TestClient, storage: TripStorage
 ) -> None:
     visitor = client.post("/api/v1/auth/visitor").json()["usuario"]
-    storage.add_for_user(visitor["id"], {"id": "trip-visits"}, visitor)
+    storage.add_for_user(visitor["id"], {"id": "trip-visits", "atrativos": [{"id": "poi-1"}]}, visitor)
     path = "/api/v1/roteiros/trip-visits/visitas"
     for _ in range(2):
         response = client.patch(path, json={"atrativo_id": "poi-1", "visitado": True})

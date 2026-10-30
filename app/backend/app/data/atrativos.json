@@ -1,4 +1,26 @@
 {
+  "Abaiara - CE": [
+    {
+      "id": "abaiara-praca-igreja-matriz",
+      "nome": "Praça da Igreja Matriz",
+      "categoria": "cultura",
+      "descricao": "Praça no centro de Abaiara citada em projeto de recuperação publicado pela Prefeitura. Confirme as condições de visita antes de ir.",
+      "destaque": "Centro de Abaiara",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Pra%C3%A7a%20da%20Igreja%20Matriz%2C%20Abaiara%20-%20CE",
+      "icone": "⛪",
+      "visitado": false
+    },
+    {
+      "id": "abaiara-mercado-publico",
+      "nome": "Mercado Público Municipal Amâncio Tavares Leite",
+      "categoria": "outro",
+      "descricao": "Mercado público situado no centro de Abaiara, identificado em lei municipal. Confirme funcionamento e serviços antes de visitar.",
+      "destaque": "Mercado público no centro",
+      "linkMaps": "https://www.google.com/maps/search/?api=1&query=Mercado%20P%C3%BAblico%20Municipal%20Am%C3%A2ncio%20Tavares%20Leite%2C%20Abaiara%20-%20CE",
+      "icone": "📍",
+      "visitado": false
+    }
+  ],
   "Recife - PE": [
     {
       "id": "atrativo-1",
